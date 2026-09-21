@@ -35,25 +35,31 @@ src/
   main.jsx      Ponto de entrada
 ```
 
-## Status — Etapa 1 do MVP (PAC VI)
+## Status — Protótipo funcional (PAC VI)
 
 - [x] Repositório criado e estruturado
 - [x] Base da aplicação (Vite + React + rotas)
-- [x] Tela de login (fiel ao protótipo Figma)
-- [ ] Acesso por perfil (dentista/recepção x cliente)
-- [ ] Cadastro/gestão de consultas
-- [ ] Agenda (dia/semana/mês)
-- [ ] Dados do atendimento (valores, dados do cliente, procedimento)
-- [ ] Área do cliente
-- [ ] Testes e validação
+- [x] Login e cadastro
+- [x] Recuperação de senha em etapas
+- [x] Dashboard inicial
+- [x] Perfil do paciente com abas e histórico
+- [x] Novo agendamento com data, horário e procedimento
+- [x] Layout responsivo para desktop, tablet e celular
+- [ ] Integração com API e banco de dados
+- [ ] Testes automatizados
 
-A tela de login está com autenticação simulada (`src/pages/Login.jsx`) —
-o `handleSubmit` tem um `TODO` marcando onde entra a chamada real à API
-quando o backend estiver definido.
+As ações estão simuladas no frontend para apresentação do protótipo. A
+confirmação do agendamento, o acesso e a recuperação de senha já demonstram o
+fluxo completo, mas ainda precisam ser conectados aos endpoints do backend.
 
-A imagem do consultório no painel lateral do login está como um
-placeholder em gradiente; basta trocar por uma foto real da clínica em
-`src/styles/Login.css` (`.login-side__image`).
+## Rotas disponíveis
+
+- `/login`
+- `/cadastro`
+- `/recuperar-senha`
+- `/inicio`
+- `/pacientes/marcos-oliveira`
+- `/agenda`
 
 ## Próximos passos sugeridos
 
