@@ -10,8 +10,12 @@ Confira antes de assumir qualquer coisa:
 
 - **Front-end: existe e funciona.** React 19 + Vite + react-router-dom, em `src/`.
   Todas as ações são simuladas — não há chamada de rede em lugar nenhum.
+  É um exemplo básico e **será refeito** a partir dos requisitos e do backend; não
+  trate o que ele faz hoje (ex.: login por e-mail) como requisito.
 - **Backend: não existe.** Nenhum Express, nenhum Prisma, nenhum `schema.prisma`,
   nenhum MySQL. O `package.json` tem só as três dependências do front.
+  `backend/schema` é um rascunho em texto, ainda sendo alinhado às decisões D1.1–D5;
+  em caso de conflito, vale `docs/documentacao.md`.
 - A stack pretendida (Node + Express + Prisma + MySQL + JWT) é **intenção declarada**,
   ainda não justificada nem instalada.
 
@@ -28,11 +32,14 @@ npm run lint     # oxlint
 
 ```
 src/
-  components/   AppShell, AuthLayout, Icon
+  components/   AppShell, AuthLayout, Brand, Icon
   pages/        Login, Cadastro, RecuperarSenha, Inicio, PerfilPaciente, Agenda
-  styles/       CSS por página
+  index.css     Tokens de design
+  styles.css    Estilos das páginas
   App.jsx       Rotas
   main.jsx      Entrada
+backend/
+  schema        Rascunho do modelo em texto (ainda não é Prisma)
 docs/
   documentacao.md   Registro de decisões de arquitetura e modelagem
 ```

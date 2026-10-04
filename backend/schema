@@ -1,10 +1,10 @@
 Cliente
   id            INT PK
   nome          NOT NULL
-  cpf           VARCHAR(14) UNIQUE — nullable? (em aberto)
-  telefone      VARCHAR — UK? (em aberto, ver nota acima)
-  email         VARCHAR UNIQUE, NULL
-  nascimento    DATE — nullable? (em aberto)
+  cpf           VARCHAR(14) UNIQUE, NOT NULL
+  telefone      VARCHAR NOT NULL
+  email         VARCHAR
+  nascimento    DATE
   convenio      NULL (paciente particular não tem)
   criadoEm      DATE NOT NULL
   pacienteDesde DATE NOT NULL
@@ -13,3 +13,15 @@ Login
   id         INT PK
   clienteId  INT FK -> Cliente.id, UNIQUE
   senha      VARCHAR(60) NOT NULL
+
+
+
+Funcionários
+  id    INT PK
+  nome  NOT NULL
+  cpf   UNIQUE, NOT NULL
+  e-mail  UNIQUE, NOT NULL
+  CRO   UNIQUE
+  dataInicio  NOT NULL
+  senha NOT NULL
+  categoria NOT NULL
