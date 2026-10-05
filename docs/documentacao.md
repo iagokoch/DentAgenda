@@ -29,6 +29,8 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D21  | Rotas de cadastro                               | Fechada                      |
 | D22  | Rotas de horários livres e consultas            | Fechada                      |
 | D23  | Estrutura do código, erros, testes e ambiente   | Fechada                      |
+| D24  | Códigos de erro genéricos e objetos de resposta | Fechada                      |
+| D25  | Regras de implementação não fixadas antes       | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -953,10 +955,102 @@ rotas no navegador.
 **A confirmar na implementação:** a biblioteca que gera o OpenAPI a partir do Zod precisa ser
 compatível com a versão do Zod instalada — conferir na documentação atual antes de instalar.
 
+## D24 — Códigos de erro genéricos e objetos de resposta
+
+> **Status: fechada.**
+> Fecha lacunas do `docs/api.md` encontradas ao escrever o plano de implementação.
+
+**O quê:**
+1. `codigo` dos erros que o contrato ainda não nomeava:
+   - **401** sem token, token inválido ou expirado, refresh ausente/expirado/revogado →
+     `NAO_AUTENTICADO`. `CREDENCIAIS_INVALIDAS` continua só no login.
+   - **403** papel não permite → `SEM_PERMISSAO`. `CAMPO_NAO_EDITAVEL` continua no `PATCH` de paciente.
+   - **404** recurso inexistente, sem permissão de ver (D20.5) ou rota inexistente → `NAO_ENCONTRADO`.
+   - **500** → `ERRO_INTERNO` (D23).
+2. **400** `ENTRADA_INVALIDA` traz `erro.campos: [{ "caminho": "endereco.cep", "mensagem": "..." }]`.
+3. **Objeto `consulta`**, igual em toda rota de consultas:
+   `{ id, paciente: { id, nome }, dentista: { id, nome }, procedimento: { id, nome }, inicio, fim,
+   status, observacao, criadoEm, canceladoEm, canceladoPor, justificativa }`.
+4. Onde o contrato escreve só `"paciente"` (`consultasForaDaGrade`, `CONSULTAS_NO_PERIODO`), o
+   valor é `{ id, nome }`.
+5. Toda data com hora na resposta sai no fuso de São Paulo (`…-03:00`).
+
+**Por quê:**
+1. Sem `codigo` fixo o front não distingue "sessão expirou" (renovar o token) de "sem permissão"
+   (mostrar aviso).
+2. O front precisa saber qual campo do formulário marcar.
+3. e 4. Sem formato único, cada rota inventaria o seu; com nome junto do id, a agenda se monta
+   com uma chamada só.
+5. A clínica e os pacientes leem horário local; o exemplo do `api.md` já usava `-03:00`.
+
+**Alternativas descartadas:**
+- *Só o status HTTP, sem `codigo` nos erros genéricos:* quebraria a regra da D20.4 (formato único).
+- *Consulta só com IDs (`pacienteId`, `dentistaId`):* três chamadas a mais por linha da agenda.
+- *Datas de saída em UTC (`Z`):* o front teria que converter tudo.
+
+## D25 — Regras de implementação não fixadas antes
+
+> **Status: fechada.**
+> Pontos que D1–D24 deixavam abertos e que o código precisa decidir. Contrato em `docs/api.md`.
+
+**O quê:**
+1. **CPF válido** = 11 dígitos com dígitos verificadores corretos; recusa sequência repetida
+   (`11111111111`).
+2. **Bloqueio do funcionário:** as falhas contam a partir do último `SUCESSO`, `REDEFINICAO` ou
+   do fim do último bloqueio. Tentativa durante o bloqueio → 423, gravada como `FALHA`, sem
+   estender os 15 min. Senha **certa** durante o bloqueio (cliente ou funcionário) → 423.
+3. **Limite de códigos:** janelas móveis (últimos 60 min e últimas 24 h), somando todas as
+   finalidades do par (identificador, tipo).
+4. **Recuperação** de CPF sem `Login`, e-mail inexistente ou funcionário inativo → 202 igual,
+   grava linha de código sem envio (`destino` NULL).
+5. **Autocadastro de CPF que já tem login:** grava linha de código (conta no limite) com código
+   aleatório nunca enviado e `destino` NULL; ao telefone cadastrado vai só o SMS de orientação.
+6. **Logout:** o access token carrega o `sessaoId` (id do `RefreshToken`); o logout revoga essa
+   sessão e apaga o cookie.
+7. **`PATCH` de paciente com `cpf`** → 422 `CPF_IMUTAVEL` para qualquer papel, conferido antes
+   do 403 `CAMPO_NAO_EDITAVEL`.
+8. **`dias-disponiveis`:** para C conta só horários no passo; para R/D conta também janelas de encaixe.
+9. **Procedimento inexistente ou inativo** em `horarios-livres` e `dias-disponiveis` → 404.
+10. **Ordem das checagens em `POST /api/consultas`** (o primeiro erro vence): entrada (400) →
+    paciente, dentista e procedimento existem e são visíveis (404) → `DENTISTA_INATIVO` /
+    `PROCEDIMENTO_INATIVO` → `HORARIO_NO_PASSADO` (C) → `FORA_DOS_5_MINUTOS` (R/D) →
+    `FORA_DA_GRADE` → `FORA_DO_PASSO` (C) → `HORARIO_BLOQUEADO` → sobreposição (banco).
+    "No passado" = `inicio` antes de agora.
+11. **Remarcação feita pela clínica** manda **um** SMS ao paciente com o horário novo.
+12. **`ADMIN_INICIAL_*`** são conferidas só pelo seed, não pela subida do servidor.
+13. **Postgres de desenvolvimento:** `POSTGRES_USER` e `POSTGRES_PASSWORD` em `backend/.env`,
+    lidas pelo Docker Compose.
+
+**Por quê:**
+1. Erro de digitação na recepção criaria um CPF errado UNIQUE, que travaria o verdadeiro dono
+   no autocadastro.
+2. Sem recomeçar a contagem, a primeira falha depois do bloqueio travaria de novo na hora; e
+   tentativas durante o bloqueio estendendo o prazo deixariam um atacante travar a recepção
+   para sempre (o motivo da D19).
+3. Janela móvel não deixa 5 pedidos às 23:59 e mais 5 à 00:01. Somar as finalidades impede
+   contornar o limite trocando de rota.
+4. e 5. Mesmo princípio da D5 e da D19: o comportamento não pode revelar se a conta existe.
+6. O cookie só vai para `/api/auth/refresh` (D19), então a rota de logout não o recebe.
+7. CPF é imutável para todos; a resposta não deve depender do papel de quem tentou.
+8. A recepção encaixa fora do passo (D12.3); um dia com só janela de encaixe tem vaga para ela.
+9. O cliente não vê procedimento inativo (`docs/api.md`); 404 é a mesma resposta para os dois casos.
+10. Erros de entrada e de permissão antes dos de regra; checagens baratas antes da transação.
+11. Remarcação é uma ação só para o paciente; dois SMS (cancelada + nova) confundiriam.
+12. O servidor não usa essas variáveis; exigir na subida obrigaria a mantê-las em produção.
+13. Senha do banco fora do código e do git (D8).
+
+**Alternativas descartadas:**
+- *CPF só com formato (11 dígitos):* aceita erro de digitação.
+- *Bloqueio do funcionário estendido a cada tentativa:* trava a recepção (acima).
+- *Limite por dia de calendário:* acima.
+- *Cookie de refresh com path `/api/auth`:* também resolveria o logout, mas mandaria o cookie a
+  rotas que não precisam dele.
+- *Dois SMS na remarcação:* acima.
+
 ## Próximo
 
-1. Spec consolidada do backend (resumo de D1–D23 + `docs/api.md`) para revisão do grupo.
-2. Plano de implementação.
+1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
+2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa.
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a

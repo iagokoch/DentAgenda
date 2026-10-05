@@ -11,7 +11,8 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
 - **IDs:** UUID.
 - **Autenticação:** `Authorization: Bearer <accessToken>`. O refresh token anda só no cookie
   `httpOnly` (D19).
-- **CPF** trafega só com dígitos (`12345678900`); **telefone** só com dígitos, com DDD.
+- **CPF** trafega só com dígitos (`12345678900`); **telefone** só com dígitos, com DDD. CPF com
+  dígito verificador errado ou sequência repetida → 400 `ENTRADA_INVALIDA` (D25.1).
 
 ### Erros
 
@@ -21,18 +22,55 @@ Todo erro tem o mesmo formato:
 { "erro": { "codigo": "HORARIO_INDISPONIVEL", "mensagem": "Texto para exibir ao usuário." } }
 ```
 
-| Status | Quando                                                       |
-|--------|--------------------------------------------------------------|
-| 400    | Entrada inválida (validação Zod). `codigo: "ENTRADA_INVALIDA"` |
-| 401    | Sem login, token expirado ou credencial errada              |
-| 403    | Logado, mas o papel não permite (D10)                        |
-| 404    | Recurso não existe — ou existe e o usuário não pode vê-lo    |
-| 409    | Conflito de horário                                          |
-| 422    | Regra de negócio violada (ex.: justificativa obrigatória)    |
-| 423    | Conta bloqueada (D5, D19)                                    |
-| 429    | Limite de pedidos de código atingido (D19)                   |
+| Status | Quando                                                       | `codigo` genérico (D24)          |
+|--------|--------------------------------------------------------------|----------------------------------|
+| 400    | Entrada inválida (validação Zod ou JSON malformado)          | `codigo: "ENTRADA_INVALIDA"`     |
+| 401    | Sem login, token inválido/expirado, refresh inválido         | `codigo: "NAO_AUTENTICADO"`      |
+| 403    | Logado, mas o papel não permite (D10)                        | `codigo: "SEM_PERMISSAO"`        |
+| 404    | Recurso não existe — ou existe e o usuário não pode vê-lo — ou rota inexistente | `codigo: "NAO_ENCONTRADO"` |
+| 409    | Conflito de horário                                          | (específico da rota)             |
+| 422    | Regra de negócio violada (ex.: justificativa obrigatória)    | (específico da rota)             |
+| 423    | Conta bloqueada (D5, D19)                                    | (específico da rota)             |
+| 429    | Limite de pedidos de código atingido (D19)                   | (específico da rota)             |
+| 500    | Erro inesperado; detalhe só no log do servidor (D23)         | `codigo: "ERRO_INTERNO"`         |
+
+Rotas com código próprio para 400/401/403 (`CODIGO_INVALIDO`, `CREDENCIAIS_INVALIDAS`,
+`CAMPO_NAO_EDITAVEL`) usam o próprio; as demais usam o genérico.
+
+O 400 `ENTRADA_INVALIDA` lista os campos (D24):
+
+```json
+{ "erro": { "codigo": "ENTRADA_INVALIDA", "mensagem": "...",
+            "campos": [{ "caminho": "endereco.cep", "mensagem": "..." }] } }
+```
 
 *404 para "existe mas não pode ver":* responder 403 confirmaria que o recurso existe.
+
+### Objetos de resposta (D24)
+
+**`consulta`** — igual em toda rota de consultas:
+
+```json
+{
+  "id": "uuid",
+  "paciente": { "id": "uuid", "nome": "Marcos Oliveira" },
+  "dentista": { "id": "uuid", "nome": "Ana Costa" },
+  "procedimento": { "id": "uuid", "nome": "Limpeza" },
+  "inicio": "2026-10-05T09:00:00-03:00",
+  "fim": "2026-10-05T10:00:00-03:00",
+  "status": "CONFIRMADA",
+  "observacao": null,
+  "criadoEm": "2026-10-01T14:12:00-03:00",
+  "canceladoEm": null,
+  "canceladoPor": null,
+  "justificativa": null
+}
+```
+
+**`paciente`** dentro de outros objetos (`consultasForaDaGrade`, `CONSULTAS_NO_PERIODO`):
+`{ "id", "nome" }`.
+
+**Datas:** toda data com hora na resposta sai no fuso de São Paulo (`-03:00`).
 
 ### Objeto `usuario`
 
@@ -83,7 +121,9 @@ Todas as rotas abaixo são públicas, exceto `logout` e `eu`.
 
 - **200** igual ao do cliente; `usuario` traz `categoria` e `isAdmin`. Refresh de 12 h.
 - **401** `CREDENCIAIS_INVALIDAS`. Funcionário com `ativo = false` também recebe 401.
-- **423** `CONTA_BLOQUEADA` — 15 min a partir da 3ª falha.
+- **423** `CONTA_BLOQUEADA` — 15 min a partir da 3ª falha. Tentativas durante o bloqueio não
+  estendem o prazo; depois dele a contagem recomeça (D25.2). Senha certa durante o bloqueio
+  também recebe 423, aqui e no login de cliente.
 
 ### `POST /api/auth/refresh` (D9, D19)
 
@@ -95,7 +135,8 @@ Sem corpo. Exige o cookie de refresh **e** o cabeçalho `X-DentAgenda-Refresh: 1
 
 ### `POST /api/auth/logout`
 
-- **204** revoga a sessão atual e apaga o cookie.
+- **204** revoga a sessão atual e apaga o cookie. A sessão vem do `sessaoId` dentro do access
+  token, porque o cookie só é enviado para a rota de refresh (D25.6).
 
 ### `GET /api/auth/eu`
 
@@ -113,7 +154,8 @@ Sem corpo. Exige o cookie de refresh **e** o cabeçalho `X-DentAgenda-Refresh: 1
   - CPF novo → código por SMS no telefone informado (finalidade `CADASTRO`).
   - CPF de paciente sem login → código no telefone **que a clínica tem** (finalidade `ATIVACAO`).
   - CPF que já tem login → SMS orientando a usar "Recuperar senha".
-- **429** `LIMITE_DE_CODIGOS` — mais de 3 pedidos na última hora ou 5 no dia.
+- **429** `LIMITE_DE_CODIGOS` — mais de 3 pedidos nos últimos 60 min ou 5 nas últimas 24 h,
+  somando autocadastro e recuperação do mesmo CPF (D25.3).
 
 **2. `POST /api/auth/cliente/cadastro/confirmar`**
 
@@ -144,7 +186,8 @@ Sem corpo. Exige o cookie de refresh **e** o cabeçalho `X-DentAgenda-Refresh: 1
 **1. `POST /api/auth/funcionario/recuperacao/codigo`** — `{ "email": "..." }`
 
 - **202** sempre: *"Se os dados estiverem corretos, enviamos um código."* Cliente recebe por
-  SMS; funcionário, por e-mail (simulados no MVP — D16).
+  SMS; funcionário, por e-mail (simulados no MVP — D16). CPF sem `Login`, e-mail inexistente e
+  funcionário inativo recebem a mesma resposta, sem envio (D25.4).
 - **429** `LIMITE_DE_CODIGOS`.
 
 **2. `POST /api/auth/cliente/recuperacao/confirmar`** — `{ "cpf", "codigo", "novaSenha" }`
@@ -213,7 +256,8 @@ Envia só os campos a mudar.
 - **R:** qualquer campo, exceto `cpf`.
 - **C:** só `email`, `convenio`, `nascimento`. Outro campo no corpo → **403** `CAMPO_NAO_EDITAVEL`.
 
-`cpf` nunca muda → **422** `CPF_IMUTAVEL`.
+`cpf` nunca muda → **422** `CPF_IMUTAVEL`, para qualquer papel; conferido antes do
+`CAMPO_NAO_EDITAVEL` (D25.7).
 
 ### `PUT /api/pacientes/{id}/endereco` · `DELETE /api/pacientes/{id}/endereco` (D18)
 
@@ -352,7 +396,7 @@ Apaga a linha — nada aponta para bloqueio. **204**.
 
 Cálculo (D12): faixas da grade − bloqueios − consultas não canceladas. Horário que já passou
 nunca aparece. `dentistaId` opcional (ausente = todos os dentistas ativos); para **D** é sempre
-ele mesmo.
+ele mesmo. Procedimento inexistente ou inativo → **404** `NAO_ENCONTRADO` (D25.9).
 
 ### `GET /api/horarios-livres` — um dia (`data=AAAA-MM-DD`)
 
@@ -375,7 +419,8 @@ encaixe fora do passo (múltiplos de 5 min — D22):
 ### `GET /api/dias-disponiveis` — um mês (`mes=AAAA-MM`)
 
 Dias do mês com pelo menos um horário livre para o procedimento, para o calendário marcar
-dias sem vaga. **200** `{ "dias": ["2026-10-05", "2026-10-06"] }`.
+dias sem vaga. **200** `{ "dias": ["2026-10-05", "2026-10-06"] }`. Para **C** conta só horário
+no passo; para **R/D** conta também janela de encaixe (D25.8).
 
 ---
 
@@ -426,8 +471,13 @@ dias sem vaga. **200** `{ "dias": ["2026-10-05", "2026-10-06"] }`.
   - **C** → **422** `HORARIO_NO_PASSADO`.
   - **R/D** podem registrar consulta já acontecida (urgência sem agendamento). Nesse caso
     grade e bloqueio **não** são checados — o atendimento já aconteceu —, mas a sobreposição
-    continua (409). Nasce `CONFIRMADA` e aparece em pendentes (D22).
+    continua (409). Nasce `CONFIRMADA` e aparece em pendentes (D22). "No passado" = `inicio`
+    antes de agora.
 - **201** a consulta criada.
+- **Ordem das checagens** — o primeiro erro vence (D25.10): entrada (400) → paciente, dentista e
+  procedimento existem e são visíveis (404) → `DENTISTA_INATIVO` / `PROCEDIMENTO_INATIVO` →
+  `HORARIO_NO_PASSADO` (C) → `FORA_DOS_5_MINUTOS` (R/D) → `FORA_DA_GRADE` → `FORA_DO_PASSO` (C)
+  → `HORARIO_BLOQUEADO` → sobreposição.
 
 ### `GET /api/consultas`
 
@@ -466,6 +516,7 @@ nova (com todas as regras do `POST /api/consultas`). Se qualquer parte falhar, n
 
 - **201** `{ "cancelada": {...}, "nova": {...} }`.
 - Erros: os do cancelamento e os da criação.
+- Remarcação feita pela clínica → **um** SMS ao paciente com o horário novo (D25.11).
 
 ### `POST /api/consultas/{id}/realizacao` (D10, D13)
 
