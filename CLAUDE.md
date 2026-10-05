@@ -76,8 +76,10 @@ npm run dev              # API em http://localhost:<PORTA do .env>/api
 src/
   api/          cliente-http (token em memória, refresh no 401, ErroDaApi), api.js (instância
                 única), mensagens.js (texto dos erros de entrada)
-  sessao/       SessaoProvider (restaura pelo refresh), useSessao, RotaProtegida/RotaPublica
+  sessao/       SessaoProvider (restaura pelo refresh), sessao-contexto.js (useSessao),
+                rotas.jsx (RotaProtegida/RotaPublica)
   components/   AppShell, AuthLayout, Brand, Icon
+  assets/       consultorio.png (foto do painel do login)
   pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, PerfilPaciente, Agenda
   index.css     Tokens de design
   styles.css    Estilos das páginas

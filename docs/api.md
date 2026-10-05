@@ -1,7 +1,9 @@
 # Contrato da API — DentAgenda
 
 Contrato entre o backend e o front. As decisões por trás de cada regra estão em
-`docs/documentacao.md` (número entre parênteses). Ainda não implementado.
+`docs/documentacao.md` (número entre parênteses). Implementado até agora: todas as rotas de
+Autenticação e de Procedimentos; o andamento das demais está nos checkboxes de
+`docs/plano-implementacao.md`.
 
 ## Convenções (D20)
 
