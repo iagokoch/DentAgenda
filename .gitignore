@@ -23,6 +23,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Variáveis de ambiente — credenciais do banco, segredo do JWT (D8, D9)
+# Sem barra no início: vale para a raiz e para backend/
+.env
+.env.*
+!.env.example
+
 #CLAUDE
 
 CLAUDE.local.md

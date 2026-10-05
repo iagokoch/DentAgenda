@@ -12,12 +12,18 @@ Confira antes de assumir qualquer coisa:
   Todas as ações são simuladas — não há chamada de rede em lugar nenhum.
   É um exemplo básico e **será refeito** a partir dos requisitos e do backend; não
   trate o que ele faz hoje (ex.: login por e-mail) como requisito.
-- **Backend: não existe.** Nenhum Express, nenhum Prisma, nenhum `schema.prisma`,
-  nenhum MySQL. O `package.json` tem só as três dependências do front.
-  `backend/schema` é um rascunho em texto, ainda sendo alinhado às decisões D1.1–D5;
+- **Backend: não existe.** Nenhum framework HTTP, nenhum Prisma, nenhum `schema.prisma`,
+  nenhum banco instalado. O `package.json` tem só as três dependências do front.
+  `backend/schema` é um rascunho em texto, ainda sendo alinhado às decisões D1–D16;
   em caso de conflito, vale `docs/documentacao.md`.
-- A stack pretendida (Node + Express + Prisma + MySQL + JWT) é **intenção declarada**,
-  ainda não justificada nem instalada.
+- **Stack decidida, ainda não instalada:** PostgreSQL (D6), TypeScript no Node (D7),
+  Prisma, pasta `backend/` com `package.json` próprio e Postgres em Docker Compose (D8),
+  JWT curto + refresh em cookie httpOnly (D9). MySQL foi descartado — ver D6.
+- **Framework HTTP ainda não escolhido** (Express, Fastify ou NestJS). Não instale nenhum
+  antes de a escolha estar registrada em `docs/documentacao.md`.
+- **Figma** (`https://www.figma.com/design/b3V1rT0BRjqm6gchOxpRhm/dentagendaSistema`):
+  só as 8 primeiras páginas são escopo. O MCP do Figma exige acesso de **edição** ao
+  arquivo, até para leitura.
 
 ## Comandos
 
@@ -41,7 +47,8 @@ src/
 backend/
   schema        Rascunho do modelo em texto (ainda não é Prisma)
 docs/
-  documentacao.md   Registro de decisões de arquitetura e modelagem
+  documentacao.md        Registro de decisões de arquitetura e modelagem (D1, D2, ...)
+  pendencias-colzani.md  Perguntas que só a clínica responde
 ```
 
 ## Escopo do MVP do backend
@@ -50,7 +57,8 @@ Definido pelo README (seção "Próximos passos sugeridos"), que é o contrato d
 
 1. API de autenticação
 2. Rotas protegidas por perfil (dentista/recepção vs. cliente)
-3. CRUD de consultas (criar, ver, editar, cancelar)
+3. CRUD de consultas (criar, ver, editar, cancelar). "Editar" data/hora é cancelar +
+   criar nova (D14); não existe update de horário na mesma consulta.
 
 **Fora do MVP:** aba Documentos (upload de arquivo) e aba Financeiro. Continuam como
 placeholder no front (`TabPlaceholder` em `PerfilPaciente.jsx`).
@@ -71,14 +79,20 @@ placeholder no front (`TabPlaceholder` em `PerfilPaciente.jsx`).
 
 ## Armadilhas conhecidas no front-end
 
-Coisas que já cravaram decisão de modelagem sem ninguém ter decidido:
+Coisas que já cravaram decisão de modelagem sem ninguém ter decidido. Entre parênteses,
+a decisão que agora vale no lugar:
 
 - `Agenda.jsx` — `procedures` é um objeto com preço em string (`'180,00'`), hardcoded.
+  (D11: `precoCentavos` inteiro + `duracaoMinutos`.)
 - `Agenda.jsx` — `times` é uma lista fixa 08:00–15:00 com `11:30` e `12:00` `disabled`
-  no código; não há noção de disponibilidade real.
+  no código; não há noção de disponibilidade real. (D12: grade semanal + bloqueios.)
 - `Agenda.jsx` — `confirm()` sempre confirma. Não há conflito, erro nem validação.
+  (D6/D13: conflito recusado pelo banco.)
 - `PerfilPaciente.jsx` — dentista é string livre (`'Dr. Silva'`, `'Dra. Ana Costa'`).
+  (D10: `Funcionario` com categoria DENTISTA.)
 - `PerfilPaciente.jsx` — status da consulta só tem `REALIZADA` e `CANCELADA`.
+  (D13: falta `CONFIRMADA`.)
 - `AppShell.jsx` — o profissional logado é `Dr. Silva` hardcoded; não existe conceito
-  de papel/perfil em lugar nenhum do código.
-- `Cadastro.jsx` — cria conta com e-mail e senha apenas.
+  de papel/perfil em lugar nenhum do código. (D10.)
+- `Cadastro.jsx` — cria conta com e-mail e senha apenas. (D1.1: login por CPF; D15:
+  CPF já cadastrado ativa por SMS.)
