@@ -28,6 +28,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D20  | Convenções da API e rotas de autenticação       | Fechada                      |
 | D21  | Rotas de cadastro                               | Fechada                      |
 | D22  | Rotas de horários livres e consultas            | Fechada                      |
+| D23  | Estrutura do código, erros, testes e ambiente   | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -868,10 +869,95 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
 - *Transação `SERIALIZABLE` em vez da trava:* também resolve, mas falha com erro de
   serialização que o código teria que repetir; a trava só faz a segunda transação esperar.
 
+## D23 — Estrutura do código, erros, testes e ambiente
+
+> **Status: fechada.**
+
+**O quê:**
+
+*Estrutura* (detalha a D17):
+```
+backend/
+  docker-compose.yml   Postgres de desenvolvimento e de teste
+  .env.example         nomes das variáveis, sem valores
+  prisma/
+    schema.prisma
+    migrations/        SQL à mão para exclusion constraints e CHECKs (D6, D18)
+    seed.ts            cria o primeiro admin
+  src/
+    app.ts             monta o Express sem abrir porta
+    server.ts          abre a porta
+    config/env.ts      valida as variáveis com Zod
+    compartilhado/     erros, autenticação, papéis, validação, mensageria, relógio
+    modulos/<dominio>/ <dominio>.rotas.ts · .controller.ts · .service.ts · .schemas.ts · .test.ts
+```
+
+*Nomes no código em português* (`Consulta`, `cancelarConsulta`, `horariosLivres`). Termos do
+framework (`req`, `res`, `middleware`) ficam como são.
+
+*Erros:* um middleware só traduz tudo para o formato do `docs/api.md`:
+- `ErroDeNegocio` (status + código) → resposta direta.
+- Erro de validação Zod → 400 `ENTRADA_INVALIDA` com os campos que falharam.
+- Violação de exclusion constraint (Postgres `23P01`) → 409; o nome da constraint escolhe o
+  código (`HORARIO_INDISPONIVEL` ou `PACIENTE_COM_CONSULTA_NO_HORARIO`).
+- Qualquer outro → 500 `ERRO_INTERNO` com mensagem genérica; o stack trace vai só para o log.
+
+*Log:* pino, com `senha`, `novaSenha`, `codigo`, `cpf`, `authorization` e `cookie` trocados por
+`[OCULTO]` antes de gravar.
+
+*Testes:*
+- **TDD:** cada regra deste documento vira um teste que falha antes do código que a implementa.
+- Vitest + Supertest contra o banco `dentagenda_test`, no mesmo Docker.
+- Arquivos de teste rodam em série; o banco é limpo antes de cada arquivo.
+- **Relógio injetável:** o código pede "agora" a um relógio, não a `Date.now()`, para testar a
+  regra de 24 h, pendentes e expiração de código sem esperar o tempo passar.
+- **Critério de pronto:** todo código de erro listado em `docs/api.md` tem pelo menos um teste.
+
+*Ambiente:*
+- Variáveis: `DATABASE_URL`, `DATABASE_URL_TESTE`, `JWT_SEGREDO`, `CODIGO_HMAC_SEGREDO`,
+  `NODE_ENV`, `PORTA`, `ENVIADOR_MENSAGEM`, e as do primeiro admin: `ADMIN_INICIAL_EMAIL`,
+  `ADMIN_INICIAL_NOME`, `ADMIN_INICIAL_CPF`, `ADMIN_INICIAL_CATEGORIA`, `ADMIN_INICIAL_CRO`
+  (só se for dentista).
+- `config/env.ts` recusa subir se faltar variável, e recusa `ENVIADOR_MENSAGEM=log` com
+  `NODE_ENV=production` (D16).
+- Scripts: `dev`, `build`, `start`, `test`, `lint`, `typecheck`, `db:migrate`, `db:seed`.
+- `vite.config.js` do front ganha proxy de `/api` para o backend (D19).
+
+*Primeiro admin:* `npm run db:seed` cria o admin com os dados das variáveis acima,
+`dataInicio` = hoje e senha aleatória. Ele define a senha por "Recuperar senha" (mesmo fluxo da
+D21). Se já existir algum admin, o seed não faz nada.
+
+*Swagger:* documentação navegável em `/api/docs`, gerada a partir dos schemas Zod. Só fora de
+produção. `docs/api.md` continua sendo o contrato revisado pelo grupo; o Swagger é para testar
+rotas no navegador.
+
+**Por quê:**
+- *`app.ts` separado de `server.ts`:* o Supertest testa o app sem abrir porta.
+- *Português:* domínio, documentação e contrato estão em português; traduzir no código cria
+  dois vocabulários para a mesma coisa.
+- *Middleware único de erro:* o formato de erro é o mesmo em todas as rotas sem cada controller repetir.
+- *Log sem dado sensível:* CPF é dado pessoal (LGPD) e senha/código em log é credencial vazada.
+- *Banco real nos testes:* as regras principais (sobreposição, CHECKs) existem só no Postgres (D6).
+- *Testes em série:* mais simples que um banco por worker; o volume de testes do projeto não
+  justifica o paralelismo.
+- *Seed:* sem admin, ninguém cria funcionário. O seed não expõe rota nenhuma.
+- *Swagger só fora de produção:* não expor o mapa da API publicamente.
+
+**Alternativas descartadas:**
+- *Nomes em inglês:* acima.
+- *Rota pública de setup inicial:* a primeira pessoa a chamar viraria admin.
+- *Código antes dos testes:* risco de regra sem teste.
+- *Sem Swagger:* preterido pelo grupo.
+- *Banco em memória/SQLite nos testes:* não tem exclusion constraint.
+
+**A confirmar na implementação:** a biblioteca que gera o OpenAPI a partir do Zod precisa ser
+compatível com a versão do Zod instalada — conferir na documentação atual antes de instalar.
+
 ## Próximo
 
-1. Design seção 4 de 4: tratamento de erros, testes e estrutura de pastas.
-2. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
+1. Spec consolidada do backend (resumo de D1–D23 + `docs/api.md`) para revisão do grupo.
+2. Plano de implementação.
+3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
-3. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
+4. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
    de edição ao arquivo, e o MCP do Figma exige esse acesso.

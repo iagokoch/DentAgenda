@@ -71,6 +71,8 @@ placeholder no front (`TabPlaceholder` em `PerfilPaciente.jsx`).
 - **Toda decisão de modelagem ou de contrato vai para `docs/documentacao.md`** antes
   de virar código — com o quê, por quê e a alternativa descartada. O projeto é em
   grupo; decisão não registrada é decisão que o outro dev não consegue contestar.
+- **Backend em TDD, nomes em português** (D23): teste que falha antes do código; todo código de
+  erro de `docs/api.md` tem pelo menos um teste.
 - **Não invente campo sem justificativa.** Se não dá pra explicar por que a coluna
   existe e o que quebra sem ela, ela não entra no schema.
 - **Cuidado com dado do protótipo.** Os valores em `Agenda.jsx` (tabela de preços,
