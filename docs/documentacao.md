@@ -8,22 +8,23 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D1   | Separação entre Cliente e Login                 | Fechada                      |
 | D1.1 | Identificação e contato do Cliente              | Fechada (pendência Colzani)  |
 | D2   | Funcionário autentica pela própria tabela       | Fechada quanto à autenticação|
-| D3   | Autenticação em dois endpoints                  | Parcial                      |
-| D4   | `pacienteDesde`                                 | Parcial                      |
-| D5   | Registro de tentativas de login                 | Parcial                      |
+| D3   | Autenticação em dois endpoints                  | Fechada                      |
+| D4   | `pacienteDesde`                                 | Fechada                      |
+| D5   | Registro de tentativas de login                 | Fechada                      |
 | D6   | Banco de dados: PostgreSQL                      | Fechada                      |
 | D7   | Linguagem: TypeScript no Node                   | Fechada                      |
 | D8   | Repositório e ambiente de desenvolvimento       | Fechada                      |
-| D9   | Sessão: JWT curto + refresh revogável           | Parcial                      |
-| D10  | Papéis e administração                          | Parcial                      |
+| D9   | Sessão: JWT curto + refresh revogável           | Fechada                      |
+| D10  | Papéis e administração                          | Fechada                      |
 | D11  | Procedimento                                    | Parcial                      |
-| D12  | Disponibilidade dos dentistas                   | Parcial                      |
-| D13  | Consulta: criação e estados                     | Parcial                      |
-| D14  | Cancelamento e remarcação                       | Parcial                      |
+| D12  | Disponibilidade dos dentistas                   | Fechada                      |
+| D13  | Consulta: criação e estados                     | Fechada                      |
+| D14  | Cancelamento e remarcação                       | Fechada                      |
 | D15  | Ativação de conta de paciente já cadastrado     | Parcial                      |
 | D16  | SMS e e-mail simulados no MVP                   | Fechada                      |
 | D17  | Framework HTTP e organização do código          | Fechada                      |
 | D18  | Modelo de dados do domínio                      | Parcial                      |
+| D19  | Tabelas e regras de autenticação                | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -80,13 +81,14 @@ Tabela `LoginFuncionario` espelhando a D1 — uma tabela a mais sem nenhuma regr
 
 ## D3 — Autenticação em dois endpoints
 
-> **Status: parcial.**
+> **Status: fechada** (pendências resolvidas pela D16 e pela D19).
 
 **O quê:**
 - Login de cliente (CPF + senha) e login de funcionário (e-mail + senha) são endpoints separados. Identificador em formato inválido → erro, sem tentar autenticar.
 - CPF/e-mail inexistente e senha errada recebem a **mesma** mensagem de erro.
 - Recuperação de senha **entra no MVP**: cliente recebe código por SMS no telefone cadastrado; funcionário, por e-mail. Código de 6 dígitos, válido por 10 min, 3 tentativas.
-- Mais de 4 pedidos de código → erro e espera de 5 min.
+- ~~Mais de 4 pedidos de código → erro e espera de 5 min.~~ Substituído pela D19: no máximo
+  3 pedidos por hora e 5 por dia por identificador.
 
 **Por quê:**
 - *Endpoints separados:* cliente e funcionário precisam de regras de proteção diferentes. Todos os funcionários saem pelo mesmo IP público da clínica (NAT), então bloqueio por IP no login de funcionário travaria a recepção inteira. Endpoints separados deixam cada regra explícita, sem adivinhar o tipo de usuário pelo formato do identificador.
@@ -97,15 +99,16 @@ Tabela `LoginFuncionario` espelhando a D1 — uma tabela a mais sem nenhuma regr
 Um endpoint só, detectando o formato do identificador.
 
 **Em aberto:**
-1. Limite de pedidos de código: calcular quantos SMS um atacante dispara por CPF em 1 h e em 1 dia com a regra atual, e decidir se é aceitável (cada SMS tem custo).
-2. Endpoint de recuperação também pode vazar enumeração ("código enviado" vs. "CPF não encontrado").
-3. Onde o código de recuperação fica guardado. Cliente e funcionário recebem código — uma tabela com FK para quem?
-   A mesma pergunta aparece no código de ativação (D15) e no refresh token (D9) — decidir as três juntas.
+1. ~~Limite de pedidos de código.~~ Fechado pela D19 (a regra antiga permitia ~1.150 SMS/dia por CPF).
+2. ~~Endpoint de recuperação também pode vazar enumeração.~~ Fechado pela D19: resposta sempre igual.
+3. ~~Onde o código de recuperação fica guardado. Cliente e funcionário recebem código — uma
+   tabela com FK para quem?~~ Fechado pela D19: `CodigoVerificacao`, sem FK (decidido junto com
+   o código de ativação da D15 e o refresh token da D9).
 4. ~~Provedor de SMS e de e-mail.~~ Fechado para o MVP pela D16 (envio simulado).
 
 ## D4 — `pacienteDesde`
 
-> **Status: parcial.**
+> **Status: fechada.**
 
 **O quê:**
 `pacienteDesde` em `Cliente` significa "início do vínculo com a clínica". Paciente novo: data do cadastro. Paciente antigo (histórico em papel, anterior ao sistema): informada pela secretária. A secretária pode corrigir o valor depois.
@@ -117,17 +120,21 @@ Quem se cadastra já é paciente, mesmo que falte à primeira consulta. O histó
 Derivar da primeira consulta. Quem se cadastrou e faltou também é paciente, e o histórico em papel nunca estaria em `Consulta`.
 
 **Em aberto:**
-1. Para paciente novo o valor repete `criadoEm`. A D1.1 recusou duplicação porque o valor podia divergir — justificar por que aqui é aceitável (`criadoEm` muda algum dia?).
-2. Nulabilidade: paciente antigo que se autocadastra fica com a data do cadastro até a secretária corrigir, ou fica null? Se null, o que o null significa?
+1. ~~Para paciente novo o valor repete `criadoEm`. Justificar por que aqui é aceitável.~~
+   Fechado: não é o mesmo fato. `criadoEm` é quando a linha nasceu e nunca muda; `pacienteDesde`
+   é um dado de negócio editável. Os dois divergem exatamente no paciente antigo — por isso os dois existem.
+2. ~~Nulabilidade.~~ Fechado: **NOT NULL**, começa com a data do cadastro (autocadastro ou
+   recepção) e a recepção corrige depois. Nenhum NULL com significado escondido.
 
 ## D5 — Registro de tentativas de login
 
-> **Status: parcial.**
+> **Status: fechada** (pendências resolvidas pela D19).
 
 **O quê:**
 Tabela de eventos com uma linha por tentativa de login (cliente e funcionário): identificador digitado (texto, **sem FK**), IP, data/hora e resultado (sucesso/falha). Acertos também são gravados.
 - *Bloqueio da conta:* 3 falhas com o mesmo identificador depois do último acerto → conta bloqueada até redefinir a senha.
-- *Bloqueio por IP:* só no endpoint de cliente (ver D3).
+  Para **funcionário**, o bloqueio dura 15 min (D19).
+- ~~*Bloqueio por IP:* só no endpoint de cliente (ver D3).~~ Fora do MVP (D19).
 
 **Por quê:**
 O fato registrado é a tentativa, não a pessoa — por isso CPF inexistente também é gravado e bloqueia igual, sem permitir enumeração pelo comportamento do bloqueio. Acertos ficam gravados porque marcam o ponto a partir do qual se contam as falhas e preservam o histórico de ataque.
@@ -139,10 +146,10 @@ O fato registrado é a tentativa, não a pessoa — por isso CPF inexistente tam
 - *Bloqueio permanente desbloqueado pela secretária:* qualquer um com o CPF de um paciente travaria a conta dele e a recepção.
 
 **Em aberto:**
-1. Regra por IP: limite e janela de tempo. Precisa ser bem maior que o limite por CPF — um IP pode ser a sala de espera inteira ou milhares de clientes de operadora (CGNAT). Proposta atual (3 falhas → 5/15/30 min/24 h) bloqueia o IP com um único paciente errando 3 vezes.
-2. Identificador em uma coluna (CPF ou e-mail) ou duas? Se uma, a linha precisa saber de qual endpoint veio?
-3. Como a redefinição de senha aparece no registro, para que as falhas anteriores parem de contar.
-4. O bloqueio "até redefinir" vale também para funcionário (que recupera por e-mail)?
+1. ~~Regra por IP.~~ Fechado pela D19: fora do MVP.
+2. ~~Identificador em uma coluna ou duas?~~ Fechado pela D19: uma coluna + `tipo`.
+3. ~~Como a redefinição de senha aparece no registro.~~ Fechado pela D19: linha com resultado `REDEFINICAO`.
+4. ~~O bloqueio "até redefinir" vale também para funcionário?~~ Fechado pela D19: não, 15 min.
 
 ## D6 — Banco de dados: PostgreSQL
 
@@ -215,7 +222,7 @@ Passo de build/execução (`tsc` / `tsx`).
 
 ## D9 — Sessão: JWT curto + refresh revogável
 
-> **Status: parcial.**
+> **Status: fechada** (pendências resolvidas pela D19).
 
 **O quê:**
 O login devolve um *access token* JWT de vida curta (proposta: 15 min) e um *refresh token*
@@ -233,14 +240,13 @@ em cookie `httpOnly`. O refresh fica guardado no banco (só o hash) e pode ser r
   Foi preterida para manter a stack declarada (JWT) — motivo fraco; pode ser reaberta.
 
 **Em aberto:**
-1. Validade do refresh e se ele é trocado a cada uso (rotação).
-2. Tabela de refresh: cliente e funcionário têm sessão — mesma pergunta de FK da D3.3.
-3. CSRF: o cookie vai automaticamente em toda requisição, então o endpoint de refresh precisa
-   de proteção (`SameSite`, front e API no mesmo domínio?).
+1. ~~Validade do refresh e rotação.~~ Fechado pela D19.
+2. ~~Tabela de refresh.~~ Fechado pela D19: `RefreshToken` com FK exclusiva.
+3. ~~CSRF.~~ Fechado pela D19.
 
 ## D10 — Papéis e administração
 
-> **Status: parcial.**
+> **Status: fechada.**
 
 **O quê:**
 - Papéis: **CLIENTE** (quem tem linha em `Login`), **RECEPCIONISTA**, **DENTISTA** e **admin**.
@@ -252,9 +258,12 @@ Permissões já decididas:
 | Papel          | Pode                                                                      |
 |----------------|---------------------------------------------------------------------------|
 | Admin          | Gerenciar funcionários, procedimentos (D11) e grades semanais (D12)       |
-| Recepcionista  | Gerenciar pacientes, consultas de qualquer paciente e bloqueios (D12)     |
-| Dentista       | Ver a própria agenda                                                      |
+| Recepcionista  | Gerenciar pacientes, consultas de qualquer paciente e bloqueios (D12); marcar REALIZADA; ver pendentes (D13) |
+| Dentista       | Ver **só a própria** agenda; criar e cancelar consultas da própria agenda; cadastrar os próprios bloqueios; marcar REALIZADA nas próprias consultas |
 | Cliente        | Ver horários livres, criar e cancelar as próprias consultas               |
+
+*Dentista só na própria agenda:* ele não vê a agenda dos colegas, então também não cria nem
+cancela consulta nela.
 
 **Por quê `isAdmin` separado da categoria:**
 O dono da clínica atende como dentista e também administra. Com ADMIN como categoria ele
@@ -267,11 +276,14 @@ dele ficariam presas a uma conta diferente da que administra.
 - *Dentista e recepção com as mesmas permissões:* nenhum controle.
 
 **Em aberto:**
-1. Dentista vê a agenda dos outros dentistas? Cria/cancela consulta? Cadastra o próprio bloqueio?
-2. Quem marca a consulta como REALIZADA (D13).
+1. ~~Dentista vê a agenda dos outros? Cria/cancela consulta? Cadastra o próprio bloqueio?~~
+   Fechado: não vê; cria/cancela e bloqueia só na própria agenda (tabela acima).
+2. ~~Quem marca a consulta como REALIZADA.~~ Fechado: o dentista da consulta e a recepção — o
+   dentista marca ao terminar, a recepção corrige se ele esquecer.
 3. ~~Quem pode ver dados de saúde do paciente (dado sensível pela LGPD).~~ Fechado pela D18:
    funcionários e o próprio paciente leem e escrevem.
-4. Admin pode remover o próprio `isAdmin`? O que impede a clínica de ficar sem nenhum admin?
+4. ~~O que impede a clínica de ficar sem nenhum admin?~~ Fechado: o sistema recusa tirar o
+   `isAdmin` ou desativar o último admin ativo.
 
 ## D11 — Procedimento
 
@@ -303,7 +315,7 @@ dele ficariam presas a uma conta diferente da que administra.
 
 ## D12 — Disponibilidade dos dentistas
 
-> **Status: parcial.**
+> **Status: fechada.**
 
 **O quê:**
 - **Grade semanal** por dentista: faixas de (dia da semana, início, fim).
@@ -333,13 +345,18 @@ dele ficariam presas a uma conta diferente da que administra.
 1. ~~Feriado/clínica fechada: um bloqueio por dentista, ou bloqueio sem dentista?~~
    Fechado pela D18: um bloqueio por dentista, criados em lote.
 2. ~~Fuso horário.~~ Fechado pela D18: UTC (`timestamptz`), grade lida em `America/Sao_Paulo`.
-3. A recepção também fica presa ao passo, ou pode encaixar em qualquer minuto livre?
+3. ~~A recepção também fica presa ao passo?~~ Fechado: **a clínica (recepção e dentista) encaixa
+   em qualquer minuto livre** dentro da grade; só o paciente fica preso ao passo. Resolve os
+   buracos que o passo cria. O banco continua impedindo sobreposição (D18).
 4. ~~Bloqueio criado em cima de consulta já confirmada.~~ Fechado pela D18: o bloqueio é recusado.
-5. Grade alterada quando já existem consultas futuras fora da nova grade.
+5. ~~Grade alterada quando já existem consultas futuras fora da nova grade.~~ Fechado: a mudança
+   é aceita, nenhuma consulta é cancelada sozinha, e a resposta lista as consultas futuras que
+   ficaram fora da nova grade para a recepção resolver. *Descartados:* recusar a mudança (trava
+   o admin) e cancelar automaticamente (paciente perde a consulta sem ninguém decidir).
 
 ## D13 — Consulta: criação e estados
 
-> **Status: parcial.**
+> **Status: fechada.**
 > Substitui o esboço anterior (criado → aguardando confirmação do médico → aguardando
 > confirmação do paciente → concluída).
 
@@ -367,14 +384,15 @@ paciente (`Cliente`), dentista (`Funcionario` DENTISTA), procedimento, `inicio`,
 mantém o horário que reservou — e a exclusion constraint (D6) precisa do intervalo na própria linha.
 
 **Em aberto:**
-1. Quem marca REALIZADA (D10).
+1. ~~Quem marca REALIZADA.~~ Fechado na D10: dentista da consulta e recepção.
 2. ~~"Observações clínicas" (campo do protótipo) entra? Quem lê?~~ Fechado pela D18.
 3. ~~Registrar quem criou a consulta?~~ Fechado pela D18: não entra — nenhuma regra do MVP depende disso.
-4. Consulta CONFIRMADA com horário já passado: fica assim ou aparece como pendente para a recepção?
+4. ~~Consulta CONFIRMADA com horário já passado.~~ Fechado: um endpoint lista as consultas
+   CONFIRMADAS com `fim` no passado ("pendentes") para a recepção marcar. Nada muda sozinho.
 
 ## D14 — Cancelamento e remarcação
 
-> **Status: parcial.**
+> **Status: fechada.**
 
 **O quê:**
 - Clínica e paciente podem cancelar uma consulta CONFIRMADA.
@@ -396,10 +414,14 @@ mantém o horário que reservou — e a exclusion constraint (D6) precisa do int
 
 **Em aberto:**
 1. ~~Campos de cancelamento (quando, quem cancelou, justificativa).~~ Fechado pela D18.
-2. A clínica também precisa justificar?
-3. Paciente pode cancelar depois do horário de início? (Proposta: não.)
-4. Cancelamento com menos de 24 h tem alguma consequência além da justificativa?
-5. Paciente é avisado quando a clínica cancela? (O canal existe — D16.)
+2. ~~A clínica também precisa justificar?~~ Fechado: não. Justificativa é obrigatória só para o
+   paciente com menos de 24 h.
+3. ~~Paciente pode cancelar depois do horário de início?~~ Fechado: não. Depois do início,
+   cancelar não libera horário para ninguém e mascararia a falta. Só a clínica cancela.
+4. ~~Cancelamento com menos de 24 h tem consequência?~~ Fechado: nenhuma no MVP além da
+   justificativa — coerente com "sem limites" (D12) e "sem FALTOU" (D13).
+5. ~~Paciente é avisado quando a clínica cancela?~~ Fechado: sim, por SMS pela interface da D16
+   (simulado no MVP).
 
 ## D15 — Ativação de conta de paciente já cadastrado
 
@@ -421,13 +443,12 @@ não controla.
 - *Criar a senha direto:* qualquer um toma a conta.
 
 **Em aberto:**
-1. Enumeração: se CPF novo cria conta na hora e CPF existente dispara SMS, a resposta revela
-   quem é paciente. Proposta: o autocadastro **sempre** verifica telefone por SMS (CPF novo →
-   telefone informado; CPF existente → telefone cadastrado) e responde igual nos dois casos.
-2. CPF que já tem `Login`: mesma resposta, e o SMS orienta a recuperar a senha?
+1. ~~Enumeração no autocadastro.~~ Fechado pela D19: sempre verifica telefone por SMS e responde igual.
+2. ~~CPF que já tem `Login`.~~ Fechado pela D19: mesma resposta; o SMS orienta a recuperar a senha.
 3. Paciente trocou de telefone e a clínica tem o antigo: só a recepção resolve?
-4. Código igual ao da D3 (6 dígitos, 10 min, 3 tentativas)? Mesma tabela (D3.3)?
-5. Custo de SMS por autocadastro entra na conta da D3.1.
+   (Pergunta em `docs/pendencias-colzani.md`.)
+4. ~~Código igual ao da D3? Mesma tabela?~~ Fechado pela D19: sim, `CodigoVerificacao`.
+5. ~~Custo de SMS por autocadastro.~~ Fechado pela D19: entra no mesmo limite de 3/h e 5/dia.
 
 ## D16 — SMS e e-mail simulados no MVP
 
@@ -648,8 +669,95 @@ por engano faz o dentista atender sem saber da alergia.
 1. `dataInicio` do funcionário: nenhuma regra do sistema lê a coluna. Confirmar que é exigência
    de cadastro, não campo "por via das dúvidas".
 
+## D19 — Tabelas e regras de autenticação
+
+> **Status: fechada.**
+> Fecha as pendências de D3, D5, D9 e quase todas da D15.
+
+### Tabelas
+
+**TentativaLogin** (D5)
+
+| Coluna        | Tipo / restrição                          | Por que existe                                   |
+|---------------|-------------------------------------------|--------------------------------------------------|
+| identificador | TEXT NOT NULL, **sem FK**                 | CPF ou e-mail digitado, exista ou não (D5)        |
+| tipo          | {CLIENTE, FUNCIONARIO} NOT NULL           | Define a regra de bloqueio que se aplica          |
+| ip            | NOT NULL                                  | Histórico de ataque (D5); não há regra por IP     |
+| ocorridoEm    | timestamptz NOT NULL                      | Janela de contagem                                |
+| resultado     | {SUCESSO, FALHA, REDEFINICAO} NOT NULL    | `REDEFINICAO` zera a contagem (fecha D5.3)        |
+
+Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` ou `REDEFINICAO`.
+- **Cliente:** 3 falhas → bloqueado até redefinir a senha (D5).
+- **Funcionário:** 3 falhas → bloqueado por 15 min a partir da 3ª falha.
+
+**CodigoVerificacao** (D3, D15)
+
+| Coluna        | Tipo / restrição                               | Por que existe                                   |
+|---------------|------------------------------------------------|--------------------------------------------------|
+| identificador | TEXT NOT NULL, **sem FK**                      | No cadastro de CPF novo ainda não existe linha para apontar |
+| tipo          | {CLIENTE, FUNCIONARIO} NOT NULL                | Mesmo motivo da `TentativaLogin`                  |
+| finalidade    | {RECUPERACAO, ATIVACAO, CADASTRO} NOT NULL     | Código de recuperar senha não pode criar conta    |
+| destino       | TEXT NULL                                      | Telefone/e-mail para onde foi enviado. No `CADASTRO`, a confirmação precisa vir com o **mesmo** telefone — senão alguém recebe o código no próprio celular e cadastra outro número. NULL = nada enviado (abaixo) |
+| codigoHash    | NOT NULL                                       | HMAC com segredo do servidor: banco vazado não entrega códigos válidos |
+| criadoEm      | timestamptz NOT NULL                           | Limite de pedidos                                 |
+| expiraEm      | timestamptz NOT NULL                           | 10 min (D3)                                       |
+| tentativas    | int NOT NULL, padrão 0, `CHECK <= 3`           | 3 tentativas por código (D3)                      |
+| usadoEm       | timestamptz NULL                               | Código vale uma vez só                            |
+
+- **Limite:** no máximo **3 pedidos por hora e 5 por dia** por (identificador, tipo). Acima disso → erro.
+- **Identificador inexistente também grava linha** (sem envio, `destino` NULL). Se não gravasse,
+  o limite só disparasse para quem existe e revelaria a conta — mesmo princípio da D5.
+- Código novo invalida os códigos anteriores ainda não usados da mesma finalidade.
+
+**RefreshToken** (D9)
+
+| Coluna        | Tipo / restrição                 | Por que existe                                   |
+|---------------|----------------------------------|--------------------------------------------------|
+| loginId       | FK → Login NULL                  | Sessão de cliente                                |
+| funcionarioId | FK → Funcionario NULL            | Sessão de funcionário                            |
+| tokenHash     | UNIQUE NOT NULL                  | SHA-256 do token (aleatório, alta entropia)      |
+| criadoEm      | timestamptz NOT NULL             | —                                                |
+| expiraEm      | timestamptz NOT NULL             | Validade (abaixo)                                |
+| revogadoEm    | timestamptz NULL                 | Revogação e rotação                              |
+
+`CHECK (num_nonnulls(loginId, funcionarioId) = 1)` — toda sessão é de exatamente uma conta.
+
+*Por que aqui tem FK e nos códigos não:* a sessão sempre pertence a uma conta que já existe, e
+"derrubar todas as sessões da conta" precisa achar as linhas pela chave.
+
+### Regras
+
+**Sessão** (fecha D9.1–D9.3)
+- Access token JWT: **15 min**. Refresh: **cliente 30 dias, funcionário 12 h**.
+- **Rotação:** cada uso do refresh revoga o atual e emite um novo. Reapresentar um token já
+  revogado → **todas** as sessões daquela conta são revogadas (sinal de token roubado).
+- Todas as sessões da conta caem quando: a senha é redefinida, a conta de cliente é bloqueada
+  (D5), o funcionário é desativado (D18).
+- **Cookie:** `httpOnly`, `Secure` fora do desenvolvimento, `SameSite=Strict`, enviado só para a
+  rota de refresh. A chamada de refresh exige também um cabeçalho próprio da aplicação.
+  Consequência: front e API no mesmo site — no desenvolvimento, o Vite encaminha `/api` ao backend.
+
+**Respostas que não revelam contas** (fecha D3.2, D15.1, D15.2)
+- Recuperação e autocadastro respondem sempre: *"Se os dados estiverem corretos, enviamos um código."*
+- Autocadastro **sempre** verifica telefone por SMS: CPF novo → telefone informado;
+  CPF de paciente sem login → telefone cadastrado (D15); CPF que já tem login → SMS orientando
+  a usar "Recuperar senha".
+
+**Alternativas descartadas:**
+- *Tabela `Usuario` base unificando cliente e funcionário:* desfaria a D1 e a D2.
+- *Duas tabelas de refresh (cliente e funcionário):* duplicaria a regra de rotação.
+- *FK nos códigos:* não existe linha para apontar no cadastro de CPF novo.
+- *Refresh igual para todos (7 dias):* sessão esquecida aberta por dias no computador da recepção.
+- *Funcionário bloqueado até redefinir:* e-mail de funcionário é fácil de adivinhar, e qualquer
+  pessoa travaria a recepção.
+- *Limite antigo (4 pedidos → 5 min):* permitia ~1.150 SMS por dia por CPF.
+- *Regra por IP:* fora do MVP. **Risco aceito:** um robô pode testar muitos CPFs diferentes, 3
+  vezes cada, sem barreira global.
+
 ## Próximo
 
-1. Design seção 2: tabelas de autenticação (refresh D9, códigos D3/D15, tentativas D5).
-2. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
+1. Design seção 3: endpoints (contrato da API).
+2. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
+   D11.1, D11.3, D15.3, D18 (`dataInicio`).
+3. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
    de edição ao arquivo, e o MCP do Figma exige esse acesso.
