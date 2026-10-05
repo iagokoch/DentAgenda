@@ -242,6 +242,27 @@ describe('restrições do banco', () => {
     expect(violacao?.campos).toContain('cpf');
   });
 
+  it('recusa e-mail de funcionário com maiúscula (D28)', async () => {
+    const funcionario = await criarFuncionario({ categoria: 'RECEPCIONISTA' });
+
+    const erro = await erroDe(
+      prisma.funcionario.update({ where: { id: funcionario.id }, data: { email: 'Ana@colzani.com.br' } }),
+    );
+
+    expect(violacaoDoBanco(erro)).toMatchObject({ codigoSql: '23514', restricao: 'funcionario_email_minusculo' });
+  });
+
+  it('recusa e-mail de paciente com maiúscula e aceita paciente sem e-mail (D28)', async () => {
+    const paciente = await criarCliente();
+
+    const erro = await erroDe(
+      prisma.cliente.update({ where: { id: paciente.id }, data: { email: 'Marcos@Email.com' } }),
+    );
+
+    expect(paciente.email).toBeNull();
+    expect(violacaoDoBanco(erro)).toMatchObject({ codigoSql: '23514', restricao: 'cliente_email_minusculo' });
+  });
+
   it('devolve null para erro que não veio do banco', () => {
     expect(violacaoDoBanco(new Error('qualquer'))).toBeNull();
   });

@@ -33,6 +33,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D25  | Regras de implementação não fixadas antes       | Fechada                      |
 | D26  | Postgres do Docker na porta 5433 do host        | Fechada                      |
 | D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
+| D28  | E-mail sempre em minúsculas                     | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1099,6 +1100,31 @@ seguinte, livre em instalação padrão, e não exige mexer em nada da máquina.
 - *401 na 3ª falha e 423 só a partir da 4ª:* o paciente erra mais uma vez sem saber que já está
   bloqueado.
 - *Responder rápido para identificador inexistente:* revela quem tem conta pelo tempo de resposta.
+
+**Em aberto:** nada.
+
+## D28 — E-mail sempre em minúsculas
+
+> **Status: fechada.** Escolha do grupo na Tarefa 6 do plano.
+
+**O quê:**
+- Todo e-mail recebido pela API (login e recuperação de funcionário, cadastro e edição de
+  funcionário e de paciente) é convertido para minúsculas antes de qualquer uso.
+- O banco garante: `CHECK (email = lower(email))` em `Funcionario` e em `Cliente`
+  (migration `email_minusculo`).
+
+**Por quê:**
+O e-mail é o login do funcionário (D2). Sem normalizar, `Ana@colzani.com.br` e
+`ana@colzani.com.br` seriam contas diferentes: a funcionária digitaria com maiúscula e receberia
+"credenciais inválidas", e o UNIQUE deixaria cadastrar a mesma pessoa duas vezes. O CHECK pega o
+que não passa pela API (seed, inserção direta). No paciente o e-mail é só contato (D1.1), mas a
+regra é a mesma para não haver dois formatos no banco.
+
+**Alternativas descartadas:**
+- *Comparar sem diferenciar maiúsculas no login (`lower(email)` na consulta):* o UNIQUE continuaria
+  aceitando as duas grafias como contas diferentes.
+- *Tipo `citext` do Postgres:* exige mais uma extensão e o Prisma o trata como texto comum; o
+  CHECK resolve com o que já existe.
 
 **Em aberto:** nada.
 

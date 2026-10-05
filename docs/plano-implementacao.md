@@ -43,7 +43,8 @@ Valores copiados de D1–D23 e `docs/api.md`. Toda tarefa obedece a esta lista.
   horário → 409; "existe mas você não pode ver" → 404 (D20).
 - Datas com hora em `timestamptz` (UTC); grade em `America/Sao_Paulo`; resposta em ISO 8601 com
   fuso (`2026-10-05T14:30:00-03:00`); data sem hora `AAAA-MM-DD`; dinheiro em centavos (D18, api.md).
-- CPF e telefone só dígitos (api.md).
+- CPF e telefone só dígitos (api.md). E-mail sempre em minúsculas: usar `esquemaEmail` de
+  `compartilhado/validacao.ts` em toda entrada com e-mail; o banco tem CHECK (D28).
 - Senha: 8 a 72 caracteres, sem regra de composição; guardada em bcrypt `senhaHash` (D18, D20).
 - Access JWT: **15 min**. Refresh: **cliente 30 dias, funcionário 12 h**, rotativo, guardado como
   SHA-256 (D19).

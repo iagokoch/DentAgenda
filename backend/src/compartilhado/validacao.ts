@@ -4,6 +4,9 @@ import { cpfValido } from './cpf.ts';
 // D25.1 e api.md: só dígitos, com dígitos verificadores corretos.
 export const esquemaCpf = z.string().refine(cpfValido, { error: 'CPF inválido.' });
 
+// D28: e-mail sempre em minúsculas, na entrada e no banco.
+export const esquemaEmail = z.email().toLowerCase();
+
 // D20: 8 a 72 caracteres (72 é o limite do bcrypt), sem regra de composição.
 export const esquemaSenha = z.string().min(8).max(72);
 

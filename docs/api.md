@@ -13,6 +13,8 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
   `httpOnly` (D19).
 - **CPF** trafega só com dígitos (`12345678900`); **telefone** só com dígitos, com DDD. CPF com
   dígito verificador errado ou sequência repetida → 400 `ENTRADA_INVALIDA` (D25.1).
+- **E-mail** é convertido para minúsculas em toda rota que o recebe; `Ana@X.com` e `ana@x.com`
+  são o mesmo e-mail (D28).
 
 ### Erros
 

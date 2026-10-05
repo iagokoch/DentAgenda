@@ -164,6 +164,15 @@ describe('POST /api/auth/funcionario/login', () => {
     expect(sessao.expiraEm.getTime() - sessao.criadoEm.getTime()).toBe(30 * 24 * HORA);
   });
 
+  it('e-mail digitado com maiúsculas loga e registra a tentativa em minúsculas (D28)', async () => {
+    const recepcionista = await criarFuncionario(contexto);
+
+    const resposta = await loginFuncionario(recepcionista.email.toUpperCase(), SENHA_DE_TESTE);
+
+    expect(resposta.status).toBe(200);
+    expect(await contexto.prisma.tentativaLogin.count({ where: { identificador: recepcionista.email } })).toBe(1);
+  });
+
   it('funcionário inativo com senha certa → 401 CREDENCIAIS_INVALIDAS', async () => {
     const inativo = await criarFuncionario(contexto, { ativo: false });
 
