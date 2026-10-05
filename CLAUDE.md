@@ -147,11 +147,12 @@ a decisão que agora vale no lugar:
   (D10: `Funcionario` com categoria DENTISTA.)
 - `PerfilPaciente.jsx` — status da consulta só tem `REALIZADA` e `CANCELADA`.
   (D13: falta `CONFIRMADA`.)
-- `Inicio.jsx` — a saudação é `Bom dia, Dr. Silva!` hardcoded. (Dashboard entra na F3.)
+- `Inicio.jsx` — números, consultas do dia e lembretes são fictícios. (Dashboard entra na F3.)
 - `AppShell.jsx` — o link "Pacientes" aponta para `/pacientes/marcos-oliveira`, fixo. (F2.)
 - **Figma × decisões (F1):** as telas de login, cadastro e recuperação do Figma pedem e-mail e
   código de 4 dígitos. Valem as decisões: paciente entra por CPF (D1.1), cadastro pede CPF,
   telefone, código, nome e senha (D15), código tem 6 dígitos (D19). O visual do Figma foi mantido.
 
 Resolvidas na F1: login por e-mail (agora CPF ou e-mail), `Dr. Silva` fixo no `AppShell`
-(agora o usuário logado), cadastro só com e-mail e senha (agora D15).
+(agora o usuário logado), cadastro só com e-mail e senha (agora D15). Depois da F1: saudação e
+data do Início com o usuário e o dia reais; painel do login com "DentAgenda" e a foto do Figma.
