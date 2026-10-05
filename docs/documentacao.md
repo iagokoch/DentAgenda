@@ -32,6 +32,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D24  | Códigos de erro genéricos e objetos de resposta | Fechada                      |
 | D25  | Regras de implementação não fixadas antes       | Fechada                      |
 | D26  | Postgres do Docker na porta 5433 do host        | Fechada                      |
+| D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1072,13 +1073,42 @@ seguinte, livre em instalação padrão, e não exige mexer em nada da máquina.
 
 **Em aberto:** nada.
 
+## D27 — Login: a 3ª falha e o tempo de resposta
+
+> **Status: fechada.**
+> Encontrada na Tarefa 6 do plano; detalha D5, D19 e D25.2 sem mudar nenhuma delas.
+
+**O quê:**
+1. **A tentativa que completa 3 falhas já responde 423** `CONTA_BLOQUEADA`, e não 401. No cliente,
+   é nela que as sessões abertas são revogadas (D19).
+2. **CPF ou e-mail inexistente também passa pelo bcrypt**, comparado com um hash fictício, antes de
+   responder 401.
+3. **As falhas contam pela ordem**, e não pelo horário: entram as falhas registradas depois do
+   último `SUCESSO` ou `REDEFINICAO`, mesmo que tenham ocorrido no mesmo instante.
+
+**Por quê:**
+1. O `docs/api.md` define 423 como "3 falhas desde o último acerto", e na 3ª falha essa condição já
+   vale. O paciente fica sabendo na hora que precisa redefinir a senha, em vez de errar uma 4ª vez
+   para descobrir.
+2. Sem isso, CPF inexistente responderia em ~1 ms e CPF real em ~250 ms (bcrypt custo 12). A
+   diferença de tempo revelaria quais CPFs têm conta — a enumeração que a D5 quer evitar.
+3. Comparando horário, um acerto e uma falha no mesmo milissegundo ficariam empatados, e a falha
+   deixaria de contar.
+
+**Alternativas descartadas:**
+- *401 na 3ª falha e 423 só a partir da 4ª:* o paciente erra mais uma vez sem saber que já está
+  bloqueado.
+- *Responder rápido para identificador inexistente:* revela quem tem conta pelo tempo de resposta.
+
+**Em aberto:** nada.
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
 2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
-   progresso nos checkboxes do plano (Tarefas 0–5 feitas: ambiente, schema Prisma e migration
+   progresso nos checkboxes do plano (Tarefas 0–6 feitas: ambiente, schema Prisma e migration
    com as restrições do banco, utilitários de relógio, fuso, CPF e paginação, app Express com
-   middleware de erro, logger e mensageria, senhas, JWT e papéis).
+   middleware de erro, logger e mensageria, senhas, JWT e papéis, login com bloqueio).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a

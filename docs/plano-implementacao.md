@@ -873,13 +873,13 @@ Fábricas calculam o hash de `SENHA_DE_TESTE` **uma vez** por arquivo (bcrypt cu
 - Rotas: `POST /api/auth/cliente/login`, `POST /api/auth/funcionario/login`. Resposta 200
   `{ accessToken, usuario }` + cookie. `usuario` no formato do api.md.
 
-- [ ] **Passo 1: testes que falham** — `bloqueio-de-login.test.ts` (puro):
+- [x] **Passo 1: testes que falham** — `bloqueio-de-login.test.ts` (puro):
   - `it('cliente com 2 falhas não está bloqueado')`, `it('cliente com 3 falhas está bloqueado')`
   - `it('REDEFINICAO zera a contagem do cliente')`
   - `it('funcionário: bloqueado até 3ª falha + 15 min')`
   - `it('funcionário: falhas durante o bloqueio não estendem o prazo')`
   - `it('funcionário: depois do bloqueio, recomeça a contar do zero')`
-- [ ] **Passo 2: testes que falham** — `auth.login.test.ts`:
+- [x] **Passo 2: testes que falham** — `auth.login.test.ts`:
   - `it('cliente com CPF e senha certos → 200, accessToken, usuario tipo CLIENTE e cookie httpOnly SameSite=Strict no path /api/auth/refresh')`
   - `it('CPF inexistente e senha errada → mesma resposta 401 CREDENCIAIS_INVALIDAS')` (compara corpo)
   - `it('paciente sem Login → 401 CREDENCIAIS_INVALIDAS')`
@@ -892,8 +892,8 @@ Fábricas calculam o hash de `SENHA_DE_TESTE` **uma vez** por arquivo (bcrypt cu
   - `it('funcionário inativo com senha certa → 401 CREDENCIAIS_INVALIDAS')`
   - `it('funcionário bloqueado → 423; 15 min depois loga')`
   - `it('senha com 73 caracteres → 400 ENTRADA_INVALIDA')`
-- [ ] **Passo 3:** `npm test` → FAIL; implementar. IP vem de `req.ip`.
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 3:** `npm test` → FAIL; implementar. IP vem de `req.ip`.
+- [x] **Passo 4:** verificação padrão.
 
 **Pronto quando:** 18 testes passam; códigos `CREDENCIAIS_INVALIDAS` e `CONTA_BLOQUEADA` cobertos.
 

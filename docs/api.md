@@ -111,7 +111,8 @@ Todas as rotas abaixo são públicas, exceto `logout` e `eu`.
 
 - **200** `{ "accessToken": "...", "usuario": {...} }` + cookie de refresh (30 dias).
 - **401** `CREDENCIAIS_INVALIDAS` — CPF inexistente e senha errada recebem a mesma resposta.
-- **423** `CONTA_BLOQUEADA` — 3 falhas desde o último acerto; só sai redefinindo a senha.
+- **423** `CONTA_BLOQUEADA` — 3 falhas desde o último acerto; só sai redefinindo a senha. A
+  própria tentativa que completa as 3 falhas já recebe 423 (D27).
 
 ### `POST /api/auth/funcionario/login` (D2, D3, D5)
 
@@ -123,7 +124,7 @@ Todas as rotas abaixo são públicas, exceto `logout` e `eu`.
 - **401** `CREDENCIAIS_INVALIDAS`. Funcionário com `ativo = false` também recebe 401.
 - **423** `CONTA_BLOQUEADA` — 15 min a partir da 3ª falha. Tentativas durante o bloqueio não
   estendem o prazo; depois dele a contagem recomeça (D25.2). Senha certa durante o bloqueio
-  também recebe 423, aqui e no login de cliente.
+  também recebe 423, aqui e no login de cliente. Como no cliente, a 3ª falha já recebe 423 (D27).
 
 ### `POST /api/auth/refresh` (D9, D19)
 
