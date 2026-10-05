@@ -27,6 +27,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D19  | Tabelas e regras de autenticação                | Fechada                      |
 | D20  | Convenções da API e rotas de autenticação       | Fechada                      |
 | D21  | Rotas de cadastro                               | Fechada                      |
+| D22  | Rotas de horários livres e consultas            | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -348,7 +349,7 @@ dele ficariam presas a uma conta diferente da que administra.
    Fechado pela D18: um bloqueio por dentista, criados em lote.
 2. ~~Fuso horário.~~ Fechado pela D18: UTC (`timestamptz`), grade lida em `America/Sao_Paulo`.
 3. ~~A recepção também fica presa ao passo?~~ Fechado: **a clínica (recepção e dentista) encaixa
-   em qualquer minuto livre** dentro da grade; só o paciente fica preso ao passo. Resolve os
+   em qualquer minuto livre** (múltiplo de 5 min — D22) dentro da grade; só o paciente fica preso ao passo. Resolve os
    buracos que o passo cria. O banco continua impedindo sobreposição (D18).
 4. ~~Bloqueio criado em cima de consulta já confirmada.~~ Fechado pela D18: o bloqueio é recusado.
 5. ~~Grade alterada quando já existem consultas futuras fora da nova grade.~~ Fechado: a mudança
@@ -824,9 +825,52 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
 - *Paciente não edita nada:* liga para a clínica até para mudar o e-mail.
 - *Bloqueio em lote parcial* (cria os que dá e lista os que falharam): acima.
 
+## D22 — Rotas de horários livres e consultas
+
+> **Status: fechada.**
+> Contrato em `docs/api.md`; aqui ficam os porquês das regras que não vieram de D1–D21.
+
+**O quê:**
+1. **Remarcação atômica:** `POST /api/consultas/{id}/remarcacao` cancela a original e cria a nova
+   numa transação só. O modelo da D14 não muda: continua sendo uma consulta cancelada + uma nova.
+2. **Dias com vaga no mês:** `GET /api/dias-disponiveis` para o calendário marcar dias lotados.
+3. **Encaixe da clínica em múltiplos de 5 min** (refina a D12.3 "qualquer minuto livre").
+4. **Consulta retroativa só pela clínica:** R/D registram consulta com horário no passado
+   (urgência atendida sem agendamento). Grade e bloqueio não são checados nesse caso;
+   sobreposição continua. Nasce `CONFIRMADA` e aparece em pendentes. Paciente → 422.
+5. **Todo erro de horário é 409**, com `codigo` diferente para cada causa.
+6. **Ações como sub-recursos** (`/cancelamento`, `/realizacao`, `/remarcacao`), não `PATCH status`.
+7. **Trava da linha do dentista:** criar consulta e criar bloqueio fazem
+   `SELECT … FOR UPDATE` no `Funcionario` do dentista dentro da transação.
+
+**Por quê:**
+1. Com duas chamadas soltas, se o horário novo fosse tomado entre elas, o paciente ficaria sem
+   nenhuma consulta. E mover a consulta 30 min para frente conflitaria com a própria consulta
+   antiga (D18, paciente sem sobreposição). Dentro da transação a antiga já está `CANCELADA`
+   quando a nova é inserida, e a exclusion constraint ignora canceladas.
+2. Escolha do grupo: paciente não clica dia por dia procurando vaga.
+3. Evita início como 08:07 por erro de digitação e mantém a agenda legível.
+4. Escolha do grupo. Grade e bloqueio não são checados porque descrevem quando o dentista
+   **pode** atender; o atendimento retroativo já aconteceu. A sobreposição continua porque o
+   dentista não atendeu dois pacientes ao mesmo tempo.
+5. Para o front a ação é sempre a mesma (escolher outro horário); o `codigo` explica o motivo.
+6. Cada ação tem regras e campos próprios (justificativa, 24 h, "só depois do início"). Um
+   `PATCH status` genérico misturaria todas num lugar só.
+7. A exclusion constraint compara linhas de **uma** tabela. Sem a trava, um bloqueio e uma
+   consulta criados no mesmo instante passariam os dois pela checagem um do outro.
+
+**Alternativas descartadas:**
+- *Front remarca com duas chamadas:* acima.
+- *Calendário sem marcar dias:* preterido pelo grupo.
+- *Encaixe em qualquer minuto:* acima.
+- *Só horário futuro para todos:* preterido pelo grupo — urgência sem agendamento ficaria fora do sistema.
+- *Ligar a consulta nova à cancelada* (`remarcadaDe`): nenhuma regra do MVP lê esse vínculo.
+- *Transação `SERIALIZABLE` em vez da trava:* também resolve, mas falha com erro de
+  serialização que o código teria que repetir; a trava só faz a segunda transação esperar.
+
 ## Próximo
 
-1. Design seção 3, parte 2, bloco B: horários livres e consultas.
+1. Design seção 4 de 4: tratamento de erros, testes e estrutura de pastas.
 2. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 3. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso

@@ -340,3 +340,150 @@ tiver consulta CONFIRMADA no período, nenhum bloqueio é criado.
 ### `DELETE /api/bloqueios/{id}`
 
 Apaga a linha — nada aponta para bloqueio. **204**.
+
+---
+
+## Horários livres (`disponibilidade`)
+
+| Rota                                                                 | Quem      |
+|----------------------------------------------------------------------|-----------|
+| `GET /api/horarios-livres?procedimentoId=&data=&dentistaId=`         | R, D, C   |
+| `GET /api/dias-disponiveis?procedimentoId=&mes=&dentistaId=`         | R, D, C   |
+
+Cálculo (D12): faixas da grade − bloqueios − consultas não canceladas. Horário que já passou
+nunca aparece. `dentistaId` opcional (ausente = todos os dentistas ativos); para **D** é sempre
+ele mesmo.
+
+### `GET /api/horarios-livres` — um dia (`data=AAAA-MM-DD`)
+
+**C** recebe só os horários no passo da duração do procedimento:
+
+```json
+{ "horarios": [{ "dentistaId": "uuid", "inicio": "2026-10-05T08:00:00-03:00" }] }
+```
+
+**R/D** recebem os mesmos `horarios` **mais** as janelas livres onde cabe o procedimento, para
+encaixe fora do passo (múltiplos de 5 min — D22):
+
+```json
+{
+  "horarios": [...],
+  "janelasLivres": [{ "dentistaId": "uuid", "inicio": "...T08:30:00-03:00", "fim": "...T10:00:00-03:00" }]
+}
+```
+
+### `GET /api/dias-disponiveis` — um mês (`mes=AAAA-MM`)
+
+Dias do mês com pelo menos um horário livre para o procedimento, para o calendário marcar
+dias sem vaga. **200** `{ "dias": ["2026-10-05", "2026-10-06"] }`.
+
+---
+
+## Consultas (`consultas`)
+
+| Rota                                                          | Quem      |
+|---------------------------------------------------------------|-----------|
+| `POST /api/consultas`                                         | R, D, C   |
+| `GET /api/consultas?de=&ate=&dentistaId=&pacienteId=&status=` | R, D, C   |
+| `GET /api/consultas/pendentes`                                | R, D      |
+| `GET /api/consultas/{id}`                                     | R, D, C   |
+| `POST /api/consultas/{id}/cancelamento`                       | R, D, C   |
+| `POST /api/consultas/{id}/remarcacao`                         | R, D, C   |
+| `POST /api/consultas/{id}/realizacao`                         | R, D      |
+| `PUT /api/consultas/{id}/observacao`                          | R, D, C   |
+| `GET /api/consultas/{id}/observacao/historico`                | R, D, C   |
+
+**D** só age em consultas da própria agenda; **C** só nas próprias (D10). Fora disso → 404.
+
+### Erros de horário — todos 409
+
+| `codigo`                            | Quando                                                  |
+|-------------------------------------|---------------------------------------------------------|
+| `HORARIO_INDISPONIVEL`              | Outra consulta do dentista no intervalo (D18)           |
+| `PACIENTE_COM_CONSULTA_NO_HORARIO`  | O paciente já tem consulta no intervalo (D18)           |
+| `FORA_DA_GRADE`                     | Não cabe inteira numa faixa da grade (D12)              |
+| `HORARIO_BLOQUEADO`                 | Cai em um bloqueio (D12)                                |
+| `FORA_DO_PASSO`                     | **C** escolheu início fora do passo da duração (D12)    |
+| `FORA_DOS_5_MINUTOS`                | **R/D** escolheram início que não é múltiplo de 5 min (D22) |
+
+### `POST /api/consultas` (D12, D13, D18, D22)
+
+```json
+{
+  "pacienteId": "uuid",
+  "dentistaId": "uuid",
+  "procedimentoId": "uuid",
+  "inicio": "2026-10-05T09:00:00-03:00",
+  "observacao": "Sensibilidade no dente 24."
+}
+```
+
+- **C** não envia `pacienteId` (vem do token). `observacao` é opcional.
+- `fim` = `inicio` + `duracaoMinutos` do procedimento; nasce `CONFIRMADA` (D13).
+- Dentista e procedimento precisam estar ativos → senão **422** `DENTISTA_INATIVO` /
+  `PROCEDIMENTO_INATIVO`.
+- **Horário no passado:**
+  - **C** → **422** `HORARIO_NO_PASSADO`.
+  - **R/D** podem registrar consulta já acontecida (urgência sem agendamento). Nesse caso
+    grade e bloqueio **não** são checados — o atendimento já aconteceu —, mas a sobreposição
+    continua (409). Nasce `CONFIRMADA` e aparece em pendentes (D22).
+- **201** a consulta criada.
+
+### `GET /api/consultas`
+
+Filtros opcionais: `de`, `ate` (datas), `dentistaId`, `pacienteId`, `status`. Serve a agenda
+por dia/semana/mês. Paginado. **D** recebe sempre só a própria agenda; **C** só as próprias.
+
+### `GET /api/consultas/pendentes` (D13)
+
+Consultas `CONFIRMADA` com `fim` no passado, mais antigas primeiro. Paginado.
+
+### `POST /api/consultas/{id}/cancelamento` (D14)
+
+```json
+{ "justificativa": "Imprevisto no trabalho." }
+```
+
+`justificativa` é opcional, exceto no caso abaixo.
+
+- **200** consulta cancelada (`canceladoPor` e funcionário vêm do token).
+- Clínica cancelou → paciente recebe SMS (simulado — D16).
+- **422** `CONSULTA_NAO_CANCELAVEL` — status diferente de `CONFIRMADA`.
+- **422** `CONSULTA_JA_INICIADA` — **C** depois do horário de início.
+- **422** `JUSTIFICATIVA_OBRIGATORIA` — **C** com menos de 24 h e sem justificativa. É o código
+  que faz o front abrir o popup.
+
+### `POST /api/consultas/{id}/remarcacao` (D14, D22)
+
+```json
+{ "inicio": "2026-10-07T10:00:00-03:00", "dentistaId": "uuid", "procedimentoId": "uuid", "justificativa": "..." }
+```
+
+`dentistaId` e `procedimentoId` opcionais (ausente = os da consulta original).
+
+Numa transação só: cancela a original (com **todas** as regras do cancelamento acima) e cria a
+nova (com todas as regras do `POST /api/consultas`). Se qualquer parte falhar, nada muda.
+
+- **201** `{ "cancelada": {...}, "nova": {...} }`.
+- Erros: os do cancelamento e os da criação.
+
+### `POST /api/consultas/{id}/realizacao` (D10, D13)
+
+Sem corpo. Marca `REALIZADA`.
+- **200** consulta atualizada.
+- **422** `CONSULTA_NAO_CONFIRMADA` — status diferente de `CONFIRMADA`.
+- **422** `CONSULTA_NAO_INICIADA` — antes do horário de início.
+
+### `PUT /api/consultas/{id}/observacao` (D18)
+
+```json
+{ "texto": "Dente 24 – Oclusal. Sem intercorrências." }
+```
+
+`texto: null` apaga. Grava `Consulta.observacao` **e** uma linha em `HistoricoObservacao`
+(autor do token) na mesma transação. **200**.
+
+### `GET /api/consultas/{id}/observacao/historico`
+
+**200** `[{ "texto", "autor": "PACIENTE" | "CLINICA", "funcionario": { "id", "nome" } | null, "editadoEm" }]`,
+mais recente primeiro.
