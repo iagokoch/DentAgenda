@@ -807,9 +807,9 @@ export function criarProcedimento(contexto, dados?: Partial<Procedimento>): Prom
 Fábricas calculam o hash de `SENHA_DE_TESTE` **uma vez** por arquivo (bcrypt custo 12 leva
 ~250 ms por hash).
 
-- [ ] **Passo 1: conferir no context7** bcrypt (prebuilt para Windows/Node 24) e jsonwebtoken
+- [x] **Passo 1: conferir no context7** bcrypt (prebuilt para Windows/Node 24) e jsonwebtoken
   (`sign` com `iat`/`exp` no payload; `verify` com `clockTimestamp`).
-- [ ] **Passo 2: testes que falham** — `autenticacao.test.ts` (app de teste com uma rota
+- [x] **Passo 2: testes que falham** — `autenticacao.test.ts` (app de teste com uma rota
   `exigirPapel('R','C')` e outra `exigirPapel('A')`):
   - `it('sem Authorization → 401 NAO_AUTENTICADO')`
   - `it('token com assinatura de outro segredo → 401')`
@@ -819,9 +819,9 @@ Fábricas calculam o hash de `SENHA_DE_TESTE` **uma vez** por arquivo (bcrypt cu
   - `it('recepcionista com isAdmin passa em rota A')`
   - `it('dentista sem isAdmin em rota A → 403')`
   - `it('conferirSenha aceita a senha certa e recusa a errada')`
-- [ ] **Passo 3:** `npm test` → FAIL; implementar. `exigirPapel`: R = funcionário RECEPCIONISTA,
+- [x] **Passo 3:** `npm test` → FAIL; implementar. `exigirPapel`: R = funcionário RECEPCIONISTA,
   D = funcionário DENTISTA, A = funcionário com `isAdmin`, C = cliente.
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 4:** verificação padrão.
 
 **Pronto quando:** 8 testes passam.
 

@@ -16,13 +16,14 @@ Confira antes de assumir qualquer coisa:
   tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
   validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
   com exclusion constraints e CHECKs escritos à mão; app Express com middleware de erro único,
-  logger que oculta dado sensível e mensageria simulada no log. **Ainda não há rota de negócio**:
-  o servidor sobe e responde 404 `NAO_ENCONTRADO`; auth entra nas Tarefas 5–9. Em caso de
+  logger que oculta dado sensível e mensageria simulada no log; hash de senha, JWT e middleware
+  de papéis. **Ainda não há rota de negócio**: o servidor sobe e responde 404 `NAO_ENCONTRADO`;
+  as rotas de auth entram nas Tarefas 6–9. Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
-  Express 5, pino 10 + pino-http, Vitest 5 + Supertest. A instalar nas próximas tarefas: JWT
-  curto + refresh em cookie httpOnly (D9). MySQL foi descartado — ver D6.
+  Express 5, pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest. A instalar: cookie de
+  refresh httpOnly (D9, Tarefa 7). MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
 - **Figma** — usar a cópia com acesso de edição (o MCP do Figma exige edição até para ler):
@@ -71,9 +72,11 @@ backend/
   src/config/            env.ts — valida as variáveis de ambiente
   src/app.ts, server.ts  App Express sem porta (testes) e subida do servidor
   src/compartilhado/     contexto, erros, middleware-de-erro, validacao, logger, mensageria,
+                         senhas (bcrypt), tokens (JWT e refresh), autenticacao (papéis R/D/A/C),
                          banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
   src/generated/         Client do Prisma, gerado (fora do git)
-  testes/                Apoio aos testes: migrations, limpeza do banco, RelogioFixo
+  testes/                Apoio aos testes: migrations, limpeza do banco, contexto com relógio
+                         fixo e enviador em memória, fábricas (paciente, funcionário, token)
 docs/
   plano-implementacao.md Plano do backend do MVP, tarefa por tarefa
   spec-backend-mvp.md    Spec aprovada do backend
