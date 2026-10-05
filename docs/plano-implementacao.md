@@ -5,7 +5,7 @@
 > Toda tarefa segue TDD (`superpowers:test-driven-development`): o teste falha antes do código.
 
 **Objetivo:** implementar em `backend/` todas as rotas de `docs/api.md`, com as regras de
-D1–D23 garantidas por teste contra Postgres real.
+D1–D23 garantidas por teste contra Postgres real. Tarefas F1–F3 ligam o front à API em fatias (D30).
 
 **Arquitetura:** Express por domínio (rota → controller → service → Prisma), Zod na entrada,
 middleware de erro único. Regras de sobreposição e coerência no banco (exclusion constraints e
@@ -1018,6 +1018,36 @@ transação que é desfeita, ou responder sem lançar dentro dela.
 
 ---
 
+## Tarefa F1: Front — autenticação (D30)
+
+**Arquivos:** modificar `vite.config.js`, `package.json`/`package-lock.json` (raiz), `src/App.jsx`,
+`src/components/AppShell.jsx`, `src/pages/{Login,Cadastro,RecuperarSenha}.jsx`; criar
+`src/api/cliente-http.js` (+ `.test.js`), `src/sessao/` (contexto da sessão e rota protegida).
+
+**Verificação do front (D30):** `npm run lint; npm test; npm run build` na raiz + fluxo no navegador
+contra a API rodando.
+
+- [x] **Passo 1:** `npm install` na raiz; `npm run lint` e `npm run build` passam antes de mexer.
+- [x] **Passo 2:** proxy `/api` no `vite.config.js` (passo 1 da Tarefa 23, antecipado pela D30).
+- [x] **Passo 3 (TDD, Vitest):** cliente HTTP — `Authorization: Bearer` com o token guardado só em
+  memória; 401 `NAO_AUTENTICADO` → um único `POST /api/auth/refresh` com `X-DentAgenda-Refresh: 1`
+  (pedidos simultâneos esperam o mesmo) e repete o pedido uma vez; refresh recusado → sessão
+  encerrada; erro da API vira objeto com `status`, `codigo`, `mensagem`, `campos`.
+- [x] **Passo 4:** sessão — ao abrir, tenta o refresh e lê `GET /api/auth/eu`; rotas protegidas por
+  papel (funcionário → telas da clínica; cliente → página simples com nome e sair).
+- [x] **Passo 5:** telas pelo Figma — Login (CPF para paciente, e-mail para funcionário), Cadastro
+  (pedido de código + confirmação, D15), Recuperação de senha (código e senha nova juntos, D20.7,
+  paciente e funcionário); `AppShell` com o usuário real e logout.
+- [x] **Passo 6:** verificação do front + docs (`CLAUDE.md`: estado, armadilhas resolvidas,
+  comandos; `README.md`: rodar front + API juntos).
+
+**Pronto quando:** testes do cliente HTTP passam; lint e build passam; no navegador, login de
+funcionário e de paciente, cadastro, recuperação, recarregar a página sem perder a sessão e sair.
+
+**Commit:** `feat: front de autenticação ligado à API (D30)`
+
+---
+
 ## Tarefa 10: Procedimentos
 
 **Arquivos:** criar `src/modulos/procedimentos/{procedimentos.rotas,.controller,.service,.schemas,.test}.ts`;
@@ -1147,6 +1177,17 @@ criar `src/modulos/pacientes/alertas.test.ts`, `endereco.test.ts`.
 **Pronto quando:** 12 testes passam; as 9 rotas de pacientes do api.md respondem.
 
 **Commit:** `feat: endereço e alertas do paciente (D18)`
+
+---
+
+## Tarefa F2: Front — pacientes (D30)
+
+- [ ] **Passo 1:** busca e cadastro de paciente pela recepção (`GET/POST /api/pacientes`).
+- [ ] **Passo 2:** Perfil do Paciente com dados, endereço e alertas reais; abas Documentos e
+  Financeiro continuam placeholder.
+- [ ] **Passo 3:** verificação do front + docs.
+
+**Commit:** `feat: telas de pacientes ligadas à API (D30)`
 
 ---
 
@@ -1490,6 +1531,20 @@ modificar `consultas.rotas.ts`, `.controller.ts`, `.schemas.ts`.
 
 ---
 
+## Tarefa F3: Front — agenda e consultas (D30)
+
+- [ ] **Passo 1:** Dashboard/Início e Agenda de Consultas com consultas reais.
+- [ ] **Passo 2:** Novo Agendamento — procedimentos, dias disponíveis e horários livres reais;
+  409 de horário leva a escolher outro.
+- [ ] **Passo 3:** Detalhes da Consulta — cancelar, remarcar, realizar, observação.
+- [ ] **Passo 4:** apagar os dados fictícios de `Agenda.jsx` e `PerfilPaciente.jsx`; decidir a área
+  do paciente (D30, em aberto).
+- [ ] **Passo 5:** verificação do front + docs.
+
+**Commit:** `feat: agenda e consultas ligadas à API (D30)`
+
+---
+
 ## Tarefa 22: Swagger
 
 **Arquivos:** criar `src/compartilhado/openapi.ts`, `src/compartilhado/openapi.test.ts`;
@@ -1519,7 +1574,7 @@ exportam).
 **Arquivos:** modificar `vite.config.js` (raiz), `CLAUDE.md` (raiz: estado real e comandos do
 backend), `docs/documentacao.md` ("Próximo"); criar `backend/scripts/conferir-codigos-de-erro.ts`.
 
-- [ ] **Passo 1:** proxy no Vite (D19, D23):
+- [x] **Passo 1:** proxy no Vite (D19, D23) — **feito na Tarefa F1 (D30)**:
   ```js
   // vite.config.js
   export default defineConfig({

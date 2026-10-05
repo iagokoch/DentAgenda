@@ -18,6 +18,14 @@ npm run dev
 
 Acesse http://localhost:5173
 
+Login, cadastro e recuperação de senha já falam com a API (D30): suba também o backend (abaixo).
+O Vite encaminha `/api` para `http://localhost:3000`; se a `PORTA` do `backend/.env` for outra,
+ajuste `vite.config.js`. Os códigos de SMS/e-mail simulados aparecem no log da API.
+
+```bash
+npm test   # testes do cliente HTTP (Vitest)
+```
+
 Para gerar a build de produção:
 
 ```bash
@@ -62,7 +70,8 @@ src/
 - [x] Perfil do paciente com abas e histórico
 - [x] Novo agendamento com data, horário e procedimento
 - [x] Layout responsivo para desktop, tablet e celular
-- [ ] Integração com API e banco de dados
+- [x] Integração com a API: autenticação (F1, D30)
+- [ ] Integração com a API: pacientes (F2) e agenda/consultas (F3)
 - [ ] Testes automatizados
 
 As ações estão simuladas no frontend para apresentação do protótipo. A
@@ -77,6 +86,7 @@ fluxo completo, mas ainda precisam ser conectados aos endpoints do backend.
 - `/inicio`
 - `/pacientes/marcos-oliveira`
 - `/agenda`
+- `/minha-conta` (paciente logado, provisória)
 
 ## Próximos passos sugeridos
 

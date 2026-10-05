@@ -24,11 +24,13 @@ a regra de sobreposição garantida pelo banco (D6).
    procedimentos, grade semanal, bloqueios e horários livres (D11, D12, D18, D21).
 5. Ambiente: Docker Compose, seed do primeiro admin, Swagger fora de produção, proxy `/api`
    no Vite (D8, D23).
+6. Front ligado à API em três fatias — autenticação, pacientes, agenda e consultas — nas 8
+   telas do Figma (D30).
 
 **Fora do MVP:**
 
 - Abas Documentos (upload) e Financeiro do perfil do paciente (`CLAUDE.md`).
-- Reescrever o front — só o proxy do Vite entra aqui.
+- Telas além das 8 do Figma (D30).
 - Provedor real de SMS/e-mail (D16), status `FALTOU` (D13), regra de bloqueio por IP (D19),
   limites de agendamento por paciente (D12), `DentistaProcedimento` (D11), preço copiado
   para a consulta (D11), vínculo entre consulta remarcada e original (D22).

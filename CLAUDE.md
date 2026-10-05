@@ -8,10 +8,13 @@ Colzani Odontologia (PAC VI — Engenharia de Software). Projeto acadêmico em g
 
 Confira antes de assumir qualquer coisa:
 
-- **Front-end: existe e funciona.** React 19 + Vite + react-router-dom, em `src/`.
-  Todas as ações são simuladas — não há chamada de rede em lugar nenhum.
-  É um exemplo básico e **será refeito** a partir dos requisitos e do backend; não
-  trate o que ele faz hoje (ex.: login por e-mail) como requisito.
+- **Front-end: existe e está sendo ligado à API em fatias (D30).** React 19 + Vite +
+  react-router-dom, em `src/`. **Ligado à API (F1):** login (um campo "CPF ou e-mail": com `@` vai
+  para o login de funcionário, senão de paciente), cadastro em duas etapas (código por SMS, D15),
+  recuperação de senha (6 dígitos, paciente e funcionário), sessão restaurada pelo refresh ao
+  recarregar, rotas protegidas (funcionário → telas da clínica; paciente → `/minha-conta`,
+  página provisória), `AppShell` com o usuário real e Sair. **Ainda simulado:** Início, Agenda e
+  Perfil do Paciente (F2 e F3). O que ainda é simulado **será refeito**; não trate como requisito.
 - **Backend: em construção** em `backend/`, seguindo `docs/plano-implementacao.md` tarefa por
   tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
   validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
@@ -47,7 +50,12 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint     # oxlint
+npm test         # Vitest do cliente HTTP (D30)
 ```
+
+Front + API juntos: suba a API (`backend`, `npm run dev`) e o front (`npm run dev` na raiz); o
+Vite encaminha `/api` para `http://localhost:3000` (`PORTA` de `backend/.env`), senão o cookie de
+refresh não chega (D19). Os SMS e e-mails simulados (com os códigos) saem no log da API (D16).
 
 Backend (PowerShell, na pasta `backend/`; Docker Desktop aberto; `backend/.env` criado a partir
 de `.env.example` — o Postgres fica em `localhost:5433`, D26):
@@ -65,8 +73,11 @@ npm run dev              # API em http://localhost:<PORTA do .env>/api
 
 ```
 src/
+  api/          cliente-http (token em memória, refresh no 401, ErroDaApi), api.js (instância
+                única), mensagens.js (texto dos erros de entrada)
+  sessao/       SessaoProvider (restaura pelo refresh), useSessao, RotaProtegida/RotaPublica
   components/   AppShell, AuthLayout, Brand, Icon
-  pages/        Login, Cadastro, RecuperarSenha, Inicio, PerfilPaciente, Agenda
+  pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, PerfilPaciente, Agenda
   index.css     Tokens de design
   styles.css    Estilos das páginas
   App.jsx       Rotas
@@ -134,7 +145,11 @@ a decisão que agora vale no lugar:
   (D10: `Funcionario` com categoria DENTISTA.)
 - `PerfilPaciente.jsx` — status da consulta só tem `REALIZADA` e `CANCELADA`.
   (D13: falta `CONFIRMADA`.)
-- `AppShell.jsx` — o profissional logado é `Dr. Silva` hardcoded; não existe conceito
-  de papel/perfil em lugar nenhum do código. (D10.)
-- `Cadastro.jsx` — cria conta com e-mail e senha apenas. (D1.1: login por CPF; D15:
-  CPF já cadastrado ativa por SMS.)
+- `Inicio.jsx` — a saudação é `Bom dia, Dr. Silva!` hardcoded. (Dashboard entra na F3.)
+- `AppShell.jsx` — o link "Pacientes" aponta para `/pacientes/marcos-oliveira`, fixo. (F2.)
+- **Figma × decisões (F1):** as telas de login, cadastro e recuperação do Figma pedem e-mail e
+  código de 4 dígitos. Valem as decisões: paciente entra por CPF (D1.1), cadastro pede CPF,
+  telefone, código, nome e senha (D15), código tem 6 dígitos (D19). O visual do Figma foi mantido.
+
+Resolvidas na F1: login por e-mail (agora CPF ou e-mail), `Dr. Silva` fixo no `AppShell`
+(agora o usuário logado), cadastro só com e-mail e senha (agora D15).

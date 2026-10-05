@@ -35,6 +35,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
 | D28  | E-mail sempre em minúsculas                     | Fechada                      |
 | D29  | Rotação do refresh mantém o prazo da sessão     | Fechada                      |
+| D30  | Front integrado à API em fatias                 | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1154,6 +1155,40 @@ regra é a mesma para não haver dois formatos no banco.
 
 **Em aberto:** nada.
 
+## D30 — Front integrado à API em fatias
+
+> **Status: fechada.**
+> Aprovada pelo usuário depois da Tarefa 9; muda a seção 2 da spec, que deixava o front fora do MVP.
+
+**O quê:**
+1. O front (`src/`) passa a usar a API real em três fatias, cada uma logo depois que o backend do
+   domínio fica pronto: **F1 autenticação** (depois da Tarefa 9), **F2 pacientes** (depois da
+   Tarefa 13), **F3 agenda e consultas** (depois da Tarefa 21). Tarefas no plano de implementação.
+2. O proxy `/api` do Vite sai da Tarefa 23 e entra na F1 (sem ele o cookie de refresh não chega, D19).
+3. O contrato é `docs/api.md`. Se o front precisar de algo que a API não dá, vira decisão nova e
+   mudança no `api.md`; não se contorna no front.
+4. Visual: as 8 telas do Figma listadas no `CLAUDE.md`.
+5. **Verificação do front:** Vitest só no cliente HTTP (token em memória, renovação no 401, formato
+   de erro); as telas são conferidas com `npm run lint`, `npm run build` e uso no navegador contra a
+   API rodando.
+
+**Por quê:**
+1. Erro de contrato aparece com o backend ainda em construção, quando mudar o `api.md` é barato —
+   não depois da Tarefa 23.
+2. As armadilhas do protótipo (login por e-mail, `Dr. Silva` fixo, preços em string) saem enquanto
+   a decisão que as substitui está fresca.
+3. Teste automático onde a falha é silenciosa e difícil de ver na tela (renovação de sessão); as
+   telas serão refeitas, e teste de tela se perderia junto.
+
+**Alternativas descartadas:**
+- *Front só depois da Tarefa 23:* o contrato só seria exercitado quando mudá-lo custasse mais.
+- *Front em paralelo com dados simulados (mocks):* duplica o contrato em mocks que divergem da API.
+- *Vitest + Testing Library nas telas:* 1–2 h a mais por fatia em telas que serão refeitas.
+
+**Em aberto:**
+1. O Figma não tem tela para o paciente logado (C). Na F1 ele cai numa página simples (nome e
+   sair); a F3 decide o resto.
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
@@ -1161,7 +1196,8 @@ regra é a mesma para não haver dois formatos no banco.
    progresso nos checkboxes do plano (Tarefas 0–9 feitas: ambiente, schema Prisma e migration
    com as restrições do banco, utilitários de relógio, fuso, CPF e paginação, app Express com
    middleware de erro, logger e mensageria, senhas, JWT e papéis, login com bloqueio, refresh,
-   logout e `eu`, códigos de verificação e recuperação de senha, autocadastro e ativação).
+   logout e `eu`, códigos de verificação e recuperação de senha, autocadastro e ativação; e a
+   fatia F1 do front, autenticação ligada à API — D30).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a
