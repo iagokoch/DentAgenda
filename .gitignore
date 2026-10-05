@@ -32,3 +32,5 @@ dist-ssr
 #CLAUDE
 
 CLAUDE.local.md
+# Cliente gerado pelo Prisma (recriado por "prisma generate")
+backend/src/generated/
