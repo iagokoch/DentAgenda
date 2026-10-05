@@ -6,10 +6,12 @@ import { gerarAccessToken } from '../../compartilhado/tokens.ts';
 import type { ResultadoTentativa, TipoConta } from '../../generated/prisma/client.ts';
 import { clienteEstaBloqueado, funcionarioBloqueadoAte, type Tentativa } from './bloqueio-de-login.ts';
 import { criarSessao, revogarTodasAsSessoes } from './sessoes.ts';
-
-export type UsuarioDaResposta =
-  | { id: string; tipo: 'CLIENTE'; nome: string }
-  | { id: string; tipo: 'FUNCIONARIO'; nome: string; categoria: 'RECEPCIONISTA' | 'DENTISTA'; isAdmin: boolean };
+import {
+  autenticadoDoFuncionario,
+  usuarioDoCliente,
+  usuarioDoFuncionario,
+  type UsuarioDaResposta,
+} from './usuario-da-resposta.ts';
 
 export type ResultadoDoLogin = {
   accessToken: string;
@@ -33,7 +35,8 @@ export async function loginCliente(
   contexto: Contexto,
   entrada: EntradaDoLogin & { cpf: string },
 ): Promise<ResultadoDoLogin> {
-  const registrar = (resultado: ResultadoTentativa) => registrarTentativa(contexto.prisma, contexto, entrada.cpf, 'CLIENTE', entrada.ip, resultado);
+  const registrar = (resultado: ResultadoTentativa) =>
+    registrarTentativa(contexto.prisma, contexto, entrada.cpf, 'CLIENTE', entrada.ip, resultado);
   const tentativas = await tentativasDesdeUltimaLiberacao(contexto, entrada.cpf, 'CLIENTE');
   if (clienteEstaBloqueado(tentativas)) {
     await registrar('FALHA');
@@ -59,7 +62,7 @@ export async function loginCliente(
       accessToken,
       refreshToken: sessao.refreshToken,
       expiraEm: sessao.expiraEm,
-      usuario: { id: cliente.id, tipo: 'CLIENTE', nome: cliente.nome },
+      usuario: usuarioDoCliente(cliente),
     };
   });
 }
@@ -88,16 +91,12 @@ export async function loginFuncionario(
   return contexto.prisma.$transaction(async (tx) => {
     await registrarTentativa(tx, contexto, entrada.email, 'FUNCIONARIO', entrada.ip, 'SUCESSO');
     const sessao = await criarSessao(tx, { funcionarioId: funcionario.id }, contexto);
-    const { categoria, isAdmin } = funcionario;
-    const accessToken = gerarAccessToken(
-      { tipo: 'FUNCIONARIO', funcionarioId: funcionario.id, categoria, isAdmin, sessaoId: sessao.sessaoId },
-      contexto,
-    );
+    const accessToken = gerarAccessToken(autenticadoDoFuncionario(funcionario, sessao.sessaoId), contexto);
     return {
       accessToken,
       refreshToken: sessao.refreshToken,
       expiraEm: sessao.expiraEm,
-      usuario: { id: funcionario.id, tipo: 'FUNCIONARIO', nome: funcionario.nome, categoria, isAdmin },
+      usuario: usuarioDoFuncionario(funcionario),
     };
   });
 }

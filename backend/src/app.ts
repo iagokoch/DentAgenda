@@ -1,3 +1,4 @@
+import cookieParser from 'cookie-parser';
 import express, { type Express } from 'express';
 import { pinoHttp } from 'pino-http';
 import type { Contexto } from './compartilhado/contexto.ts';
@@ -10,6 +11,7 @@ export function criarApp(contexto: Contexto): Express {
   app.disable('x-powered-by');
   app.use(pinoHttp({ logger: contexto.logger }));
   app.use(express.json());
+  app.use(cookieParser());
 
   app.use('/api/auth', criarRotasAuth(contexto));
 

@@ -132,9 +132,10 @@ Todas as rotas abaixo são públicas, exceto `logout` e `eu`.
 
 Sem corpo. Exige o cookie de refresh **e** o cabeçalho `X-DentAgenda-Refresh: 1`.
 
-- **200** `{ "accessToken": "..." }` + cookie novo (o anterior é revogado).
-- **401** token ausente, expirado ou revogado. Token já revogado reapresentado → todas as
-  sessões da conta são revogadas.
+- **200** `{ "accessToken": "..." }` + cookie novo (o anterior é revogado). O cookie novo vence
+  no mesmo instante que o da sessão original: o prazo conta do login, não da última renovação (D29).
+- **401** token ausente, expirado ou revogado, cabeçalho ausente ou funcionário desativado (D29).
+  Token já revogado reapresentado → todas as sessões da conta são revogadas.
 
 ### `POST /api/auth/logout`
 

@@ -34,6 +34,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D26  | Postgres do Docker na porta 5433 do host        | Fechada                      |
 | D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
 | D28  | E-mail sempre em minúsculas                     | Fechada                      |
+| D29  | Rotação do refresh mantém o prazo da sessão     | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1128,13 +1129,39 @@ regra é a mesma para não haver dois formatos no banco.
 
 **Em aberto:** nada.
 
+## D29 — Rotação do refresh mantém o prazo da sessão
+
+> **Status: fechada.**
+> Encontrada na Tarefa 7 do plano; a D19 fixa a rotação, mas não diz qual prazo o token novo recebe.
+
+**O quê:**
+1. Na rotação (`POST /api/auth/refresh`), o refresh novo herda o `expiraEm` da sessão original.
+   O prazo conta do **login**: 12 h para funcionário e 30 dias para cliente, por mais que o refresh
+   seja usado nesse meio-tempo. Depois disso, só fazendo login de novo.
+2. Funcionário desativado não renova a sessão (401), mesmo que alguma sessão dele tenha escapado da
+   revogação da D21.5.
+
+**Por quê:**
+1. O front renova o access token a cada 15 min enquanto a aba está aberta. Se cada renovação desse
+   um prazo novo, a sessão esquecida aberta no computador da recepção nunca venceria — exatamente o
+   que as 12 h da D19 queriam impedir.
+2. A revogação ao desativar (D21.5) acontece numa rota; a checagem no refresh garante a regra mesmo
+   se a desativação vier por outro caminho (seed, banco).
+
+**Alternativas descartadas:**
+- *Prazo renovado a cada uso (janela deslizante):* sessão de funcionário eterna enquanto houver uma
+  aba aberta.
+
+**Em aberto:** nada.
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
 2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
-   progresso nos checkboxes do plano (Tarefas 0–6 feitas: ambiente, schema Prisma e migration
+   progresso nos checkboxes do plano (Tarefas 0–7 feitas: ambiente, schema Prisma e migration
    com as restrições do banco, utilitários de relógio, fuso, CPF e paginação, app Express com
-   middleware de erro, logger e mensageria, senhas, JWT e papéis, login com bloqueio).
+   middleware de erro, logger e mensageria, senhas, JWT e papéis, login com bloqueio, refresh,
+   logout e `eu`).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a

@@ -18,13 +18,14 @@ Confira antes de assumir qualquer coisa:
   com exclusion constraints e CHECKs escritos à mão; app Express com middleware de erro único,
   logger que oculta dado sensível e mensageria simulada no log; hash de senha, JWT e middleware
   de papéis. **Rotas prontas:** `POST /api/auth/cliente/login` e `/api/auth/funcionario/login`
-  (com bloqueio após 3 falhas, D5/D19/D27); refresh, logout e cadastro entram nas Tarefas 7–9.
+  (com bloqueio após 3 falhas, D5/D19/D27), `POST /api/auth/refresh` (rotativo, D29),
+  `POST /api/auth/logout` e `GET /api/auth/eu`; recuperação e cadastro entram nas Tarefas 8–9.
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
-  Express 5, pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest. A instalar: cookie de
-  refresh httpOnly (D9, Tarefa 7). MySQL foi descartado — ver D6.
+  Express 5 + cookie-parser, pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
+  MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
 - **Figma** — usar a cópia com acesso de edição (o MCP do Figma exige edição até para ler):

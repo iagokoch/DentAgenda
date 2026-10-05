@@ -912,7 +912,7 @@ Fábricas calculam o hash de `SENHA_DE_TESTE` **uma vez** por arquivo (bcrypt cu
 - Produz: `renovarSessao(contexto, tokenDoCookie): { accessToken; refreshToken; expiraEm }`;
   `encerrarSessao(contexto, sessaoId)`.
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('refresh com cookie e cabeçalho → 200 com accessToken e cookie novo')`
   - `it('refresh sem o cabeçalho X-DentAgenda-Refresh → 401 NAO_AUTENTICADO')` (D19, CSRF)
   - `it('refresh sem cookie → 401')`
@@ -924,8 +924,8 @@ Fábricas calculam o hash de `SENHA_DE_TESTE` **uma vez** por arquivo (bcrypt cu
   - `it('logout → 204, revoga a sessão do sessaoId e apaga o cookie')`; refresh seguinte → 401
   - `it('logout sem token → 401')`
   - `it('eu → 200 { usuario } de cliente e de funcionário')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
 **Pronto quando:** 10 testes passam.
 
