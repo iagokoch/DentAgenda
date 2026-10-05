@@ -22,6 +22,8 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D14  | Cancelamento e remarcação                       | Parcial                      |
 | D15  | Ativação de conta de paciente já cadastrado     | Parcial                      |
 | D16  | SMS e e-mail simulados no MVP                   | Fechada                      |
+| D17  | Framework HTTP e organização do código          | Fechada                      |
+| D18  | Modelo de dados do domínio                      | Parcial                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -267,7 +269,8 @@ dele ficariam presas a uma conta diferente da que administra.
 **Em aberto:**
 1. Dentista vê a agenda dos outros dentistas? Cria/cancela consulta? Cadastra o próprio bloqueio?
 2. Quem marca a consulta como REALIZADA (D13).
-3. Quem pode ver dados de saúde do paciente (dado sensível pela LGPD).
+3. ~~Quem pode ver dados de saúde do paciente (dado sensível pela LGPD).~~ Fechado pela D18:
+   funcionários e o próprio paciente leem e escrevem.
 4. Admin pode remover o próprio `isAdmin`? O que impede a clínica de ficar sem nenhum admin?
 
 ## D11 — Procedimento
@@ -294,7 +297,8 @@ dele ficariam presas a uma conta diferente da que administra.
 
 **Em aberto:**
 1. Lista real de procedimentos, durações e preços (Colzani).
-2. Procedimento que deixa de ser oferecido não pode ser apagado se já tem consultas. Desativar?
+2. ~~Procedimento que deixa de ser oferecido não pode ser apagado se já tem consultas. Desativar?~~
+   Fechado pela D18: coluna `ativo`.
 3. Se a clínica tiver especialistas, `DentistaProcedimento` volta para a mesa.
 
 ## D12 — Disponibilidade dos dentistas
@@ -326,10 +330,11 @@ dele ficariam presas a uma conta diferente da que administra.
 - *Passo fixo de 30 ou 15 min:* preterido pelo grupo.
 
 **Em aberto:**
-1. Feriado/clínica fechada: um bloqueio por dentista, ou bloqueio sem dentista (clínica inteira)?
-2. Fuso horário. Proposta: guardar em UTC (`timestamptz`) e calcular a grade em `America/Sao_Paulo`.
+1. ~~Feriado/clínica fechada: um bloqueio por dentista, ou bloqueio sem dentista?~~
+   Fechado pela D18: um bloqueio por dentista, criados em lote.
+2. ~~Fuso horário.~~ Fechado pela D18: UTC (`timestamptz`), grade lida em `America/Sao_Paulo`.
 3. A recepção também fica presa ao passo, ou pode encaixar em qualquer minuto livre?
-4. Bloqueio criado em cima de consulta já confirmada: recusa o bloqueio ou cancela a consulta?
+4. ~~Bloqueio criado em cima de consulta já confirmada.~~ Fechado pela D18: o bloqueio é recusado.
 5. Grade alterada quando já existem consultas futuras fora da nova grade.
 
 ## D13 — Consulta: criação e estados
@@ -363,8 +368,8 @@ mantém o horário que reservou — e a exclusion constraint (D6) precisa do int
 
 **Em aberto:**
 1. Quem marca REALIZADA (D10).
-2. "Observações clínicas" (campo do protótipo) entra? Quem lê?
-3. Registrar quem criou a consulta (paciente ou recepção) — o que quebra sem isso?
+2. ~~"Observações clínicas" (campo do protótipo) entra? Quem lê?~~ Fechado pela D18.
+3. ~~Registrar quem criou a consulta?~~ Fechado pela D18: não entra — nenhuma regra do MVP depende disso.
 4. Consulta CONFIRMADA com horário já passado: fica assim ou aparece como pendente para a recepção?
 
 ## D14 — Cancelamento e remarcação
@@ -390,7 +395,7 @@ mantém o horário que reservou — e a exclusion constraint (D6) precisa do int
 - *Só a clínica remarca:* o paciente teria que ligar.
 
 **Em aberto:**
-1. Campos de cancelamento (quando, quem cancelou, justificativa) — justificar cada um.
+1. ~~Campos de cancelamento (quando, quem cancelou, justificativa).~~ Fechado pela D18.
 2. A clínica também precisa justificar?
 3. Paciente pode cancelar depois do horário de início? (Proposta: não.)
 4. Cancelamento com menos de 24 h tem alguma consequência além da justificativa?
@@ -444,9 +449,207 @@ Provedor real já no MVP (Zenvia, Twilio etc.).
 A implementação de log escreve códigos de recuperação e ativação em texto puro. Ela não pode
 rodar em produção — o servidor deve se recusar a subir com ela fora do ambiente de desenvolvimento.
 
+## D17 — Framework HTTP e organização do código
+
+> **Status: fechada.**
+
+**O quê:**
+- **Express** como framework HTTP, com **Zod** validando toda entrada (body, params, query).
+- Código organizado **por domínio**: `auth`, `pacientes`, `funcionarios`, `procedimentos`,
+  `disponibilidade`, `consultas`. Cada domínio tem as mesmas camadas:
+  rota → controller → service → Prisma.
+  - *Rota:* liga URL + método ao controller e aplica autenticação/papel (D10).
+  - *Controller:* valida a entrada com Zod e traduz resultado/erro em resposta HTTP.
+  - *Service:* regra de negócio (24 h do cancelamento, horários livres etc.). Não conhece HTTP.
+- Testes com **Vitest + Supertest**, contra um Postgres real no Docker (D8) — a exclusion
+  constraint (D6) só existe no Postgres, então banco simulado não testaria a regra principal.
+
+**Por quê:**
+- *Express:* era a stack declarada, é o framework Node mais documentado, e nenhum requisito
+  da clínica (volume baixo de requisições) pede o desempenho do Fastify.
+- *Zod:* o Express não valida nada sozinho. Os schemas Zod também servem de contrato da API
+  para o front (D7).
+- *Por domínio:* cada dev pega domínios diferentes sem mexer nos mesmos arquivos.
+- *Service sem HTTP:* a regra de negócio é testada direto, sem subir servidor.
+
+**Alternativas descartadas:**
+- *Fastify:* validação embutida e mais rápido, mas troca a stack declarada sem necessidade.
+- *NestJS:* injeção de dependência e decorators — curva de aprendizado alta para 2 devs num
+  projeto acadêmico; o framework pesaria mais que o domínio.
+- *Organização por camada* (`controllers/`, `services/` na raiz): uma mudança em consultas
+  espalha arquivos por quatro pastas.
+
+## D18 — Modelo de dados do domínio
+
+> **Status: parcial.**
+> Cruza o rascunho `backend/schema` com D1–D17. Tabelas de autenticação (refresh, códigos,
+> tentativas) ficam para a próxima decisão. Ainda não é `schema.prisma`.
+
+**Convenções de todas as tabelas:**
+- Datas com hora em `timestamptz` (UTC). A grade semanal é lida no fuso `America/Sao_Paulo`.
+- Senhas guardadas só como hash (`senhaHash`, 60 caracteres — bcrypt). Renomeado de `senha`
+  para que o nome não sugira texto puro.
+- Nada é apagado se outra tabela aponta para ele: `Funcionario` e `Procedimento` têm `ativo`.
+  Apagar quebraria o histórico de consultas; sem `ativo`, ex-funcionário continuaria logando.
+
+### Tabelas
+
+**Cliente** (D1, D1.1, D4)
+
+| Coluna         | Tipo / restrição           | Por que existe                                                      |
+|----------------|----------------------------|---------------------------------------------------------------------|
+| nome           | NOT NULL                   | Identifica o paciente para a clínica                                |
+| cpf            | UNIQUE NOT NULL            | Login do cliente (D1.1)                                             |
+| telefone       | NOT NULL                   | Contato e canal de recuperação/ativação (D3, D15)                   |
+| email          | NULL                       | Só contato (D1.1)                                                   |
+| nascimento     | DATE NULL                  | Idade orienta o atendimento (criança, dose de anestésico). NULL = não informado (cadastro por telefone) |
+| convenio       | NULL                       | Recepção precisa saber se é plano ou particular. NULL = particular   |
+| criadoEm       | NOT NULL                   | D1.1                                                                |
+| pacienteDesde  | (D4 em aberto)             | D4                                                                  |
+
+**EnderecoCliente** — 1:1 com Cliente, opcional
+
+| Coluna                                   | Tipo / restrição          |
+|------------------------------------------|---------------------------|
+| clienteId                                | PK e FK → Cliente         |
+| cep                                      | CHAR(8) NOT NULL          |
+| logradouro, numero, bairro, cidade       | NOT NULL                  |
+| uf                                       | CHAR(2) NOT NULL          |
+| complemento                              | NULL                      |
+
+*Por que tabela separada:* "se o paciente informou endereço, CEP, rua, número, cidade e UF são
+obrigatórios" é regra condicional — o mesmo caso da D1. Com colunas NULL em `Cliente`, o banco
+aceitaria endereço só com a cidade. Na tabela própria, toda linha **é** um endereço e o NOT NULL
+vale de verdade. *Por que campos separados:* escolha do grupo.
+
+**AlertaCliente** — risco clínico que o dentista vê antes de atender ("Alergia à Penicilina")
+
+| Coluna                  | Tipo / restrição                    | Por que existe                                  |
+|-------------------------|-------------------------------------|-------------------------------------------------|
+| clienteId               | FK NOT NULL                         | De quem é o alerta                              |
+| texto                   | TEXT NOT NULL                       | O alerta                                        |
+| autor                   | {PACIENTE, CLINICA} NOT NULL        | Quem registrou                                  |
+| autorFuncionarioId      | FK → Funcionario NULL               | Qual funcionário registrou                      |
+| criadoEm                | NOT NULL                            | Quando                                          |
+| removidoEm              | NULL                                | Remoção sem apagar a linha                      |
+| removidoPorFuncionarioId| FK → Funcionario NULL               | Só funcionário remove                           |
+
+- `CHECK`: `autor = 'CLINICA'` ⇔ `autorFuncionarioId` preenchido.
+- `CHECK`: `removidoEm` e `removidoPorFuncionarioId` preenchidos juntos ou vazios juntos.
+- *Por que uma linha por alerta, e não texto único em `Cliente`:* a regra "paciente só acrescenta,
+  só funcionário remove" vale **por alerta**. Num texto único o banco não distingue o trecho que a
+  clínica escreveu do que o paciente escreveu. Alerta removido não some: o histórico mostra que
+  existiu e quem removeu.
+
+**Login** (D1): `clienteId` FK UNIQUE, `senhaHash` NOT NULL.
+
+**Funcionario** (D2, D10)
+
+| Coluna      | Tipo / restrição                     | Por que existe                                   |
+|-------------|--------------------------------------|--------------------------------------------------|
+| nome        | NOT NULL                             | Identificação                                    |
+| cpf         | UNIQUE NOT NULL                      | Identificação legal do funcionário               |
+| email       | UNIQUE NOT NULL                      | Login do funcionário (D2)                        |
+| senhaHash   | NOT NULL                             | D2                                               |
+| categoria   | {RECEPCIONISTA, DENTISTA} NOT NULL   | D2, D10                                          |
+| isAdmin     | boolean NOT NULL, padrão `false`     | D10                                              |
+| cro         | UNIQUE NULL + `CHECK`                | Registro profissional exigido do dentista        |
+| dataInicio  | DATE NOT NULL                        | Registro do vínculo com a clínica (ver Em aberto)|
+| ativo       | boolean NOT NULL, padrão `true`      | Convenções, acima                                |
+
+`CHECK (categoria <> 'DENTISTA' OR cro IS NOT NULL)` — todo dentista tem CRO, garantido pelo banco.
+
+**Procedimento** (D11): `nome` UNIQUE NOT NULL, `duracaoMinutos` NOT NULL `CHECK > 0`,
+`precoCentavos` NOT NULL `CHECK >= 0`, `ativo`.
+
+**GradeHorario** (D12): `dentistaId` FK, `diaSemana` 0–6, `inicio` TIME, `fim` TIME,
+`CHECK (inicio < fim)`. Faixas sobrepostas do mesmo dentista no mesmo dia: recusadas no service.
+
+**Bloqueio** (D12): `dentistaId` FK **NOT NULL**, `inicio`, `fim`, `CHECK (inicio < fim)`.
+- Feriado = um bloqueio por dentista, criados em lote por um único pedido.
+- Bloqueio em cima de consulta CONFIRMADA é **recusado**, com a lista das consultas em conflito;
+  a recepção cancela antes. Fica no service, dentro de uma transação — exclusion constraint
+  não compara duas tabelas.
+
+**Consulta** (D13, D14)
+
+| Coluna                     | Tipo / restrição                          | Por que existe                              |
+|----------------------------|-------------------------------------------|---------------------------------------------|
+| clienteId                  | FK NOT NULL                               | Paciente                                    |
+| dentistaId                 | FK → Funcionario NOT NULL                 | Quem atende                                 |
+| procedimentoId             | FK NOT NULL                               | Define a duração (D11)                      |
+| inicio, fim                | timestamptz NOT NULL, `inicio < fim`      | D13 (`fim` guardado, não derivado)          |
+| status                     | {CONFIRMADA, REALIZADA, CANCELADA}        | D13                                         |
+| observacao                 | TEXT NULL                                 | Anotação clínica do atendimento             |
+| criadoEm                   | NOT NULL                                  | Momento do agendamento                      |
+| canceladoEm                | NULL                                      | Base da regra de 24 h (D14)                 |
+| canceladoPor               | {PACIENTE, CLINICA} NULL                  | A regra de 24 h só vale para o paciente     |
+| canceladoPorFuncionarioId  | FK → Funcionario NULL                     | Qual funcionário cancelou                   |
+| justificativa              | TEXT NULL                                 | D14                                         |
+
+Restrições garantidas pelo banco:
+1. Um dentista não tem duas consultas não canceladas sobrepostas (exclusion constraint, D6).
+2. Um paciente não tem duas consultas não canceladas sobrepostas (exclusion constraint).
+3. `status = 'CANCELADA'` ⇔ `canceladoEm` e `canceladoPor` preenchidos.
+4. `canceladoPor = 'CLINICA'` ⇔ `canceladoPorFuncionarioId` preenchido.
+5. Paciente que cancela com menos de 24 h tem justificativa:
+   `CHECK (canceladoPor <> 'PACIENTE' OR inicio - canceladoEm >= interval '24 hours' OR justificativa IS NOT NULL)`.
+
+Garantido só no service: `dentistaId` aponta para funcionário com categoria DENTISTA e ativo
+(FK não olha colunas da linha apontada).
+
+**HistoricoObservacao** — log das edições de `Consulta.observacao`
+
+| Coluna              | Tipo / restrição                 | Por que existe                         |
+|---------------------|----------------------------------|----------------------------------------|
+| consultaId          | FK NOT NULL                      | Qual consulta                          |
+| texto               | TEXT NULL                        | Texto **depois** da edição (NULL = apagado) |
+| autor               | {PACIENTE, CLINICA} NOT NULL     | Quem editou                            |
+| autorFuncionarioId  | FK → Funcionario NULL            | Qual funcionário editou                |
+| editadoEm           | NOT NULL                         | Quando                                 |
+
+- `CHECK`: `autor = 'CLINICA'` ⇔ `autorFuncionarioId` preenchido.
+- Toda escrita em `Consulta.observacao` grava uma linha aqui **na mesma transação**, no service.
+- Guarda o texto completo de cada versão: se o paciente apagar a anotação do dentista, a versão
+  anterior continua no histórico.
+- *Risco aceito:* o valor atual existe duas vezes (`Consulta.observacao` e a última linha do
+  histórico). Uma escrita que pule o service deixa os dois divergentes.
+
+**Padrão de autor** (usado em `Consulta.canceladoPor`, `AlertaCliente`, `HistoricoObservacao`):
+enum {PACIENTE, CLINICA} + FK para o funcionário quando é a clínica. Quando é o paciente, ele já
+é conhecido pela própria linha (`clienteId`), então não precisa de FK para `Cliente`.
+
+### Permissões sobre dado clínico (fecha a D10.3)
+
+| Dado                   | Lê                                | Escreve                               | Remove           |
+|------------------------|-----------------------------------|---------------------------------------|------------------|
+| `Consulta.observacao`  | Funcionários e o próprio paciente | Funcionários e o próprio paciente     | —                |
+| `AlertaCliente`        | Funcionários e o próprio paciente | Funcionários e o próprio paciente     | Só funcionários  |
+| `HistoricoObservacao`  | Funcionários e o próprio paciente | Ninguém direto (gravado pelo service) | Ninguém          |
+
+**Por quê:** escolha do grupo. O paciente informa alergias e condições que a clínica precisa saber.
+O histórico compensa o risco de o paciente alterar a anotação do dentista: nada se perde e
+fica registrado quem mudou. Alerta não pode ser removido pelo paciente porque um alerta apagado
+por engano faz o dentista atender sem saber da alergia.
+
+**Alternativas descartadas:**
+- *Dado clínico fora do MVP:* o protótipo já mostra alertas e observações.
+- *Observação só para dentistas:* o grupo quer o paciente vendo o próprio registro.
+- *Endereço em texto único:* escolha do grupo por campos separados.
+- *Nascimento, convênio, endereço, CPF/CRO/dataInicio do funcionário fora do MVP:* o grupo
+  decidiu manter o cadastro completo do rascunho e do protótipo.
+- *Bloqueio sem dentista (NULL = clínica inteira):* o NULL carregaria um significado escondido.
+- *`criadoPor` na Consulta:* nenhuma regra do MVP depende de quem criou.
+- *Duas colunas de observação (da clínica e do paciente):* o grupo preferiu uma coluna só com
+  histórico de quem editou.
+- *Alertas em texto único em `Cliente`:* não permite "paciente só acrescenta" (acima).
+
+**Em aberto:**
+1. `dataInicio` do funcionário: nenhuma regra do sistema lê a coluna. Confirmar que é exigência
+   de cadastro, não campo "por via das dúvidas".
+
 ## Próximo
 
-1. Escolher o framework HTTP (Express, Fastify ou NestJS) — abordagens em discussão.
-2. Desenhar o modelo de dados completo, cruzando `backend/schema` com D1–D16.
-3. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
+1. Design seção 2: tabelas de autenticação (refresh D9, códigos D3/D15, tentativas D5).
+2. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
    de edição ao arquivo, e o MCP do Figma exige esse acesso.
