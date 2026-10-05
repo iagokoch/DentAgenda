@@ -25,6 +25,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D17  | Framework HTTP e organização do código          | Fechada                      |
 | D18  | Modelo de dados do domínio                      | Parcial                      |
 | D19  | Tabelas e regras de autenticação                | Fechada                      |
+| D20  | Convenções da API e rotas de autenticação       | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -754,9 +755,46 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
 - *Regra por IP:* fora do MVP. **Risco aceito:** um robô pode testar muitos CPFs diferentes, 3
   vezes cada, sem barreira global.
 
+## D20 — Convenções da API e rotas de autenticação
+
+> **Status: fechada.**
+> O contrato rota por rota fica em `docs/api.md`; aqui ficam os porquês.
+
+**O quê:**
+1. **IDs em UUID** em todas as tabelas expostas pela API.
+2. **Senha:** 8 a 72 caracteres, sem regra de composição.
+3. **Prefixo `/api` sem versão.**
+4. **Erro em formato único** (`{ erro: { codigo, mensagem } }`) com status fixo por tipo
+   (tabela em `docs/api.md`). Regra de negócio violada → 422; conflito de horário → 409.
+5. **404 também para "existe, mas você não pode ver"**.
+6. **Ativação (D15) não sobrescreve** o cadastro feito pela clínica: só cria a senha.
+7. **Recuperação de senha sem rota de verificação do código**: código e senha nova vão juntos.
+
+**Por quê:**
+1. *UUID:* ID sequencial revela quantos pacientes a clínica tem e permite chutar o próximo.
+   Com UUID, um esquecimento de checagem de permissão não vira acesso ao paciente vizinho por
+   `id + 1`.
+2. *Senha:* recomendação atual do NIST — comprimento protege mais que exigir símbolo, e regra
+   de composição leva o paciente a anotar a senha. 72 é o limite do bcrypt (D18): acima disso
+   o resto seria ignorado em silêncio.
+3. *Sem versão:* só existe um cliente da API (o nosso front), que muda junto no mesmo repositório (D8).
+4. *Erro único:* o front trata todos os erros num lugar só. 409 separado de 422 porque conflito
+   de horário pede outra ação na tela (escolher outro horário).
+5. *404:* responder 403 confirmaria que aquele paciente/consulta existe.
+6. *Ativação:* quem tem o telefone pode criar a senha, mas os dados que a clínica conferiu não
+   devem ser trocados por qualquer coisa digitada na tela de cadastro.
+7. *Sem rota de verificação:* seria mais um ponto para testar códigos; o limite de 3 tentativas
+   já vive no `confirmar`. Custo aceito: código errado só aparece no último passo da tela.
+
+**Alternativas descartadas:**
+- *INT sequencial (rascunho):* segurança dependeria 100% da checagem em toda rota.
+- *Senha com letra e número / mínimo de 6:* acima.
+- *Prefixo `/api/v1`:* versão sem segundo cliente que precise dela.
+- *Rota `recuperacao/verificar`:* acima.
+
 ## Próximo
 
-1. Design seção 3: endpoints (contrato da API).
+1. Design seção 3, parte 2: rotas de agenda e consultas.
 2. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 3. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso

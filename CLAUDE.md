@@ -19,8 +19,8 @@ Confira antes de assumir qualquer coisa:
 - **Stack decidida, ainda não instalada:** PostgreSQL (D6), TypeScript no Node (D7),
   Prisma, pasta `backend/` com `package.json` próprio e Postgres em Docker Compose (D8),
   JWT curto + refresh em cookie httpOnly (D9). MySQL foi descartado — ver D6.
-- **Framework HTTP ainda não escolhido** (Express, Fastify ou NestJS). Não instale nenhum
-  antes de a escolha estar registrada em `docs/documentacao.md`.
+- **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
+  Prisma), testes Vitest + Supertest contra Postgres real (D17).
 - **Figma** (`https://www.figma.com/design/b3V1rT0BRjqm6gchOxpRhm/dentagendaSistema`):
   só as 8 primeiras páginas são escopo. O MCP do Figma exige acesso de **edição** ao
   arquivo, até para leitura.
@@ -49,6 +49,7 @@ backend/
 docs/
   documentacao.md        Registro de decisões de arquitetura e modelagem (D1, D2, ...)
   pendencias-colzani.md  Perguntas que só a clínica responde
+  api.md                 Contrato da API (rotas, entrada, saída, erros)
 ```
 
 ## Escopo do MVP do backend
