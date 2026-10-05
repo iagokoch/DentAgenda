@@ -209,7 +209,8 @@ Passo de build/execução (`tsc` / `tsx`).
 **O quê:**
 - Backend na pasta `backend/` deste repositório, com `package.json` próprio (front e back não
   compartilham dependências).
-- `backend/schema` (rascunho em texto) vira `backend/prisma/schema.prisma` quando a modelagem fechar.
+- ~~`backend/schema` (rascunho em texto) vira `backend/prisma/schema.prisma`.~~ Feito na Tarefa 2 do
+  plano; o rascunho foi apagado.
 - PostgreSQL de desenvolvimento roda em Docker Compose.
 - Credenciais do banco ficam em variável de ambiente (`.env`), fora do git.
 
@@ -224,7 +225,7 @@ Passo de build/execução (`tsc` / `tsx`).
 - *Banco na nuvem (Neon/Supabase):* depende de internet para desenvolver.
 
 **Pré-requisitos:**
-- `.gitignore` ainda **não** cobre `.env` — precisa entrar antes do primeiro commit do backend.
+- `.gitignore` cobre `.env` (incluído antes do primeiro commit do backend).
 - Docker Desktop instalado nas duas máquinas.
 
 ## D9 — Sessão: JWT curto + refresh revogável
@@ -328,7 +329,7 @@ dele ficariam presas a uma conta diferente da que administra.
 - **Grade semanal** por dentista: faixas de (dia da semana, início, fim).
   Ex.: segunda 08:00–12:00 e 14:00–18:00. O almoço é o intervalo entre duas faixas.
 - **Bloqueio:** período (início, fim) em que um dentista não atende — férias, curso, feriado.
-- **Horário livre** = faixas da grade − bloqueios − consultas CONFIRMADAS.
+- **Horário livre** = faixas da grade − bloqueios − consultas não canceladas (CONFIRMADA e REALIZADA; ver D18).
 - Os horários de início oferecidos **andam no passo da duração do procedimento**, contados a
   partir do início de cada faixa. Limpeza de 60 min na faixa 08:00–12:00 → 08:00, 09:00,
   10:00, 11:00. A consulta precisa caber inteira dentro de uma faixa.
@@ -511,7 +512,7 @@ rodar em produção — o servidor deve se recusar a subir com ela fora do ambie
 
 > **Status: parcial.**
 > Cruza o rascunho `backend/schema` com D1–D17. Tabelas de autenticação (refresh, códigos,
-> tentativas) ficam para a próxima decisão. Ainda não é `schema.prisma`.
+> tentativas) ficam para a próxima decisão. Implementada em `backend/prisma/schema.prisma`.
 
 **Convenções de todas as tabelas:**
 - Datas com hora em `timestamptz` (UTC). A grade semanal é lida no fuso `America/Sao_Paulo`.
@@ -533,7 +534,7 @@ rodar em produção — o servidor deve se recusar a subir com ela fora do ambie
 | nascimento     | DATE NULL                  | Idade orienta o atendimento (criança, dose de anestésico). NULL = não informado (cadastro por telefone) |
 | convenio       | NULL                       | Recepção precisa saber se é plano ou particular. NULL = particular   |
 | criadoEm       | NOT NULL                   | D1.1                                                                |
-| pacienteDesde  | (D4 em aberto)             | D4                                                                  |
+| pacienteDesde  | DATE NOT NULL              | Início do vínculo com a clínica (D4)                                |
 
 **EnderecoCliente** — 1:1 com Cliente, opcional
 
@@ -1075,8 +1076,8 @@ seguinte, livre em instalação padrão, e não exige mexer em nada da máquina.
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
 2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
-   progresso nos checkboxes do plano (Tarefas 0–2 feitas: ambiente, schema Prisma e migration
-   com as restrições do banco).
+   progresso nos checkboxes do plano (Tarefas 0–3 feitas: ambiente, schema Prisma e migration
+   com as restrições do banco, utilitários de relógio, fuso, CPF e paginação).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a

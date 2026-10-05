@@ -59,7 +59,7 @@ middleware de erro único ─ formato `{ erro: { codigo, mensagem } }` (D20, D23
 ## 4. Entidades
 
 Colunas, restrições e o porquê de cada uma: **D18** (domínio) e **D19** (autenticação).
-O arquivo `backend/schema` é rascunho superado por elas.
+O rascunho `backend/schema` foi apagado na Tarefa 2; o schema real é `backend/prisma/schema.prisma`.
 
 | Tabela               | Para que serve                                         | Decisão        |
 |----------------------|--------------------------------------------------------|----------------|
@@ -152,7 +152,7 @@ explícita. A implementação segue o texto abaixo até alguém contestar.
 3. **Dentista cria e cancela consultas só na própria agenda** (D10).
 4. **Endereço em tabela 1:1 separada** (`EnderecoCliente`), pelo mesmo motivo da D1 (D18).
 5. **Horário livre desconta consultas não canceladas** (CONFIRMADA e REALIZADA), como em D18 e
-   `docs/api.md`. O texto da D12 diz só "CONFIRMADAS"; a diferença aparece quando uma consulta
+   `docs/api.md`. A D12 dizia só "CONFIRMADAS" e foi corrigida; a diferença aparece quando uma consulta
    é marcada REALIZADA antes do fim — o resto do horário dela não pode virar livre.
 6. **Dados fictícios de desenvolvimento** (procedimentos, um dentista, grade) entram num seed
    **separado** do seed do primeiro admin (D23), que continua criando só o admin. O seed

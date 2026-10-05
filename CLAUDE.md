@@ -16,8 +16,7 @@ Confira antes de assumir qualquer coisa:
   tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
   validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
   com exclusion constraints e CHECKs escritos à mão. **Ainda não há rota HTTP** (Express entra
-  na Tarefa 4). `backend/schema` é um rascunho em texto, ainda sendo alinhado às decisões D1–D16;
-  em caso de conflito, vale `docs/documentacao.md`.
+  na Tarefa 4). Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
   Vitest 5. A instalar nas próximas tarefas: Express, JWT curto + refresh em cookie httpOnly (D9).
@@ -64,13 +63,12 @@ src/
   App.jsx       Rotas
   main.jsx      Entrada
 backend/
-  schema                 Rascunho do modelo em texto (superado por prisma/schema.prisma)
   prisma/                schema.prisma e migrations (SQL à mão no fim da "inicial")
   prisma.config.ts       Config do Prisma 7 (lê backend/.env)
   src/config/            env.ts — valida as variáveis de ambiente
-  src/compartilhado/     banco.ts (criarPrisma), erros-do-banco.ts (violacaoDoBanco)
+  src/compartilhado/     banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
   src/generated/         Client do Prisma, gerado (fora do git)
-  testes/                Apoio aos testes: migrations e limpeza do banco de teste
+  testes/                Apoio aos testes: migrations, limpeza do banco, RelogioFixo
 docs/
   plano-implementacao.md Plano do backend do MVP, tarefa por tarefa
   spec-backend-mvp.md    Spec aprovada do backend
