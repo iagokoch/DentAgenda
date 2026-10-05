@@ -142,6 +142,9 @@ export type Papel = 'R' | 'D' | 'A' | 'C';     // legenda de docs/api.md
 export function autenticar(contexto: Contexto): RequestHandler;   // preenche req.usuario
 export function exigirPapel(...papeis: Papel[]): RequestHandler;  // 403 SEM_PERMISSAO
 
+// compartilhado/validacao.ts — acrescentado na Tarefa 10 (ver ledger)
+export function idDaRota(valor: unknown): string;   // id de rota que não é UUID → 404 NAO_ENCONTRADO
+
 // app.ts
 export function criarApp(contexto: Contexto): Express;   // sem abrir porta (D23)
 
@@ -1053,7 +1056,7 @@ funcionário e de paciente, cadastro, recuperação, recarregar a página sem pe
 **Arquivos:** criar `src/modulos/procedimentos/{procedimentos.rotas,.controller,.service,.schemas,.test}.ts`;
 modificar `src/app.ts`.
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('GET de cliente traz só os ativos; de funcionário traz todos')`
   - `it('GET sem login → 401')`
   - `it('POST por admin → 201 { id, nome, duracaoMinutos, precoCentavos, ativo: true }')`
@@ -1063,8 +1066,8 @@ modificar `src/app.ts`.
   - `it('PATCH ativo=false some da lista do cliente')`
   - `it('PATCH duracaoMinutos não altera o fim de consulta já marcada')` (D13) — cria a consulta pelo Prisma
   - `it('PATCH de id inexistente → 404 NAO_ENCONTRADO')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
 **Pronto quando:** 9 testes passam.
 

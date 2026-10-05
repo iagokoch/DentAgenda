@@ -1193,10 +1193,10 @@ regra é a mesma para não haver dois formatos no banco.
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
 2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
-   progresso nos checkboxes do plano (Tarefas 0–9 feitas: ambiente, schema Prisma e migration
+   progresso nos checkboxes do plano (Tarefas 0–10 feitas: ambiente, schema Prisma e migration
    com as restrições do banco, utilitários de relógio, fuso, CPF e paginação, app Express com
    middleware de erro, logger e mensageria, senhas, JWT e papéis, login com bloqueio, refresh,
-   logout e `eu`, códigos de verificação e recuperação de senha, autocadastro e ativação; e a
+   logout e `eu`, códigos de verificação e recuperação de senha, autocadastro e ativação, procedimentos; e a
    fatia F1 do front, autenticação ligada à API — D30).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).

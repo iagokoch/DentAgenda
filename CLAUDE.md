@@ -25,7 +25,8 @@ Confira antes de assumir qualquer coisa:
   `POST /api/auth/logout`, `GET /api/auth/eu`, recuperação de senha (`.../recuperacao/codigo` e
   `/confirmar`, cliente e funcionário) e autocadastro/ativação do paciente
   (`POST /api/auth/cliente/cadastro/codigo` e `/confirmar`, D15). Todas as 11 rotas de `auth`
-  estão prontas; próximo domínio: procedimentos (Tarefa 10).
+  estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18).
+  Próximo: funcionários, dentistas e seeds (Tarefa 11).
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
@@ -91,6 +92,7 @@ backend/
                          senhas (bcrypt), tokens (JWT e refresh), autenticacao (papéis R/D/A/C),
                          banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
   src/modulos/auth/      Login, sessões (refresh em cookie), bloqueio de login, códigos, recuperação e autocadastro
+  src/modulos/procedimentos/  Listar (cliente só ativos), criar e editar (admin)
   src/generated/         Client do Prisma, gerado (fora do git)
   testes/                Apoio aos testes: migrations, limpeza do banco, contexto com relógio
                          fixo e enviador em memória, fábricas (paciente, funcionário, token)

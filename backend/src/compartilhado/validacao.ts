@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { cpfValido } from './cpf.ts';
+import { naoEncontrado } from './erros.ts';
 
 // D25.1 e api.md: só dígitos, com dígitos verificadores corretos.
 export const esquemaCpf = z.string().refine(cpfValido, { error: 'CPF inválido.' });
@@ -17,3 +18,10 @@ export function validar<T>(esquema: z.ZodType<T>, dado: unknown): T {
 
 // api.md: telefone só com dígitos, com DDD (fixo 10, celular 11).
 export const esquemaTelefone = z.string().regex(/^\d{10,11}$/, { error: 'Telefone só com dígitos, com DDD.' });
+
+// D20: id que não é UUID não aponta para nada; responde como recurso inexistente, não 400 nem 500.
+export function idDaRota(valor: unknown): string {
+  const id = z.uuid().safeParse(valor);
+  if (!id.success) throw naoEncontrado();
+  return id.data;
+}

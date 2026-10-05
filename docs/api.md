@@ -8,7 +8,7 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
 - **Base:** `/api`, sem versão.
 - **Formato:** JSON. Datas em ISO 8601 com fuso (`2026-10-05T14:30:00-03:00`); datas sem hora
   em `AAAA-MM-DD`. Dinheiro em centavos inteiros (`18000` = R$ 180,00).
-- **IDs:** UUID.
+- **IDs:** UUID. Id na rota que não é UUID → 404 `NAO_ENCONTRADO`, igual a um id inexistente.
 - **Autenticação:** `Authorization: Bearer <accessToken>`. O refresh token anda só no cookie
   `httpOnly` (D19).
 - **CPF** trafega só com dígitos (`12345678900`); **telefone** só com dígitos, com DDD (10 dígitos
@@ -332,10 +332,12 @@ Dentistas ativos, para o paciente escolher. **200** `[{ "id", "nome" }]`.
 | `POST /api/procedimentos`          | A                |
 | `PATCH /api/procedimentos/{id}`    | A                |
 
-- `GET` → `[{ "id", "nome", "duracaoMinutos", "precoCentavos", "ativo" }]`. Cliente recebe só
-  os ativos; funcionário recebe todos.
-- `POST` → `{ "nome", "duracaoMinutos", "precoCentavos" }`. **409** `NOME_JA_CADASTRADO`.
-- `PATCH` → qualquer campo + `ativo`. Não existe `DELETE` (D18). Mudar `duracaoMinutos` não
+- `GET` → `[{ "id", "nome", "duracaoMinutos", "precoCentavos", "ativo" }]`, em ordem de `nome`.
+  Cliente recebe só os ativos; funcionário recebe todos.
+- `POST` → `{ "nome", "duracaoMinutos", "precoCentavos" }` → **201** com o procedimento
+  (`ativo: true`). `duracaoMinutos` inteiro > 0, `precoCentavos` inteiro ≥ 0. **409** `NOME_JA_CADASTRADO`.
+- `PATCH` → qualquer campo + `ativo`; só os enviados mudam. Responde **200** com o procedimento.
+  Nome de outro procedimento → **409** `NOME_JA_CADASTRADO`. Não existe `DELETE` (D18). Mudar `duracaoMinutos` não
   altera consultas já marcadas (`fim` guardado — D13).
 
 ---
