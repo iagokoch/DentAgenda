@@ -634,7 +634,7 @@ export const esquemaPaginacao;   // Zod: pagina ≥ 1 (padrão 1), porPagina 1..
 export function paginar(pagina: number, porPagina: number): { skip: number; take: number };
 ```
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `datas.test.ts`
     - `it('08:00 de 2026-10-05 em São Paulo é 11:00Z')`
     - `it('22:00 de segunda em São Paulo é terça em UTC, mas dataEmSaoPaulo devolve segunda')`
@@ -644,8 +644,8 @@ export function paginar(pagina: number, porPagina: number): { skip: number; take
     `it('recusa 11111111111')`, `it('recusa com pontuação')`, `it('recusa 10 dígitos')`
   - `paginacao.test.ts`: `it('padrão pagina 1, porPagina 20')`, `it('recusa porPagina 101')`,
     `it('pagina 3 de 20 → skip 40')`
-- [ ] **Passo 2:** `npm test` → FAIL.
-- [ ] **Passo 3: implementar** (sem dependência externa):
+- [x] **Passo 2:** `npm test` → FAIL.
+- [x] **Passo 3: implementar** (sem dependência externa):
   ```ts
   // datas.ts
   const MINUTO = 60_000;
@@ -710,7 +710,7 @@ export function paginar(pagina: number, porPagina: number): { skip: number; take
     return digitoVerificador(9) === digitos[9] && digitoVerificador(10) === digitos[10];
   }
   ```
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 4:** verificação padrão.
 
 **Pronto quando:** todos os testes desta tarefa passam.
 
