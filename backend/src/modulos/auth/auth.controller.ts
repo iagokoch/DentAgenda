@@ -4,13 +4,16 @@ import type { Contexto } from '../../compartilhado/contexto.ts';
 import { naoAutenticado } from '../../compartilhado/erros.ts';
 import { validar } from '../../compartilhado/validacao.ts';
 import {
+  esquemaConfirmacaoDeCadastro,
   esquemaConfirmacaoDeRecuperacaoCliente,
   esquemaConfirmacaoDeRecuperacaoFuncionario,
   esquemaLoginCliente,
   esquemaLoginFuncionario,
+  esquemaPedidoDeCadastro,
   esquemaPedidoDeRecuperacaoCliente,
   esquemaPedidoDeRecuperacaoFuncionario,
 } from './auth.schemas.ts';
+import { confirmarCadastro, pedirCodigoDeCadastro } from './cadastro.service.ts';
 import { loginCliente, loginFuncionario, type ResultadoDoLogin } from './login.service.ts';
 import {
   apagarCookieDeRefresh,
@@ -37,7 +40,9 @@ type AcoesDeAuth =
   | 'pedirRecuperacaoCliente'
   | 'pedirRecuperacaoFuncionario'
   | 'confirmarRecuperacaoCliente'
-  | 'confirmarRecuperacaoFuncionario';
+  | 'confirmarRecuperacaoFuncionario'
+  | 'pedirCodigoDeCadastro'
+  | 'confirmarCadastro';
 
 // Rotas protegidas passam por autenticar(); aqui o usuário já existe.
 function usuarioDe(req: Request): UsuarioAutenticado {
@@ -46,9 +51,9 @@ function usuarioDe(req: Request): UsuarioAutenticado {
 }
 
 export function criarControllerAuth(contexto: Contexto): Record<AcoesDeAuth, RequestHandler> {
-  const responderLogin = (res: Response, resultado: ResultadoDoLogin) => {
+  const responderLogin = (res: Response, resultado: ResultadoDoLogin, status = 200) => {
     definirCookieDeRefresh(res, resultado.refreshToken, resultado.expiraEm, contexto);
-    res.json({ accessToken: resultado.accessToken, usuario: resultado.usuario });
+    res.status(status).json({ accessToken: resultado.accessToken, usuario: resultado.usuario });
   };
   const ipDe = (req: Request) => req.ip ?? 'desconhecido';
 
@@ -105,6 +110,14 @@ export function criarControllerAuth(contexto: Contexto): Record<AcoesDeAuth, Req
       const entrada = validar(esquemaConfirmacaoDeRecuperacaoFuncionario, req.body);
       await confirmarRecuperacaoFuncionario(contexto, { ...entrada, ip: ipDe(req) });
       res.status(204).end();
+    },
+    pedirCodigoDeCadastro: async (req, res) => {
+      await pedirCodigoDeCadastro(contexto, validar(esquemaPedidoDeCadastro, req.body));
+      res.status(202).json({ mensagem: MENSAGEM_DE_CODIGO_ENVIADO });
+    },
+    confirmarCadastro: async (req, res) => {
+      const entrada = validar(esquemaConfirmacaoDeCadastro, req.body);
+      responderLogin(res, await confirmarCadastro(contexto, entrada), 201);
     },
   };
 }

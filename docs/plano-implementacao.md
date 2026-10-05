@@ -997,7 +997,7 @@ transação que é desfeita, ou responder sem lançar dentro dela.
 
 **Interfaces:** consome `emitirCodigo`, `consumirCodigo` (T8), `criarSessao` (T6), `cpfValido` (T3).
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('CPF novo → 202 e código CADASTRO no telefone informado')`
   - `it('CPF de paciente sem login → 202 e código ATIVACAO no telefone que a clínica tem, não no informado')` (D15)
   - `it('CPF com login → 202 e SMS de orientação ao telefone cadastrado, sem código válido')` (D25.5)
@@ -1007,10 +1007,10 @@ transação que é desfeita, ou responder sem lançar dentro dela.
   - `it('confirmar ATIVACAO cria só o Login; nome e telefone digitados não sobrescrevem')` (D20.6)
   - `it('CPF com dígito verificador errado → 400 ENTRADA_INVALIDA')` (D25.1)
   - `it('4º pedido na hora → 429')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar. Código de `CADASTRO` com CPF que ganhou
+- [x] **Passo 2:** `npm test` → FAIL; implementar. Código de `CADASTRO` com CPF que ganhou
   cadastro na recepção entre os dois passos → o CPF já existe: tratar como `CODIGO_INVALIDO`
   (o UNIQUE do banco recusa; mapear).
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 3:** verificação padrão.
 
 **Pronto quando:** 9 testes passam; todas as 11 rotas de `auth` do api.md respondem.
 

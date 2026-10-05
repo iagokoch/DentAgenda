@@ -14,3 +14,6 @@ export const esquemaSenha = z.string().min(8).max(72);
 export function validar<T>(esquema: z.ZodType<T>, dado: unknown): T {
   return esquema.parse(dado);
 }
+
+// api.md: telefone só com dígitos, com DDD (fixo 10, celular 11).
+export const esquemaTelefone = z.string().regex(/^\d{10,11}$/, { error: 'Telefone só com dígitos, com DDD.' });

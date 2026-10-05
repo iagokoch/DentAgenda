@@ -12,6 +12,8 @@ export function criarRotasAuth(contexto: Contexto): Router {
   rotas.post('/funcionario/recuperacao/codigo', controller.pedirRecuperacaoFuncionario);
   rotas.post('/cliente/recuperacao/confirmar', controller.confirmarRecuperacaoCliente);
   rotas.post('/funcionario/recuperacao/confirmar', controller.confirmarRecuperacaoFuncionario);
+  rotas.post('/cliente/cadastro/codigo', controller.pedirCodigoDeCadastro);
+  rotas.post('/cliente/cadastro/confirmar', controller.confirmarCadastro);
   rotas.post('/refresh', controller.renovar);
   rotas.post('/logout', autenticar(contexto), controller.sair);
   rotas.get('/eu', autenticar(contexto), controller.eu);

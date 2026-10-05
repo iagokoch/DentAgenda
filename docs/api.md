@@ -11,8 +11,9 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
 - **IDs:** UUID.
 - **Autenticação:** `Authorization: Bearer <accessToken>`. O refresh token anda só no cookie
   `httpOnly` (D19).
-- **CPF** trafega só com dígitos (`12345678900`); **telefone** só com dígitos, com DDD. CPF com
-  dígito verificador errado ou sequência repetida → 400 `ENTRADA_INVALIDA` (D25.1).
+- **CPF** trafega só com dígitos (`12345678900`); **telefone** só com dígitos, com DDD (10 dígitos
+  para fixo, 11 para celular). CPF com dígito verificador errado ou sequência repetida → 400
+  `ENTRADA_INVALIDA` (D25.1).
 - **E-mail** é convertido para minúsculas em toda rota que o recebe; `Ana@X.com` e `ana@x.com`
   são o mesmo e-mail (D28).
 
@@ -175,14 +176,16 @@ Sem corpo. Exige o cookie de refresh **e** o cabeçalho `X-DentAgenda-Refresh: 1
 }
 ```
 
-`email` e `nascimento` são opcionais.
+`email` e `nascimento` são opcionais. `nome` é obrigatório mesmo na ativação, quando é ignorado:
+a tela é a mesma e não sabe qual dos casos aconteceu (D19).
 
 - **201** igual ao login (`accessToken`, `usuario`, cookie) — o paciente sai logado.
   - `CADASTRO`: cria `Cliente` + `Login`. O `telefone` precisa ser o mesmo para onde o código foi.
   - `ATIVACAO`: cria só o `Login`. Nome, telefone e demais dados do cadastro da clínica **não**
     são sobrescritos pelo que foi digitado.
 - **400** `CODIGO_INVALIDO` — errado, expirado, já usado ou com 3 tentativas. Mesma resposta
-  para todos os casos.
+  para todos os casos, inclusive CPF que já tem login e CPF cadastrado pela recepção entre o
+  pedido e a confirmação.
 
 ### Recuperação de senha (D3, D19)
 
