@@ -24,6 +24,23 @@ Para gerar a build de produção:
 npm run build
 ```
 
+### Backend (API)
+
+Em construção em `backend/` (plano em `docs/plano-implementacao.md`). Precisa do Docker Desktop
+aberto e de `backend/.env` criado a partir de `backend/.env.example` (o Postgres do Docker fica
+na porta 5433). No PowerShell:
+
+```powershell
+cd backend
+docker compose up -d   # Postgres 17
+npm install            # dependências + client do Prisma
+npm run db:migrate     # cria as tabelas no banco de desenvolvimento
+npm run dev            # API em http://localhost:<PORTA>/api
+npm test               # testes contra o banco dentagenda_test
+```
+
+Contrato das rotas em `docs/api.md`.
+
 ## Estrutura do projeto
 
 ```

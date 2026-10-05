@@ -15,12 +15,14 @@ Confira antes de assumir qualquer coisa:
 - **Backend: em construção** em `backend/`, seguindo `docs/plano-implementacao.md` tarefa por
   tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
   validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
-  com exclusion constraints e CHECKs escritos à mão. **Ainda não há rota HTTP** (Express entra
-  na Tarefa 4). Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
+  com exclusion constraints e CHECKs escritos à mão; app Express com middleware de erro único,
+  logger que oculta dado sensível e mensageria simulada no log. **Ainda não há rota de negócio**:
+  o servidor sobe e responde 404 `NAO_ENCONTRADO`; auth entra nas Tarefas 5–9. Em caso de
+  conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
-  Vitest 5. A instalar nas próximas tarefas: Express, JWT curto + refresh em cookie httpOnly (D9).
-  MySQL foi descartado — ver D6.
+  Express 5, pino 10 + pino-http, Vitest 5 + Supertest. A instalar nas próximas tarefas: JWT
+  curto + refresh em cookie httpOnly (D9). MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
 - **Figma** — usar a cópia com acesso de edição (o MCP do Figma exige edição até para ler):
@@ -50,6 +52,7 @@ docker compose up -d     # Postgres 17 com os bancos dentagenda e dentagenda_tes
 npm install              # também gera o client do Prisma (postinstall)
 npm run db:migrate       # aplica as migrations no banco de desenvolvimento
 npm run lint; npm run typecheck; npm test   # testes aplicam as migrations no banco de teste
+npm run dev              # API em http://localhost:<PORTA do .env>/api
 ```
 
 ## Estrutura
@@ -66,7 +69,9 @@ backend/
   prisma/                schema.prisma e migrations (SQL à mão no fim da "inicial")
   prisma.config.ts       Config do Prisma 7 (lê backend/.env)
   src/config/            env.ts — valida as variáveis de ambiente
-  src/compartilhado/     banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
+  src/app.ts, server.ts  App Express sem porta (testes) e subida do servidor
+  src/compartilhado/     contexto, erros, middleware-de-erro, validacao, logger, mensageria,
+                         banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
   src/generated/         Client do Prisma, gerado (fora do git)
   testes/                Apoio aos testes: migrations, limpeza do banco, RelogioFixo
 docs/

@@ -1076,8 +1076,9 @@ seguinte, livre em instalação padrão, e não exige mexer em nada da máquina.
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
 2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
-   progresso nos checkboxes do plano (Tarefas 0–3 feitas: ambiente, schema Prisma e migration
-   com as restrições do banco, utilitários de relógio, fuso, CPF e paginação).
+   progresso nos checkboxes do plano (Tarefas 0–4 feitas: ambiente, schema Prisma e migration
+   com as restrições do banco, utilitários de relógio, fuso, CPF e paginação, app Express com
+   middleware de erro, logger e mensageria).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a

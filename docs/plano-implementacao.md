@@ -113,6 +113,7 @@ export type Contexto = {
   relogio: Relogio;
   enviador: EnviadorMensagem;
   config: Config;                // de config/env.ts
+  logger: Logger;                // pino; acrescentado na Tarefa 4 (ver ledger)
 };
 
 // compartilhado/relogio.ts
@@ -747,9 +748,9 @@ completar `testes/contexto-de-teste.ts` (`EnviadorEmMemoria`, `criarContextoDeTe
   - qualquer outro → 500 `ERRO_INTERNO`, mensagem genérica, stack só no log
   - rota inexistente → 404 `NAO_ENCONTRADO`
 
-- [ ] **Passo 1: conferir no context7** Express (versão atual; se repassa erro de handler `async`
+- [x] **Passo 1: conferir no context7** Express (versão atual; se repassa erro de handler `async`
   sozinho), pino e pino-http (opção `redact`), cookie-parser.
-- [ ] **Passo 2: testes que falham** — `middleware-de-erro.test.ts` monta um app de teste com
+- [x] **Passo 2: testes que falham** — `middleware-de-erro.test.ts` monta um app de teste com
   rotas que lançam cada tipo de erro:
   - `it('ErroDeNegocio vira status e codigo')` → 422 `{ erro: { codigo: 'X', mensagem } }`
   - `it('erro do Zod vira 400 ENTRADA_INVALIDA com campos')`
@@ -759,14 +760,14 @@ completar `testes/contexto-de-teste.ts` (`EnviadorEmMemoria`, `criarContextoDeTe
   - `it('violação de sobreposição do paciente vira 409 PACIENTE_COM_CONSULTA_NO_HORARIO')`
   - `it('erro inesperado vira 500 ERRO_INTERNO sem stack na resposta')`
   - `it('rota inexistente vira 404 NAO_ENCONTRADO')` — esta usa `criarApp` de verdade
-- [ ] **Passo 3: teste que falha** — `logger.test.ts`:
+- [x] **Passo 3: teste que falha** — `logger.test.ts`:
   `it('troca senha, novaSenha, codigo, cpf, authorization e cookie por [OCULTO]')` — logger com
   destino em memória; loga `{ senha: 'x', cpf: '52998224725', req: { headers: { authorization: 'Bearer y', cookie: 'z' } } }`
   e confere que nenhum valor original aparece.
-- [ ] **Passo 4:** `npm test` → FAIL; implementar.
-- [ ] **Passo 5:** `server.ts`: `carregarConfig(process.env)`, monta `Contexto` com
+- [x] **Passo 4:** `npm test` → FAIL; implementar.
+- [x] **Passo 5:** `server.ts`: `carregarConfig(process.env)`, monta `Contexto` com
   `relogioDoSistema` e `EnviadorLog`, `criarApp(contexto).listen(config.porta)`.
-- [ ] **Passo 6:** verificação padrão + `npm run dev` e
+- [x] **Passo 6:** verificação padrão + `npm run dev` e
   `curl.exe -s http://localhost:<PORTA>/api/nada` → 404 com `NAO_ENCONTRADO`.
 
 **Pronto quando:** 8 testes passam; servidor sobe e responde 404 no formato certo.
