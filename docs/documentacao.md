@@ -959,5 +959,5 @@ compatível com a versão do Zod instalada — conferir na documentação atual 
 2. Plano de implementação.
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
-4. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
-   de edição ao arquivo, e o MCP do Figma exige esse acesso.
+4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a
+   cópia com acesso de edição indicada no `CLAUDE.md`.

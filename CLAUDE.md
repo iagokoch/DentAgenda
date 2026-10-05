@@ -21,9 +21,14 @@ Confira antes de assumir qualquer coisa:
   JWT curto + refresh em cookie httpOnly (D9). MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
-- **Figma** (`https://www.figma.com/design/b3V1rT0BRjqm6gchOxpRhm/dentagendaSistema`):
-  só as 8 primeiras páginas são escopo. O MCP do Figma exige acesso de **edição** ao
-  arquivo, até para leitura.
+- **Figma** — usar a cópia com acesso de edição (o MCP do Figma exige edição até para ler):
+  `https://www.figma.com/design/XdO0E1on8EG2S9pLl0zEov/dentagendaSistema--Copy-`
+  (fileKey `XdO0E1on8EG2S9pLl0zEov`). Uma página (`0:1`) com 12 telas; escopo = as 8 primeiras
+  da esquerda para a direita: Tela de Login `1:2156`, cadastro `13:2`, Recuperação de Senha
+  `1:2`, Dashboard / Início `1:1549`, Perfil do Paciente `1:897`, Novo Agendamento `1:1704`,
+  Detalhes da Consulta `1:1161`, Agenda de Consultas `1:1899`. O `get_metadata` da página
+  inteira estoura o limite de tokens — consultar por tela. A cópia não acompanha mudanças no
+  arquivo original.
 
 ## Comandos
 
