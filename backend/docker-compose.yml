@@ -7,7 +7,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: dentagenda
     ports:
-      - "5432:5432"
+      # 5433 no host: a 5432 costuma estar ocupada por um Postgres instalado na máquina (D26).
+      - "5433:5432"
     volumes:
       - dados:/var/lib/postgresql/data
       - ./docker/criar-banco-teste.sql:/docker-entrypoint-initdb.d/criar-banco-teste.sql:ro

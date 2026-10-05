@@ -222,12 +222,12 @@ só com IDs — obrigaria o front a fazer três chamadas a mais por linha da age
 13. **Banco de desenvolvimento:** `POSTGRES_USER` e `POSTGRES_PASSWORD` em `backend/.env` (o
     Compose lê de lá); a D23 não listava porque não cobria o container.
 
-- [ ] **Passo 1:** escrever D24 e D25 em `docs/documentacao.md` no formato do grupo (status, O quê,
+- [x] **Passo 1:** escrever D24 e D25 em `docs/documentacao.md` no formato do grupo (status, O quê,
   Por quê, Alternativas descartadas, Em aberto); atualizar índice e "Próximo".
-- [ ] **Passo 2:** em `docs/api.md`: tabela de erros com coluna `codigo` (formato
+- [x] **Passo 2:** em `docs/api.md`: tabela de erros com coluna `codigo` (formato
   `` `codigo: "NAO_AUTENTICADO"` ``, que o script da Tarefa 23 lê), objetos `consulta` e
   `paciente`, notas de D25.6–D25.10 nas rotas.
-- [ ] **Passo 3:** commit.
+- [x] **Passo 3:** commit.
   ```powershell
   git add docs/documentacao.md docs/api.md
   git commit -m "docs: registra D24 (códigos de erro e objetos) e D25 (regras de implementação)"
@@ -254,15 +254,15 @@ falta no `api.md`.
   `Config = { nodeEnv: 'development' | 'test' | 'production'; porta: number; databaseUrl: string;
   jwtSegredo: string; codigoHmacSegredo: string; enviadorMensagem: 'log' }`
 
-- [ ] **Passo 1: conferir no context7** as versões atuais de TypeScript, tsx, Vitest, oxlint, Zod
+- [x] **Passo 1: conferir no context7** as versões atuais de TypeScript, tsx, Vitest, oxlint, Zod
   e a tag atual da imagem `postgres:17`. Anotar as versões no commit.
-- [ ] **Passo 2: `package.json`** com `"type": "module"`, `"engines": { "node": ">=24" }` e os
+- [x] **Passo 2: `package.json`** com `"type": "module"`, `"engines": { "node": ">=24" }` e os
   scripts da D23:
   `dev` (`tsx watch --env-file=.env src/server.ts`), `build` (`tsc -p tsconfig.build.json`),
   `start` (`node --env-file=.env dist/server.js`), `test` (`vitest run`), `lint` (`oxlint`),
   `typecheck` (`tsc --noEmit`), `db:migrate` (`prisma migrate dev`),
   `db:seed` (`tsx --env-file=.env prisma/seed.ts`), `db:seed:dev` (`tsx --env-file=.env prisma/seed-dev.ts`).
-- [ ] **Passo 3: Docker.**
+- [x] **Passo 3: Docker.**
   ```yaml
   # backend/docker-compose.yml
   services:
@@ -284,7 +284,7 @@ falta no `api.md`.
   -- backend/docker/criar-banco-teste.sql (roda só na primeira subida do volume)
   CREATE DATABASE dentagenda_test;
   ```
-- [ ] **Passo 4: `.env.example`** — só nomes:
+- [x] **Passo 4: `.env.example`** — só nomes:
   ```
   NODE_ENV=
   PORTA=
@@ -307,17 +307,17 @@ falta no `api.md`.
   ```
   (rodar uma vez para cada segredo e colar no `.env`; o valor vai direto para o clipboard, sem
   aparecer na tela).
-- [ ] **Passo 5: testes que falham** — `src/config/env.test.ts`:
+- [x] **Passo 5: testes que falham** — `src/config/env.test.ts`:
   - `it('recusa subir quando falta JWT_SEGREDO e cita o nome, não o valor')`
   - `it('recusa ENVIADOR_MENSAGEM=log com NODE_ENV=production')` (D16)
   - `it('recusa segredo com menos de 32 caracteres')`
   - `it('converte PORTA para número')`
-- [ ] **Passo 6:** rodar `npm test` → FAIL (`carregarConfig` não existe).
-- [ ] **Passo 7:** implementar `env.ts` com um schema Zod e `.refine` para a regra da D16.
-- [ ] **Passo 8:** `vitest.config.ts` com `fileParallelism: false` (D23), `include: ['src/**/*.test.ts']`,
+- [x] **Passo 6:** rodar `npm test` → FAIL (`carregarConfig` não existe).
+- [x] **Passo 7:** implementar `env.ts` com um schema Zod e `.refine` para a regra da D16.
+- [x] **Passo 8:** `vitest.config.ts` com `fileParallelism: false` (D23), `include: ['src/**/*.test.ts']`,
   carregando `backend/.env` com `process.loadEnvFile` (Node 24) e trocando `DATABASE_URL` por
   `DATABASE_URL_TESTE` antes dos testes.
-- [ ] **Passo 9:** verificação.
+- [x] **Passo 9:** verificação.
   ```powershell
   docker compose up -d
   docker compose exec postgres sh -c 'psql -U "$POSTGRES_USER" -l'   # lista dentagenda e dentagenda_test
@@ -348,10 +348,10 @@ arquivos acima + `backend/package-lock.json` + `.gitignore`.
 - Produz (testes): `limparBanco(prisma)` — `TRUNCATE` de todas as tabelas de `public` exceto
   `_prisma_migrations`, com `CASCADE`.
 
-- [ ] **Passo 1: conferir no context7** a versão atual do Prisma: bloco `generator`
+- [x] **Passo 1: conferir no context7** a versão atual do Prisma: bloco `generator`
   (`prisma-client` + `output`?), necessidade de `prisma.config.ts` e de driver adapter
   (`@prisma/adapter-pg`), e se o Prisma lê `.env` sozinho.
-- [ ] **Passo 2: `schema.prisma`** — modelos da D18/D19 (nomes de tabela = nomes do modelo):
+- [x] **Passo 2: `schema.prisma`** — modelos da D18/D19 (nomes de tabela = nomes do modelo):
   ```prisma
   enum Categoria          { RECEPCIONISTA DENTISTA }
   enum StatusConsulta     { CONFIRMADA REALIZADA CANCELADA }
@@ -525,7 +525,7 @@ arquivos acima + `backend/package-lock.json` + `.gitignore`.
     revogadoEm    DateTime?    @db.Timestamptz
   }
   ```
-- [ ] **Passo 3:** `npx prisma migrate dev --create-only --name inicial` e **acrescentar ao fim**
+- [x] **Passo 3:** `npx prisma migrate dev --create-only --name inicial` e **acrescentar ao fim**
   do `migration.sql` gerado:
   ```sql
   CREATE EXTENSION IF NOT EXISTS btree_gist;
@@ -569,9 +569,9 @@ arquivos acima + `backend/package-lock.json` + `.gitignore`.
   ALTER TABLE "RefreshToken" ADD CONSTRAINT refresh_uma_conta
     CHECK (num_nonnulls("loginId", "funcionarioId") = 1);
   ```
-- [ ] **Passo 4:** `configuracao-global.ts` roda `prisma migrate deploy` com `DATABASE_URL` =
+- [x] **Passo 4:** `configuracao-global.ts` roda `prisma migrate deploy` com `DATABASE_URL` =
   `DATABASE_URL_TESTE`; `preparar-arquivo.ts` faz `beforeAll(() => limparBanco(prisma))`.
-- [ ] **Passo 5: testes que falham** — `restricoes-do-banco.test.ts` (insere direto pelo Prisma,
+- [x] **Passo 5: testes que falham** — `restricoes-do-banco.test.ts` (insere direto pelo Prisma,
   sem rota; cada um confere `violacaoDoBanco(erro)`):
   - `it('recusa duas consultas não canceladas sobrepostas do mesmo dentista')` → `23P01`,
     `consulta_dentista_sem_sobreposicao`
@@ -585,12 +585,12 @@ arquivos acima + `backend/package-lock.json` + `.gitignore`.
   - `it('recusa refresh com loginId e funcionarioId ao mesmo tempo')`
   - `it('recusa código com 4 tentativas')`
   - `it('informa os campos do UNIQUE violado')` → `23505`, `campos` contém `cpf`
-- [ ] **Passo 6:** `npm test` → FAIL; implementar `banco.ts`, `erros-do-banco.ts`, `limparBanco`.
+- [x] **Passo 6:** `npm test` → FAIL; implementar `banco.ts`, `erros-do-banco.ts`, `limparBanco`.
   O formato do erro do Prisma é descoberto pelo próprio teste (imprimir uma vez, ajustar o
   extrator, apagar o print).
-- [ ] **Passo 7:** conferir que `npx prisma migrate dev` **não** gera migration nova (o Prisma não
+- [x] **Passo 7:** conferir que `npx prisma migrate dev` **não** gera migration nova (o Prisma não
   pode tentar apagar as restrições manuais). Se gerar, parar e avisar o usuário.
-- [ ] **Passo 8:** verificação padrão.
+- [x] **Passo 8:** verificação padrão.
 
 **Pronto quando:** 11 testes passam; `migrate dev` limpo.
 

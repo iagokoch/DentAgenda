@@ -10,5 +10,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     // Um banco só para todos os arquivos: em série, limpo antes de cada arquivo (D23).
     fileParallelism: false,
+    globalSetup: ['testes/configuracao-global.ts'],
+    setupFiles: ['testes/preparar-arquivo.ts'],
   },
 });

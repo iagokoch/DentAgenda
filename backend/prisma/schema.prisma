@@ -1,0 +1,214 @@
+// Modelos da D18 (domínio) e D19 (autenticação). Exclusion constraints e CHECKs não cabem
+// aqui: ficam no SQL escrito à mão no fim da migration "inicial" (D6).
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "ts"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Categoria {
+  RECEPCIONISTA
+  DENTISTA
+}
+
+enum StatusConsulta {
+  CONFIRMADA
+  REALIZADA
+  CANCELADA
+}
+
+enum Autor {
+  PACIENTE
+  CLINICA
+}
+
+enum TipoConta {
+  CLIENTE
+  FUNCIONARIO
+}
+
+enum ResultadoTentativa {
+  SUCESSO
+  FALHA
+  REDEFINICAO
+}
+
+enum FinalidadeCodigo {
+  RECUPERACAO
+  ATIVACAO
+  CADASTRO
+}
+
+model Cliente {
+  id            String           @id @default(uuid()) @db.Uuid
+  nome          String
+  cpf           String           @unique @db.Char(11)
+  telefone      String
+  email         String?
+  nascimento    DateTime?        @db.Date
+  convenio      String?
+  criadoEm      DateTime         @db.Timestamptz
+  pacienteDesde DateTime         @db.Date
+  endereco      EnderecoCliente?
+  login         Login?
+  alertas       AlertaCliente[]
+  consultas     Consulta[]
+}
+
+model EnderecoCliente {
+  clienteId   String  @id @db.Uuid
+  cliente     Cliente @relation(fields: [clienteId], references: [id])
+  cep         String  @db.Char(8)
+  logradouro  String
+  numero      String
+  complemento String?
+  bairro      String
+  cidade      String
+  uf          String  @db.Char(2)
+}
+
+model AlertaCliente {
+  id                       String       @id @default(uuid()) @db.Uuid
+  clienteId                String       @db.Uuid
+  cliente                  Cliente      @relation(fields: [clienteId], references: [id])
+  texto                    String
+  autor                    Autor
+  autorFuncionarioId       String?      @db.Uuid
+  autorFuncionario         Funcionario? @relation("AlertaAutor", fields: [autorFuncionarioId], references: [id])
+  criadoEm                 DateTime     @db.Timestamptz
+  removidoEm               DateTime?    @db.Timestamptz
+  removidoPorFuncionarioId String?      @db.Uuid
+  removidoPorFuncionario   Funcionario? @relation("AlertaRemovidoPor", fields: [removidoPorFuncionarioId], references: [id])
+}
+
+model Login {
+  id            String         @id @default(uuid()) @db.Uuid
+  clienteId     String         @unique @db.Uuid
+  cliente       Cliente        @relation(fields: [clienteId], references: [id])
+  senhaHash     String         @db.Char(60)
+  refreshTokens RefreshToken[]
+}
+
+model Funcionario {
+  id                String                @id @default(uuid()) @db.Uuid
+  nome              String
+  cpf               String                @unique @db.Char(11)
+  email             String                @unique
+  senhaHash         String                @db.Char(60)
+  categoria         Categoria
+  isAdmin           Boolean               @default(false)
+  cro               String?               @unique
+  dataInicio        DateTime              @db.Date
+  ativo             Boolean               @default(true)
+  grade             GradeHorario[]
+  bloqueios         Bloqueio[]
+  consultas         Consulta[]            @relation("ConsultaDentista")
+  cancelamentos     Consulta[]            @relation("ConsultaCanceladaPor")
+  alertasCriados    AlertaCliente[]       @relation("AlertaAutor")
+  alertasRemovidos  AlertaCliente[]       @relation("AlertaRemovidoPor")
+  edicoesObservacao HistoricoObservacao[]
+  refreshTokens     RefreshToken[]
+}
+
+model Procedimento {
+  id             String     @id @default(uuid()) @db.Uuid
+  nome           String     @unique
+  duracaoMinutos Int
+  precoCentavos  Int
+  ativo          Boolean    @default(true)
+  consultas      Consulta[]
+}
+
+model GradeHorario {
+  id         String      @id @default(uuid()) @db.Uuid
+  dentistaId String      @db.Uuid
+  dentista   Funcionario @relation(fields: [dentistaId], references: [id])
+  diaSemana  Int         @db.SmallInt
+  inicio     DateTime    @db.Time(0)
+  fim        DateTime    @db.Time(0)
+}
+
+model Bloqueio {
+  id         String      @id @default(uuid()) @db.Uuid
+  dentistaId String      @db.Uuid
+  dentista   Funcionario @relation(fields: [dentistaId], references: [id])
+  inicio     DateTime    @db.Timestamptz
+  fim        DateTime    @db.Timestamptz
+}
+
+model Consulta {
+  id                        String                @id @default(uuid()) @db.Uuid
+  clienteId                 String                @db.Uuid
+  cliente                   Cliente               @relation(fields: [clienteId], references: [id])
+  dentistaId                String                @db.Uuid
+  dentista                  Funcionario           @relation("ConsultaDentista", fields: [dentistaId], references: [id])
+  procedimentoId            String                @db.Uuid
+  procedimento              Procedimento          @relation(fields: [procedimentoId], references: [id])
+  inicio                    DateTime              @db.Timestamptz
+  fim                       DateTime              @db.Timestamptz
+  status                    StatusConsulta
+  observacao                String?
+  criadoEm                  DateTime              @db.Timestamptz
+  canceladoEm               DateTime?             @db.Timestamptz
+  canceladoPor              Autor?
+  canceladoPorFuncionarioId String?               @db.Uuid
+  canceladoPorFuncionario   Funcionario?          @relation("ConsultaCanceladaPor", fields: [canceladoPorFuncionarioId], references: [id])
+  justificativa             String?
+  historicoObservacao       HistoricoObservacao[]
+}
+
+model HistoricoObservacao {
+  id                 String       @id @default(uuid()) @db.Uuid
+  consultaId         String       @db.Uuid
+  consulta           Consulta     @relation(fields: [consultaId], references: [id])
+  texto              String?
+  autor              Autor
+  autorFuncionarioId String?      @db.Uuid
+  autorFuncionario   Funcionario? @relation(fields: [autorFuncionarioId], references: [id])
+  editadoEm          DateTime     @db.Timestamptz
+}
+
+model TentativaLogin {
+  id            String             @id @default(uuid()) @db.Uuid
+  identificador String
+  tipo          TipoConta
+  ip            String
+  ocorridoEm    DateTime           @db.Timestamptz
+  resultado     ResultadoTentativa
+
+  @@index([identificador, tipo, ocorridoEm])
+}
+
+model CodigoVerificacao {
+  id            String           @id @default(uuid()) @db.Uuid
+  identificador String
+  tipo          TipoConta
+  finalidade    FinalidadeCodigo
+  destino       String?
+  codigoHash    String
+  criadoEm      DateTime         @db.Timestamptz
+  expiraEm      DateTime         @db.Timestamptz
+  tentativas    Int              @default(0)
+  usadoEm       DateTime?        @db.Timestamptz
+
+  @@index([identificador, tipo, criadoEm])
+}
+
+model RefreshToken {
+  id            String       @id @default(uuid()) @db.Uuid
+  loginId       String?      @db.Uuid
+  login         Login?       @relation(fields: [loginId], references: [id])
+  funcionarioId String?      @db.Uuid
+  funcionario   Funcionario? @relation(fields: [funcionarioId], references: [id])
+  tokenHash     String       @unique
+  criadoEm      DateTime     @db.Timestamptz
+  expiraEm      DateTime     @db.Timestamptz
+  revogadoEm    DateTime?    @db.Timestamptz
+}

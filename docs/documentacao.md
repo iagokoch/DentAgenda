@@ -31,6 +31,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D23  | Estrutura do código, erros, testes e ambiente   | Fechada                      |
 | D24  | Códigos de erro genéricos e objetos de resposta | Fechada                      |
 | D25  | Regras de implementação não fixadas antes       | Fechada                      |
+| D26  | Postgres do Docker na porta 5433 do host        | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1047,10 +1048,35 @@ compatível com a versão do Zod instalada — conferir na documentação atual 
   rotas que não precisam dele.
 - *Dois SMS na remarcação:* acima.
 
+## D26 — Postgres do Docker na porta 5433 do host
+
+> **Status: fechada.**
+> Encontrada na Tarefa 2 do plano, ao rodar a primeira migration.
+
+**O quê:**
+O `docker-compose.yml` publica o Postgres do container em `localhost:5433` (`"5433:5432"`).
+`DATABASE_URL` e `DATABASE_URL_TESTE` em `backend/.env` usam a porta 5433.
+
+**Por quê:**
+Na máquina de um dos devs já havia um Postgres instalado no Windows escutando na 5432. Com os dois
+na mesma porta, `localhost:5432` caía no Postgres local, e o Prisma falhava com `P1000`
+(credenciais inválidas) mesmo com o `.env` certo. O `docker compose exec … psql` da Tarefa 1 não
+pegou o problema porque entra direto no container, sem passar pela porta. A 5433 é a porta
+seguinte, livre em instalação padrão, e não exige mexer em nada da máquina.
+
+**Alternativas descartadas:**
+- *Parar o serviço do Postgres do Windows:* resolve numa máquina só; o próximo dev com Postgres
+  instalado cai no mesmo erro sem saber por quê.
+- *Usar o Postgres do Windows:* contraria a D8 (mesma versão para os dois devs via Docker).
+
+**Em aberto:** nada.
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
-2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa.
+2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
+   progresso nos checkboxes do plano (Tarefas 0–2 feitas: ambiente, schema Prisma e migration
+   com as restrições do banco).
 3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a

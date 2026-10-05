@@ -12,13 +12,16 @@ Confira antes de assumir qualquer coisa:
   Todas as ações são simuladas — não há chamada de rede em lugar nenhum.
   É um exemplo básico e **será refeito** a partir dos requisitos e do backend; não
   trate o que ele faz hoje (ex.: login por e-mail) como requisito.
-- **Backend: não existe.** Nenhum framework HTTP, nenhum Prisma, nenhum `schema.prisma`,
-  nenhum banco instalado. O `package.json` tem só as três dependências do front.
-  `backend/schema` é um rascunho em texto, ainda sendo alinhado às decisões D1–D16;
+- **Backend: em construção** em `backend/`, seguindo `docs/plano-implementacao.md` tarefa por
+  tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
+  validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
+  com exclusion constraints e CHECKs escritos à mão. **Ainda não há rota HTTP** (Express entra
+  na Tarefa 4). `backend/schema` é um rascunho em texto, ainda sendo alinhado às decisões D1–D16;
   em caso de conflito, vale `docs/documentacao.md`.
-- **Stack decidida, ainda não instalada:** PostgreSQL (D6), TypeScript no Node (D7),
-  Prisma, pasta `backend/` com `package.json` próprio e Postgres em Docker Compose (D8),
-  JWT curto + refresh em cookie httpOnly (D9). MySQL foi descartado — ver D6.
+- **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
+  7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
+  Vitest 5. A instalar nas próximas tarefas: Express, JWT curto + refresh em cookie httpOnly (D9).
+  MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
 - **Figma** — usar a cópia com acesso de edição (o MCP do Figma exige edição até para ler):
@@ -39,6 +42,17 @@ npm run build
 npm run lint     # oxlint
 ```
 
+Backend (PowerShell, na pasta `backend/`; Docker Desktop aberto; `backend/.env` criado a partir
+de `.env.example` — o Postgres fica em `localhost:5433`, D26):
+
+```powershell
+cd backend
+docker compose up -d     # Postgres 17 com os bancos dentagenda e dentagenda_test
+npm install              # também gera o client do Prisma (postinstall)
+npm run db:migrate       # aplica as migrations no banco de desenvolvimento
+npm run lint; npm run typecheck; npm test   # testes aplicam as migrations no banco de teste
+```
+
 ## Estrutura
 
 ```
@@ -50,8 +64,16 @@ src/
   App.jsx       Rotas
   main.jsx      Entrada
 backend/
-  schema        Rascunho do modelo em texto (ainda não é Prisma)
+  schema                 Rascunho do modelo em texto (superado por prisma/schema.prisma)
+  prisma/                schema.prisma e migrations (SQL à mão no fim da "inicial")
+  prisma.config.ts       Config do Prisma 7 (lê backend/.env)
+  src/config/            env.ts — valida as variáveis de ambiente
+  src/compartilhado/     banco.ts (criarPrisma), erros-do-banco.ts (violacaoDoBanco)
+  src/generated/         Client do Prisma, gerado (fora do git)
+  testes/                Apoio aos testes: migrations e limpeza do banco de teste
 docs/
+  plano-implementacao.md Plano do backend do MVP, tarefa por tarefa
+  spec-backend-mvp.md    Spec aprovada do backend
   documentacao.md        Registro de decisões de arquitetura e modelagem (D1, D2, ...)
   pendencias-colzani.md  Perguntas que só a clínica responde
   api.md                 Contrato da API (rotas, entrada, saída, erros)
