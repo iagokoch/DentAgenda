@@ -26,6 +26,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D18  | Modelo de dados do domínio                      | Parcial                      |
 | D19  | Tabelas e regras de autenticação                | Fechada                      |
 | D20  | Convenções da API e rotas de autenticação       | Fechada                      |
+| D21  | Rotas de cadastro                               | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -792,9 +793,40 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
 - *Prefixo `/api/v1`:* versão sem segundo cliente que precise dela.
 - *Rota `recuperacao/verificar`:* acima.
 
+## D21 — Rotas de cadastro (pacientes, funcionários, procedimentos, grade, bloqueios)
+
+> **Status: fechada.**
+> Contrato em `docs/api.md`; aqui ficam os porquês das regras que não vieram de D1–D20.
+
+**O quê:**
+1. **Primeiro acesso do funcionário:** `POST /api/funcionarios` não recebe senha. A conta nasce
+   com uma senha aleatória que ninguém conhece; o funcionário define a dele por "Recuperar senha".
+2. **O paciente edita no próprio cadastro só** `email`, `convenio`, `nascimento` e o endereço.
+   `nome` e `telefone` só pela recepção; `cpf` por ninguém.
+3. **Bloqueio em lote é tudo ou nada:** um conflito em qualquer dentista cancela o pedido inteiro.
+4. **Bloqueio é apagado de verdade** (`DELETE`), ao contrário de funcionário e procedimento.
+5. **Desativar funcionário revoga todas as sessões dele.**
+
+**Por quê:**
+1. O admin nunca conhece a senha de ninguém, e não precisa de campo "trocar no primeiro login"
+   nem de rota nova — reaproveita a recuperação (D3, D19).
+2. O telefone é o canal de recuperação de senha (D3). Se o paciente pudesse trocá-lo, quem
+   roubasse a sessão trocaria o telefone e tomaria a conta de vez. O nome identifica o
+   paciente para a clínica.
+3. Feriado aplicado pela metade (uns dentistas bloqueados, outros não) é pior que nenhum:
+   a recepção acharia que bloqueou todos.
+4. Nenhuma tabela aponta para `Bloqueio`, então apagar não quebra histórico.
+5. Sem isso, o access/refresh de quem saiu da clínica continuaria valendo até expirar (D19).
+
+**Alternativas descartadas:**
+- *Admin define senha temporária:* admin conhece a senha e exige "trocar no primeiro login".
+- *Paciente edita tudo menos CPF:* troca de telefone sem verificação (acima).
+- *Paciente não edita nada:* liga para a clínica até para mudar o e-mail.
+- *Bloqueio em lote parcial* (cria os que dá e lista os que falharam): acima.
+
 ## Próximo
 
-1. Design seção 3, parte 2: rotas de agenda e consultas.
+1. Design seção 3, parte 2, bloco B: horários livres e consultas.
 2. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
    D11.1, D11.3, D15.3, D18 (`dataInicio`).
 3. Analisar o Figma (8 primeiras páginas) — **bloqueado**: a conta conectada não tem acesso
