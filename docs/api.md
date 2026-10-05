@@ -189,7 +189,7 @@ Sem corpo. Exige o cookie de refresh **e** o cabeçalho `X-DentAgenda-Refresh: 1
 **1. `POST /api/auth/cliente/recuperacao/codigo`** — `{ "cpf": "..." }`
 **1. `POST /api/auth/funcionario/recuperacao/codigo`** — `{ "email": "..." }`
 
-- **202** sempre: *"Se os dados estiverem corretos, enviamos um código."* Cliente recebe por
+- **202** sempre `{ "mensagem": "Se os dados estiverem corretos, enviamos um código." }`. Cliente recebe por
   SMS; funcionário, por e-mail (simulados no MVP — D16). CPF sem `Login`, e-mail inexistente e
   funcionário inativo recebem a mesma resposta, sem envio (D25.4).
 - **429** `LIMITE_DE_CODIGOS`.

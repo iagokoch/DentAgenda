@@ -19,7 +19,8 @@ Confira antes de assumir qualquer coisa:
   logger que oculta dado sensível e mensageria simulada no log; hash de senha, JWT e middleware
   de papéis. **Rotas prontas:** `POST /api/auth/cliente/login` e `/api/auth/funcionario/login`
   (com bloqueio após 3 falhas, D5/D19/D27), `POST /api/auth/refresh` (rotativo, D29),
-  `POST /api/auth/logout` e `GET /api/auth/eu`; recuperação e cadastro entram nas Tarefas 8–9.
+  `POST /api/auth/logout`, `GET /api/auth/eu` e recuperação de senha (`.../recuperacao/codigo` e
+  `/confirmar`, cliente e funcionário); autocadastro entra na Tarefa 9.
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
@@ -76,7 +77,7 @@ backend/
   src/compartilhado/     contexto, erros, middleware-de-erro, validacao, logger, mensageria,
                          senhas (bcrypt), tokens (JWT e refresh), autenticacao (papéis R/D/A/C),
                          banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
-  src/modulos/auth/      Login, sessões (refresh em cookie) e bloqueio de login
+  src/modulos/auth/      Login, sessões (refresh em cookie), bloqueio de login, códigos e recuperação
   src/generated/         Client do Prisma, gerado (fora do git)
   testes/                Apoio aos testes: migrations, limpeza do banco, contexto com relógio
                          fixo e enviador em memória, fábricas (paciente, funcionário, token)

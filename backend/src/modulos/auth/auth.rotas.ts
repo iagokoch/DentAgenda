@@ -8,6 +8,10 @@ export function criarRotasAuth(contexto: Contexto): Router {
   const rotas = Router();
   rotas.post('/cliente/login', controller.loginCliente);
   rotas.post('/funcionario/login', controller.loginFuncionario);
+  rotas.post('/cliente/recuperacao/codigo', controller.pedirRecuperacaoCliente);
+  rotas.post('/funcionario/recuperacao/codigo', controller.pedirRecuperacaoFuncionario);
+  rotas.post('/cliente/recuperacao/confirmar', controller.confirmarRecuperacaoCliente);
+  rotas.post('/funcionario/recuperacao/confirmar', controller.confirmarRecuperacaoFuncionario);
   rotas.post('/refresh', controller.renovar);
   rotas.post('/logout', autenticar(contexto), controller.sair);
   rotas.get('/eu', autenticar(contexto), controller.eu);

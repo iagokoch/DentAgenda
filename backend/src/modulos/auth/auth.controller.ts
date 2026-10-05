@@ -3,7 +3,14 @@ import type { UsuarioAutenticado } from '../../compartilhado/autenticacao.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { naoAutenticado } from '../../compartilhado/erros.ts';
 import { validar } from '../../compartilhado/validacao.ts';
-import { esquemaLoginCliente, esquemaLoginFuncionario } from './auth.schemas.ts';
+import {
+  esquemaConfirmacaoDeRecuperacaoCliente,
+  esquemaConfirmacaoDeRecuperacaoFuncionario,
+  esquemaLoginCliente,
+  esquemaLoginFuncionario,
+  esquemaPedidoDeRecuperacaoCliente,
+  esquemaPedidoDeRecuperacaoFuncionario,
+} from './auth.schemas.ts';
 import { loginCliente, loginFuncionario, type ResultadoDoLogin } from './login.service.ts';
 import {
   apagarCookieDeRefresh,
@@ -12,9 +19,25 @@ import {
   NOME_DO_COOKIE_DE_REFRESH,
   renovarSessao,
 } from './sessoes.ts';
+import {
+  confirmarRecuperacaoCliente,
+  confirmarRecuperacaoFuncionario,
+  MENSAGEM_DE_CODIGO_ENVIADO,
+  pedirRecuperacaoCliente,
+  pedirRecuperacaoFuncionario,
+} from './recuperacao.service.ts';
 import { usuarioDoCliente, usuarioDoFuncionario } from './usuario-da-resposta.ts';
 
-type AcoesDeAuth = 'loginCliente' | 'loginFuncionario' | 'renovar' | 'sair' | 'eu';
+type AcoesDeAuth =
+  | 'loginCliente'
+  | 'loginFuncionario'
+  | 'renovar'
+  | 'sair'
+  | 'eu'
+  | 'pedirRecuperacaoCliente'
+  | 'pedirRecuperacaoFuncionario'
+  | 'confirmarRecuperacaoCliente'
+  | 'confirmarRecuperacaoFuncionario';
 
 // Rotas protegidas passam por autenticar(); aqui o usuário já existe.
 function usuarioDe(req: Request): UsuarioAutenticado {
@@ -62,6 +85,26 @@ export function criarControllerAuth(contexto: Contexto): Record<AcoesDeAuth, Req
       const funcionario = await contexto.prisma.funcionario.findUnique({ where: { id: usuario.funcionarioId } });
       if (!funcionario) throw naoAutenticado();
       res.json({ usuario: usuarioDoFuncionario(funcionario) });
+    },
+    pedirRecuperacaoCliente: async (req, res) => {
+      const { cpf } = validar(esquemaPedidoDeRecuperacaoCliente, req.body);
+      await pedirRecuperacaoCliente(contexto, cpf);
+      res.status(202).json({ mensagem: MENSAGEM_DE_CODIGO_ENVIADO });
+    },
+    pedirRecuperacaoFuncionario: async (req, res) => {
+      const { email } = validar(esquemaPedidoDeRecuperacaoFuncionario, req.body);
+      await pedirRecuperacaoFuncionario(contexto, email);
+      res.status(202).json({ mensagem: MENSAGEM_DE_CODIGO_ENVIADO });
+    },
+    confirmarRecuperacaoCliente: async (req, res) => {
+      const entrada = validar(esquemaConfirmacaoDeRecuperacaoCliente, req.body);
+      await confirmarRecuperacaoCliente(contexto, { ...entrada, ip: ipDe(req) });
+      res.status(204).end();
+    },
+    confirmarRecuperacaoFuncionario: async (req, res) => {
+      const entrada = validar(esquemaConfirmacaoDeRecuperacaoFuncionario, req.body);
+      await confirmarRecuperacaoFuncionario(contexto, { ...entrada, ip: ipDe(req) });
+      res.status(204).end();
     },
   };
 }

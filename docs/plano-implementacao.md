@@ -961,7 +961,7 @@ export function consumirCodigo(tx, contexto, pedido: {
 Atenção: o incremento de `tentativas` precisa **sobreviver** ao erro 400 — gravar fora da
 transação que é desfeita, ou responder sem lançar dentro dela.
 
-- [ ] **Passo 1: testes que falham** — `codigos.test.ts`:
+- [x] **Passo 1: testes que falham** — `codigos.test.ts`:
   - `it('4º pedido na mesma hora → 429 LIMITE_DE_CODIGOS')`
   - `it('6º pedido em 24 h, espaçados de 2 h → 429')`
   - `it('o limite soma finalidades diferentes do mesmo identificador')` (D25.3)
@@ -970,7 +970,7 @@ transação que é desfeita, ou responder sem lançar dentro dela.
   - `it('3 erros esgotam o código; o certo depois → CODIGO_INVALIDO')`
   - `it('código usado não vale de novo')`
   - `it('banco guarda HMAC, não o código')` (`codigoHash` ≠ código e tem 64 hex)
-- [ ] **Passo 2: testes que falham** — `auth.recuperacao.test.ts`:
+- [x] **Passo 2: testes que falham** — `auth.recuperacao.test.ts`:
   - `it('cliente: pedido → 202 com a mensagem padrão e SMS no telefone cadastrado')`
   - `it('CPF inexistente → mesma resposta 202, grava linha sem envio')` (D19, D25.4)
   - `it('paciente sem Login → mesma resposta, sem envio')` (D25.4)
@@ -980,9 +980,9 @@ transação que é desfeita, ou responder sem lançar dentro dela.
   - `it('confirmar revoga todas as sessões')`
   - `it('confirmar com código errado → 400 CODIGO_INVALIDO')`
   - `it('novaSenha com 7 caracteres → 400 ENTRADA_INVALIDA')`
-- [ ] **Passo 3:** `npm test` → FAIL; implementar. Mensagem padrão do 202 (api.md):
+- [x] **Passo 3:** `npm test` → FAIL; implementar. Mensagem padrão do 202 (api.md):
   *"Se os dados estiverem corretos, enviamos um código."*
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 4:** verificação padrão.
 
 **Pronto quando:** 18 testes passam; `LIMITE_DE_CODIGOS` e `CODIGO_INVALIDO` cobertos.
 
