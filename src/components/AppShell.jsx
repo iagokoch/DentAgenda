@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useSessao } from '../sessao/sessao-contexto.js';
+import { ehAdmin, useSessao } from '../sessao/sessao-contexto.js';
 import Brand from './Brand';
 import Icon from './Icon';
 import { termoDeBusca } from '../pacientes/formatar.js';
 
-const LINKS_DA_CLINICA = [{to:'/inicio',label:'Início',icon:'home'},{to:'/agenda',label:'Agenda',icon:'calendar'},{to:'/pacientes',label:'Pacientes',icon:'users'},{to:'/inicio#relatorios',label:'Relatórios',icon:'report'},{to:'/inicio#configuracoes',label:'Configurações',icon:'settings'}];
+const LINKS_DA_CLINICA = [{to:'/inicio',label:'Início',icon:'home'},{to:'/agenda',label:'Agenda',icon:'calendar'},{to:'/pacientes',label:'Pacientes',icon:'users'},{to:'/disponibilidade',label:'Disponibilidade',icon:'clock'},{to:'/inicio#relatorios',label:'Relatórios',icon:'report'},{to:'/inicio#configuracoes',label:'Configurações',icon:'settings'}];
+// D37: o menu só mostra o que o papel abre (a API é quem garante).
+const LINKS_DO_ADMIN = [{to:'/admin/equipe',label:'Equipe',icon:'id'},{to:'/admin/procedimentos',label:'Procedimentos',icon:'clipboard'}];
 // D35: o paciente usa o mesmo layout, com a navegação dele e sem a busca de pacientes.
 const LINKS_DO_PACIENTE = [{to:'/minha-conta',label:'Minhas consultas',icon:'calendar',exato:true},{to:'/minha-conta/agendar',label:'Marcar consulta',icon:'plus'}];
 
@@ -28,7 +30,7 @@ export default function AppShell({ children, title, wide = false }) {
   const { usuario, sair } = useSessao();
   const [busca, setBusca] = useState('');
   const daClinica = usuario.tipo === 'FUNCIONARIO';
-  const links = daClinica ? LINKS_DA_CLINICA : LINKS_DO_PACIENTE;
+  const links = !daClinica ? LINKS_DO_PACIENTE : ehAdmin(usuario) ? [...LINKS_DA_CLINICA, ...LINKS_DO_ADMIN] : LINKS_DA_CLINICA;
   const buscarPaciente = (evento) => { evento.preventDefault(); navigate('/pacientes?busca=' + encodeURIComponent(termoDeBusca(busca))); setBusca(''); };
 
   return (

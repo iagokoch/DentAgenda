@@ -19,6 +19,8 @@ Confira antes de assumir qualquer coisa:
   consulta (`/consultas/:id`: cancelar, remarcar, realizar, observação com histórico) e Histórico no perfil do paciente.
   **Área do paciente (D35):** `/minha-conta` (próximas e histórico, cancelar; justificativa já obrigatória a menos de
   24 h) e `/minha-conta/agendar` (marcar), no mesmo `AppShell` com a navegação do paciente.
+  **Administração (D37):** `/admin/equipe` e `/admin/procedimentos` (só admin; `RotaProtegida permitir={ehAdmin}`) e
+  `/disponibilidade` (grade: A edita, R e D leem; bloqueios: R de todos, em lote; D os próprios).
 - **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (Tarefas 0 a 23 feitas,
   plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (381 testes): `auth` (11),
   pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
@@ -30,7 +32,7 @@ Confira antes de assumir qualquer coisa:
   inteiro, só com login real, está em `src/e2e/ponta-a-ponta.test.ts` (roteiro manual em `docs/ponta-a-ponta.md`).
   Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
 - **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador (`docs/ponta-a-ponta.md`);
-  (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) telas de administração (funcionários, procedimentos, grade, bloqueios), hoje só pela API; (5) para produção:
+  (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) ~~telas de administração~~ feitas (D37); (5) para produção:
   enviador real de SMS e e-mail (issue #1), `trust proxy` (D32), índices e retenção (#4). Issues #1 a #7 no GitHub cobrem
   produção e qualidade.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
@@ -83,13 +85,17 @@ src/
                 única), mensagens.js (texto dos erros de entrada)
   sessao/       SessaoProvider (restaura pelo refresh), sessao-contexto.js (useSessao),
                 rotas.jsx (RotaProtegida/RotaPublica)
-  components/   AppShell, AuthLayout, Brand, Icon
+  components/   AppShell (menu por papel), AuthLayout, Brand, Gaveta (painel lateral), Icon
   assets/       consultorio.png (foto do painel do login)
   pages/        Login, Cadastro, RecuperarSenha, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda,
-                DetalhesDaConsulta, MinhasConsultas e MarcarConsulta (paciente, D35); *.test.jsx = testes de tela
+                DetalhesDaConsulta, Disponibilidade, admin/Equipe e admin/Procedimentos (D37), MinhasConsultas e
+                MarcarConsulta (paciente, D35); *.test.jsx = testes de tela
   agenda/       calendario (puro, com testes), status, useEscolhaDeHorario (mês/dia/horário e vagas), CalendarioDeDias,
                 Horarios, PacienteDaConsulta, DialogoDeCancelamento, ObservacaoDaConsulta
   minha-conta/  consultas-do-paciente (puro: próximas, histórico, regra das 24 h)
+  admin/        formatos (puro: preço em reais, fuso da clínica, grade por dia, diff do PATCH), GavetaDeFuncionario,
+                GavetaDeProcedimento
+  disponibilidade/ GradeSemanal (A edita; R e D leem), Bloqueios (R em lote; D os próprios)
   testes/       tela.jsx: API simulada no fetch, sessão e rotas para os testes de tela (D36)
   pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco, HistoricoDoPaciente
   index.css     Tokens de design

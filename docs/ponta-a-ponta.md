@@ -28,7 +28,7 @@ para `localhost:5173` e chegou à API pelo proxy do Vite (resposta 202).
 
 O `db:seed:dev` já deixa a Ana com seg–sex, 08:00–12:00 e 14:00–18:00. Para conferir a rota, redefina a grade:
 
-- **Pela tela** (depois do Bloco 3): entre como admin → Administração → Grade semanal → Dra. Ana Costa.
+- **Pela tela:** entre como admin → **Disponibilidade** → escolha a Dra. Ana Costa → ajuste as faixas → **Salvar grade**.
 - **Pela API:** em `http://localhost:3000/api/docs`, `POST /api/auth/funcionario/login` com o e-mail e a senha do
   admin; copie o `accessToken`, clique em **Authorize** e cole. Em `GET /api/dentistas` pegue o id da Ana e chame
   `PUT /api/dentistas/{id}/grade` com:

@@ -42,6 +42,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D34  | Swagger gerado dos schemas Zod                  | Fechada                      |
 | D35  | Área do paciente no front                       | Fechada (pendência Colzani)  |
 | D36  | Testes de tela no front                         | Fechada                      |
+| D37  | Telas de administração e disponibilidade        | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1390,6 +1391,49 @@ obrigatório, botão que some, mensagem do código de erro certo.
 
 **Em aberto:** nada.
 
+## D37 — Telas de administração e disponibilidade
+
+> **Status: fechada.** Fecha o item 4 de "O que falta" do README: funcionários, procedimentos, grade e bloqueios saem
+> da API para a tela. Nenhuma rota nova na API.
+
+**O quê:**
+1. **Rotas do front e quem entra** (a matriz é a do `api.md`; a tela só esconde, quem garante é a API — D10):
+
+   | Rota                    | Quem         | O que faz                                                                   |
+   |-------------------------|--------------|-----------------------------------------------------------------------------|
+   | `/admin/equipe`         | A            | Lista, cadastra, edita, desativa e reativa funcionários                      |
+   | `/admin/procedimentos`  | A            | Lista, cadastra, edita, desativa e reativa procedimentos                     |
+   | `/disponibilidade`      | R, D, A      | Grade semanal (A edita; R e D só leem) e bloqueios (R de todos; D os próprios) |
+
+   `RotaProtegida` ganha `permitir(usuario)`: funcionário sem o papel volta para `/inicio`. O menu só mostra o que o
+   usuário pode abrir.
+2. **Desativar** é `PATCH { ativo: false }`; não existe `DELETE` (D18). Funcionário desativado perde as sessões (D21.5);
+   procedimento desativado some para o paciente e da tela de agendamento. Os dois podem ser reativados.
+3. **Funcionário novo** não recebe senha (D21.1): a tela avisa que a pessoa define a dela em "Esqueci minha senha" com o
+   e-mail cadastrado. A edição manda só os campos que mudaram.
+4. **Preço** é digitado em reais (`180,00`) e enviado em centavos inteiros; duração em minutos inteiros.
+5. **Grade:** uma linha por dia da semana, com as faixas `HH:mm` de cada dia; "Salvar grade" faz o `PUT` da semana
+   inteira. A resposta `consultasForaDaGrade` aparece como lista de consultas para a recepção resolver (D12.5), com link
+   para cada uma.
+6. **Bloqueios:** lista os que terminam de hoje em diante (`?de=<hoje>`). O formulário pede início e fim
+   (`datetime-local`) e, para a recepção, os dentistas (feriado em lote: um bloqueio por dentista, tudo ou nada). O
+   instante vai com o fuso da clínica fixo em `-03:00`: o Brasil não tem horário de verão desde 2019, e a API recusa
+   instante sem fuso. O 409 `CONSULTAS_NO_PERIODO` lista as consultas que impedem o bloqueio.
+7. **Dentista** vê a própria grade e os próprios bloqueios, sem escolher outro dentista; dentista admin escolhe qualquer
+   um para a grade (A), e os bloqueios de colegas a tela não oferece (a API responderia 404).
+
+**Por quê:** sem essas telas a demonstração dependia de chamar a API na mão (Swagger). Grade e bloqueios ficam juntos
+porque os dois respondem à mesma pergunta ("quando este dentista atende?").
+
+**Alternativas descartadas:**
+- *Grade e bloqueios em telas separadas:* dois seletores de dentista para a mesma pergunta.
+- *Esconder só os botões e deixar a rota aberta:* a rota abriria e mostraria erro 403 em cada leitura.
+- *Fuso pela API do navegador (`Intl`):* o navegador pode estar em outro fuso; o que vale é o da clínica (D12).
+
+**Em aberto:**
+1. Se o Brasil voltar a ter horário de verão, o `-03:00` fixo do bloqueio precisa virar cálculo pelo fuso
+   `America/Sao_Paulo` (a API já calcula assim).
+
 ## Próximo
 
 Estado em 2026-10-22: backend completo para o MVP (43 rotas, 381 testes) e front ligado à API até a F3. O resto está no
@@ -1399,7 +1443,7 @@ README, seção "O que falta para finalizar". Em resumo:
 2. **Conferir a F3 no navegador** com a dentista com grade semanal definida (`docs/ponta-a-ponta.md`).
 3. ~~Fechamento da Tarefa 23~~: `npm run conferir:codigos` e o ponta a ponta automatizado (`backend/src/e2e/`).
 4. ~~Área do paciente~~ (`/minha-conta`): feita (D35), com testes de tela (D36).
-5. **Telas de administração** (funcionários, procedimentos, grade, bloqueios): hoje só pela API.
+5. ~~Telas de administração~~: feitas (D37).
 6. **Produção:** enviador real de SMS e e-mail, `trust proxy` (D32), índices e retenção de dados.
 7. Pendências que **não** travam o código (dependem da clínica): `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3 e
    `dataInicio` da D18, além das perguntas novas da seção 6).

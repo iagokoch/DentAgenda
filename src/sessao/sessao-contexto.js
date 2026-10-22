@@ -10,3 +10,6 @@ export function useSessao() {
 export function telaInicialDe(usuario) {
   return usuario.tipo === 'FUNCIONARIO' ? '/inicio' : '/minha-conta'
 }
+
+// Papéis do docs/api.md (D10) usados pelas rotas e pelo menu do front (D37). Admin é flag somada à categoria.
+export const ehAdmin = (usuario) => usuario.isAdmin === true
