@@ -10,7 +10,7 @@ parceria com a Colzani Odontologia (PAC VI — Engenharia de Software).
   nas fatias F2 (pacientes) e F3 (agenda e consultas).
 - **Backend** (`backend/`): em construção, tarefa por tarefa, seguindo
   `docs/plano-implementacao.md`. Prontas: as 11 rotas de autenticação, procedimentos, funcionários e dentistas, com seeds.
-  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Próximo: horários livres e bloqueios (Tarefas 15 a 17).
+  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Próximo: bloqueios e rotas de horários (Tarefas 16 e 17).
 
 ## Stack
 

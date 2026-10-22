@@ -1243,7 +1243,7 @@ export function multiploDe5Minutos(instante: Date): boolean;
 type Entrada = { faixas: Intervalo[]; ocupados: Intervalo[]; duracaoMinutos: number; agora: Date };
 ```
 
-- [ ] **Passo 1: testes que falham** (exemplos da D12, horários de São Paulo):
+- [x] **Passo 1: testes que falham** (exemplos da D12, horários de São Paulo):
   - `it('limpeza de 60 min em 08:00–12:00 → 08:00, 09:00, 10:00, 11:00')`
   - `it('avaliação 30 min ocupando 08:30–09:00 tira 08:00 da limpeza de 60')` (D12)
   - `it('horário que já passou não aparece')` (agora = 09:10 → 08:00 e 09:00 somem)
@@ -1253,8 +1253,8 @@ type Entrada = { faixas: Intervalo[]; ocupados: Intervalo[]; duracaoMinutos: num
   - `it('janela começa no próximo múltiplo de 5 min depois de agora')` (agora 09:07 → 09:10)
   - `it('bloqueio que cobre a faixa inteira zera horários e janelas')`
   - `it('multiploDe5Minutos: 08:05 sim, 08:07 não, 08:05:30 não')`
-- [ ] **Passo 2:** `npm test` → FAIL.
-- [ ] **Passo 3: implementar:**
+- [x] **Passo 2:** `npm test` → FAIL.
+- [x] **Passo 3: implementar:**
   ```ts
   const MINUTO = 60_000;
   const CINCO_MINUTOS = 5 * MINUTO;
@@ -1316,9 +1316,9 @@ type Entrada = { faixas: Intervalo[]; ocupados: Intervalo[]; duracaoMinutos: num
     return instante.getTime() % CINCO_MINUTOS === 0;
   }
   ```
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 4:** verificação padrão.
 
-**Pronto quando:** 9 testes passam, sem banco.
+**Pronto quando:** 20 testes passam, sem banco (9 previstos + 11 de fronteira).
 
 **Commit:** `feat: cálculo de horários no passo e janelas de encaixe (D12, D22)`
 
