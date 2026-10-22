@@ -92,4 +92,21 @@ describe('semearDadosDeDesenvolvimento', () => {
     // seg–sex, manhã e tarde
     expect(await contexto.prisma.gradeHorario.count({ where: { dentistaId: dentista.id } })).toBe(10);
   });
+
+  it('paciente de exemplo para a demonstração (D41): sem login, uma consulta pendente no último dia útil e uma no próximo', async () => {
+    await limparBanco(contexto.prisma);
+    const segunda = new Date('2026-10-05T12:00:00Z');
+
+    await semearDadosDeDesenvolvimento(contexto.prisma, 'development', segunda);
+    await semearDadosDeDesenvolvimento(contexto.prisma, 'development', segunda);
+
+    const paciente = await contexto.prisma.cliente.findFirstOrThrow({ include: { login: true } });
+    expect(paciente.nome).toBe('Marcos Oliveira (exemplo)');
+    expect(paciente.login).toBeNull();
+    const consultas = await contexto.prisma.consulta.findMany({ where: { clienteId: paciente.id }, orderBy: { inicio: 'asc' }, include: { procedimento: true } });
+    expect(consultas.map((consulta) => [consulta.inicio.toISOString(), consulta.status, consulta.procedimento.nome])).toEqual([
+      ['2026-10-02T12:00:00.000Z', 'CONFIRMADA', 'Limpeza'], // sexta, 09:00 em São Paulo: pendente de registro
+      ['2026-10-06T13:00:00.000Z', 'CONFIRMADA', 'Limpeza'], // terça, 10:00
+    ]);
+  });
 });

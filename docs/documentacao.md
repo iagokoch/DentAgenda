@@ -46,6 +46,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D38  | Pedidos simultâneos em login, refresh e códigos | Fechada                      |
 | D39  | Qualidade: acessibilidade, botões, papéis, relógio | Fechada                    |
 | D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
+| D41  | Roteiro de demonstração e paciente de exemplo     | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1579,16 +1580,37 @@ porque os dois respondem à mesma pergunta ("quando este dentista atende?").
 1. Prazo de retenção (`RETENCAO_DIAS`): confirmar com a Colzani (`docs/pendencias-colzani.md`, seção 6).
 2. Com mais de uma instância da API, o contador do limite precisa de store compartilhado (D32, "Em aberto 2").
 
+## D41 — Roteiro de demonstração e paciente de exemplo no `db:seed:dev`
+
+> **Status: fechada.** Só dados fictícios de desenvolvimento; o `db:seed:dev` continua recusando `NODE_ENV=production`.
+
+**O quê:**
+1. O `db:seed:dev` cria também o paciente **Marcos Oliveira (exemplo)** (CPF `123.456.789-09`, sem login) com duas
+   consultas de Limpeza com a Dra. Ana Costa: uma no último dia útil antes de hoje, às 09:00 (já passou: aparece como
+   pendente de registro), e uma no próximo dia útil, às 10:00. Só cria as consultas se o paciente ainda não tiver
+   nenhuma; o "hoje" vem de um parâmetro (relógio injetável, #7).
+2. `docs/roteiro-de-demonstracao.md`: a apresentação percorre os quatro papéis só pelas telas, inclusive o 409 de
+   horário (duas abas no mesmo horário) e a ativação da conta do paciente.
+
+**Por quê:** "marcar como realizada" só vale depois do início da consulta, e as telas não marcam no passado (D22 deixa
+recepção e dentista registrarem atendimento passado só pela API). Sem a consulta de ontem, a demonstração dependeria de
+chamar a API na mão ou de esperar a hora da consulta.
+
+**Alternativas descartadas:**
+- *Tela de "registrar atendimento já acontecido":* funcionalidade nova só para a apresentação.
+- *Mudar o relógio do servidor na demonstração:* afeta sessão, códigos e tudo o que depende da hora.
+
+**Em aberto:** nada.
+
 ## Próximo
 
-Estado em 2026-10-22: backend completo para o MVP (43 rotas, 381 testes) e front ligado à API até a F3. O resto está no
-README, seção "O que falta para finalizar". Em resumo:
+Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos
+quatro papéis, e 175 testes. Detalhes no README, seção "O que falta". Em resumo:
 
-1. ~~Spec, plano, backend, Swagger e as fatias F1 a F3 do front.~~ Feitos (`docs/plano-implementacao.md`).
-2. **Conferir a F3 no navegador** com a dentista com grade semanal definida (`docs/ponta-a-ponta.md`).
-3. ~~Fechamento da Tarefa 23~~: `npm run conferir:codigos` e o ponta a ponta automatizado (`backend/src/e2e/`).
-4. ~~Área do paciente~~ (`/minha-conta`): feita (D35), com testes de tela (D36).
-5. ~~Telas de administração~~: feitas (D37).
-6. **Produção:** enviador real de SMS e e-mail, `trust proxy` (D32), índices e retenção de dados.
-7. Pendências que **não** travam o código (dependem da clínica): `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3 e
-   `dataInicio` da D18, além das perguntas novas da seção 6).
+1. ~~Spec, plano, backend, Swagger, fatias F1 a F3 e Tarefa 23.~~ Feitos (`docs/plano-implementacao.md`).
+2. ~~Área do paciente (D35), administração (D37), qualidade (D38, D39), produção (D40) e demonstração (D41).~~ Feitos.
+3. **Enviador real de SMS e e-mail** (issue #1): depende do provedor escolhido com a Colzani.
+4. **Conferência humana** no navegador, no celular e com leitor de tela (`docs/roteiro-de-demonstracao.md`,
+   `docs/acessibilidade.md`); o percurso automatizado no Edge já passou.
+5. Pendências que dependem da clínica: `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3, `dataInicio` da D18, prazo
+   de retenção da D40, paciente marcando pelo sistema da D35 e as demais perguntas da seção 6).
