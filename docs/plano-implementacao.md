@@ -1209,7 +1209,7 @@ export function cabeNaGrade(grade: Faixa[], intervalo: Intervalo): boolean;
 ```
 `TIME` do Prisma chega como `Date` em 1970-01-01 UTC: converter com `toISOString().slice(11, 16)`.
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('PUT por admin substitui a semana e GET devolve a nova')`
   - `it('PUT com faixas sobrepostas no mesmo dia → 422 FAIXAS_SOBREPOSTAS')`
   - `it('faixas encostadas 08:00–12:00 e 12:00–14:00 são aceitas')`
@@ -1219,10 +1219,10 @@ export function cabeNaGrade(grade: Faixa[], intervalo: Intervalo): boolean;
   - `it('PUT por recepcionista sem isAdmin → 403')`
   - `it('GET pelo próprio dentista → 200; da grade de outro → 404')`
   - `it('cabeNaGrade: consulta 11:30–12:30 numa faixa 08:00–12:00 → false')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar (substituição numa transação: apaga e recria).
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar (substituição numa transação: apaga e recria).
+- [x] **Passo 3:** verificação padrão.
 
-**Pronto quando:** 9 testes passam.
+**Pronto quando:** 22 testes passam (9 previstos + 13 de cenários negativos e regressão).
 
 **Commit:** `feat: grade semanal dos dentistas (D12)`
 

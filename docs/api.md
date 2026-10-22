@@ -369,8 +369,10 @@ Substitui a semana inteira do dentista.
 
 `diaSemana`: 0 = domingo … 6 = sábado. Horários no fuso `America/Sao_Paulo`.
 
-- **200** `{ "grade": [...], "consultasForaDaGrade": [{ "id", "inicio", "fim", "paciente" }] }` —
-  nada é cancelado sozinho; a lista é para a recepção resolver (D12.5).
+- **200** `{ "grade": [...], "consultasForaDaGrade": [{ "id", "inicio", "fim", "paciente": { "id", "nome" } }] }` —
+  nada é cancelado sozinho; a lista (consultas CONFIRMADAS que começam de agora em diante) é para a
+  recepção resolver (D12.5). Lista vazia `[]` limpa a grade; faixas encostadas são aceitas.
+- **400** `ENTRADA_INVALIDA` — `diaSemana` fora de 0–6 ou hora fora de `HH:mm`.
 - **422** `FAIXAS_SOBREPOSTAS` / `FAIXA_INVALIDA` (`inicio >= fim`).
 - **404** se o id não for de um dentista.
 
