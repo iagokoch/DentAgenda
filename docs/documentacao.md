@@ -1326,12 +1326,12 @@ de resumo e o papel de cada rota são escritos à mão, e o teste pega rota esqu
 
 ## Próximo
 
-Estado em 2026-10-22: backend completo para o MVP (43 rotas, 375 testes) e front ligado à API até a F3. O resto está no
+Estado em 2026-10-22: backend completo para o MVP (43 rotas, 381 testes) e front ligado à API até a F3. O resto está no
 README, seção "O que falta para finalizar". Em resumo:
 
 1. ~~Spec, plano, backend, Swagger e as fatias F1 a F3 do front.~~ Feitos (`docs/plano-implementacao.md`).
-2. **Conferir a F3 no navegador** com a dentista com grade semanal definida.
-3. **Fechamento da Tarefa 23:** script de cobertura dos códigos de erro e ponta a ponta.
+2. **Conferir a F3 no navegador** com a dentista com grade semanal definida (`docs/ponta-a-ponta.md`).
+3. ~~Fechamento da Tarefa 23~~: `npm run conferir:codigos` e o ponta a ponta automatizado (`backend/src/e2e/`).
 4. **Área do paciente** (`/minha-conta`): decidir se entra no MVP (D30, D33 em aberto).
 5. **Telas de administração** (funcionários, procedimentos, grade, bloqueios): hoje só pela API.
 6. **Produção:** enviador real de SMS e e-mail, `trust proxy` (D32), índices e retenção de dados.

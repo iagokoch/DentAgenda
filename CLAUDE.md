@@ -19,16 +19,18 @@ Confira antes de assumir qualquer coisa:
   **Ligado à API (F3, D33):** Início real, Novo Agendamento (`/agenda`, também remarca com `?remarcar=<id>`), Detalhes da
   consulta (`/consultas/:id`: cancelar, remarcar, realizar, observação com histórico) e Histórico no perfil do paciente.
   A área do paciente (`/minha-conta`) segue provisória.
-- **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (só a Tarefa 23, o fechamento,
-  tem passos abertos). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (375 testes): `auth` (11),
+- **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (Tarefas 0 a 23 feitas,
+  plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (381 testes): `auth` (11),
   pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
   horários livres e dias disponíveis, e as 9 rotas de `/api/consultas`. Seeds: `db:seed` (admin inicial) e `db:seed:dev`
   (dados fictícios). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite
   por IP em `/api/auth`. Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção; cada
   `*.rotas.ts` exporta `rotasDocumentadas<Dominio>` e `src/modulos-documentados.ts` as liga aos routers.
+  `npm run conferir:codigos` falha se algum código de erro do `api.md` não aparecer em teste (D23); o fluxo da clínica
+  inteiro, só com login real, está em `src/e2e/ponta-a-ponta.test.ts` (roteiro manual em `docs/ponta-a-ponta.md`).
   Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
-- **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador, porque só passou em testes;
-  (2) fechamento da Tarefa 23 (script `conferir:codigos`, ponta a ponta); (3) decidir a área do paciente `/minha-conta`
+- **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador (`docs/ponta-a-ponta.md`);
+  (2) ~~Tarefa 23~~ feita; (3) decidir a área do paciente `/minha-conta`
   (D30); (4) telas de administração (funcionários, procedimentos, grade, bloqueios), hoje só pela API; (5) para produção:
   enviador real de SMS e e-mail (issue #1), `trust proxy` (D32), índices e retenção (#4). Issues #1 a #7 no GitHub cobrem
   produção e qualidade.
@@ -70,6 +72,7 @@ docker compose up -d     # Postgres 17 com os bancos dentagenda e dentagenda_tes
 npm install              # também gera o client do Prisma (postinstall)
 npm run db:migrate       # aplica as migrations no banco de desenvolvimento
 npm run lint; npm run typecheck; npm test   # testes aplicam as migrations no banco de teste
+npm run conferir:codigos # todo código de erro do docs/api.md tem teste (D23)
 npm run dev              # API em http://localhost:<PORTA do .env>/api
 ```
 
