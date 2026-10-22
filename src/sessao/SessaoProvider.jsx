@@ -10,7 +10,8 @@ export default function SessaoProvider({ children }) {
     quandoSessaoEncerrar(() => setSessao({ estado: 'anonimo', usuario: null }))
     let cancelado = false
     async function restaurar() {
-      const usuario = (await api.renovarSessao()) ? await api.pedir('/api/auth/eu').then((r) => r.usuario, () => null) : null
+      const sessaoRenovada = await api.renovarSessao().catch(() => false)
+      const usuario = sessaoRenovada ? await api.pedir('/api/auth/eu').then((r) => r.usuario, () => null) : null
       if (!cancelado) setSessao(usuario ? { estado: 'logado', usuario } : { estado: 'anonimo', usuario: null })
     }
     restaurar()

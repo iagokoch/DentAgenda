@@ -124,6 +124,57 @@ describe('cliente HTTP', () => {
     expect(cliente.temToken()).toBe(false)
   })
 
+  it('refresh que falha por rede não encerra a sessão: lança SEM_CONEXAO e mantém o token', async () => {
+    const aoEncerrarSessao = vi.fn()
+    const fila = [naoAutenticado()]
+    const fetch = vi.fn(async () => {
+      const proxima = fila.shift()
+      if (!proxima) throw new TypeError('Failed to fetch')
+      return proxima
+    })
+    const cliente = criarClienteHttp({ fetch, aoEncerrarSessao })
+    cliente.definirToken('token-1')
+
+    const erro = await cliente.pedir('/api/pacientes').catch((e) => e)
+
+    expect(erro).toMatchObject({ status: 0, codigo: 'SEM_CONEXAO' })
+    expect(aoEncerrarSessao).not.toHaveBeenCalled()
+    expect(cliente.temToken()).toBe(true)
+  })
+
+  it('refresh que volta 5xx não encerra a sessão', async () => {
+    const aoEncerrarSessao = vi.fn()
+    const { fetch } = fetchFalso(naoAutenticado(), new Response('Bad Gateway', { status: 502 }))
+    const cliente = criarClienteHttp({ fetch, aoEncerrarSessao })
+    cliente.definirToken('token-1')
+
+    const erro = await cliente.pedir('/api/pacientes').catch((e) => e)
+
+    expect(erro).toMatchObject({ status: 502 })
+    expect(aoEncerrarSessao).not.toHaveBeenCalled()
+    expect(cliente.temToken()).toBe(true)
+  })
+
+  it('renovarSessao rejeita quando a rede cai, em vez de dizer que a sessão acabou', async () => {
+    const fetch = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    const cliente = criarClienteHttp({ fetch })
+
+    const erro = await cliente.renovarSessao().catch((e) => e)
+
+    expect(erro).toMatchObject({ codigo: 'SEM_CONEXAO' })
+  })
+
+  it('todo pedido leva um limite de tempo', async () => {
+    const { fetch, chamadas } = fetchFalso(json(200, {}))
+    const cliente = criarClienteHttp({ fetch })
+
+    await cliente.pedir('/api/auth/eu')
+
+    expect(chamadas[0].opcoes.signal).toBeInstanceOf(AbortSignal)
+  })
+
   it('401 com outro código (senha errada) não tenta renovar', async () => {
     const { fetch, chamadas } = fetchFalso(
       json(401, { erro: { codigo: 'CREDENCIAIS_INVALIDAS', mensagem: 'CPF ou senha incorretos.' } }),

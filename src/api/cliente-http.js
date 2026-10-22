@@ -10,6 +10,8 @@ export class ErroDaApi extends Error {
 }
 
 const CAMINHO_DO_REFRESH = '/api/auth/refresh'
+// Sem limite, um servidor que não responde deixa a tela em "carregando" para sempre.
+const TEMPO_LIMITE_EM_MS = 30_000
 
 async function erroDaResposta(resposta) {
   const corpo = await resposta.json().catch(() => null)
@@ -35,33 +37,33 @@ export function criarClienteHttp({ fetch = (...args) => globalThis.fetch(...args
         method: metodo,
         headers,
         body: corpo === undefined ? undefined : JSON.stringify(corpo),
+        signal: AbortSignal.timeout(TEMPO_LIMITE_EM_MS),
       })
     } catch {
       throw new ErroDaApi(0, 'SEM_CONEXAO', 'Sem conexão com o servidor.')
     }
   }
 
+  // false: o servidor recusou o cookie, a sessão acabou. Queda de rede e erro 5xx lançam ErroDaApi sem apagar
+  // o token: o servidor não disse que a sessão é inválida, e o próximo pedido tenta renovar de novo.
   async function renovar() {
     const resposta = await enviar(CAMINHO_DO_REFRESH, { metodo: 'POST', cabecalhos: { 'X-DentAgenda-Refresh': '1' } })
-    if (!resposta.ok) {
+    if (resposta.status >= 500) throw await erroDaResposta(resposta)
+    const corpo = resposta.ok ? await resposta.json().catch(() => null) : null
+    if (!corpo?.accessToken) {
       accessToken = null
       return false
     }
-    accessToken = (await resposta.json()).accessToken
+    accessToken = corpo.accessToken
     return true
   }
 
   // Vários pedidos podem receber 401 juntos; todos esperam a mesma renovação,
   // porque o refresh é rotativo e um segundo uso do mesmo cookie derrubaria a sessão (D19).
   function renovarSessao() {
-    renovacaoEmAndamento ??= renovar()
-      .catch(() => {
-        accessToken = null
-        return false
-      })
-      .finally(() => {
-        renovacaoEmAndamento = null
-      })
+    renovacaoEmAndamento ??= renovar().finally(() => {
+      renovacaoEmAndamento = null
+    })
     return renovacaoEmAndamento
   }
 
