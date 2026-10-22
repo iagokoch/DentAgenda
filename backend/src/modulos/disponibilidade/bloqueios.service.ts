@@ -1,6 +1,6 @@
 import type { UsuarioAutenticado } from '../../compartilhado/autenticacao.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
-import { diaSeguinte, formatarEmSaoPaulo, instanteEmSaoPaulo } from '../../compartilhado/datas.ts';
+import { formatarEmSaoPaulo, limiteDoPeriodo } from '../../compartilhado/datas.ts';
 import { ErroDeNegocio, naoEncontrado, semPermissao } from '../../compartilhado/erros.ts';
 import { travarDentistas } from '../../compartilhado/travas.ts';
 import type { Bloqueio } from '../../generated/prisma/client.ts';
@@ -12,14 +12,6 @@ const paraResposta = (bloqueio: Bloqueio) => ({
   inicio: formatarEmSaoPaulo(bloqueio.inicio),
   fim: formatarEmSaoPaulo(bloqueio.fim),
 });
-
-const ehDia = (texto: string) => /^\d{4}-\d{2}-\d{2}$/.test(texto);
-
-// Só data: "de" começa à 00:00 do dia e "ate" vai até o fim dele (00:00 do dia seguinte), no fuso da clínica.
-function limiteDoPeriodo(texto: string, limite: 'de' | 'ate'): Date {
-  if (!ehDia(texto)) return new Date(texto);
-  return instanteEmSaoPaulo(limite === 'de' ? texto : diaSeguinte(texto), '00:00');
-}
 
 // Bloqueios que tocam o período (os que só encostam nas pontas ficam de fora).
 export async function listarBloqueios(contexto: Contexto, dentistaId: string, periodo: { de?: string; ate?: string }) {

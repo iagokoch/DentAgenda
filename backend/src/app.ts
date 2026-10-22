@@ -7,6 +7,7 @@ import { limitarRequisicoesPorIp } from './compartilhado/limite-de-requisicoes.t
 import { serializarRequisicao } from './compartilhado/logger.ts';
 import { criarMiddlewareDeErro, rotaInexistente } from './compartilhado/middleware-de-erro.ts';
 import { criarRotasAuth } from './modulos/auth/auth.rotas.ts';
+import { criarRotasConsultas } from './modulos/consultas/consultas.rotas.ts';
 import { criarRotasDentistas, criarRotasFuncionarios } from './modulos/funcionarios/funcionarios.rotas.ts';
 import { criarRotasBloqueios, criarRotasDisponibilidade, criarRotasHorarios } from './modulos/disponibilidade/disponibilidade.rotas.ts';
 import { criarRotasPacientes } from './modulos/pacientes/pacientes.rotas.ts';
@@ -30,6 +31,7 @@ export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number } =
   app.use('/api/dentistas', criarRotasDentistas(contexto));
   app.use('/api/dentistas', criarRotasDisponibilidade(contexto));
   app.use('/api/bloqueios', criarRotasBloqueios(contexto));
+  app.use('/api/consultas', criarRotasConsultas(contexto));
   app.use('/api', criarRotasHorarios(contexto));
   app.use('/api/pacientes', criarRotasPacientes(contexto));
   app.use('/api/procedimentos', criarRotasProcedimentos(contexto));

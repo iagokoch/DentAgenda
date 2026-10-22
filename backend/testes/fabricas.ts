@@ -2,7 +2,7 @@ import { randomInt, randomUUID } from 'node:crypto';
 import type { Contexto } from '../src/compartilhado/contexto.ts';
 import { gerarHashDeSenha } from '../src/compartilhado/senhas.ts';
 import { gerarAccessToken } from '../src/compartilhado/tokens.ts';
-import type { Cliente, Funcionario, Procedimento } from '../src/generated/prisma/client.ts';
+import type { Cliente, Consulta, Funcionario, Procedimento } from '../src/generated/prisma/client.ts';
 
 export const SENHA_DE_TESTE = 'senha-de-teste-123';
 
@@ -69,6 +69,32 @@ export function criarProcedimento(
 ): Promise<Procedimento> {
   return contexto.prisma.procedimento.create({
     data: { nome: `Procedimento ${randomUUID()}`, duracaoMinutos: 60, precoCentavos: 18000, ...dados },
+  });
+}
+
+// Insere a consulta direto no banco, sem passar pelas regras da API: serve de ponto de partida dos testes de leitura,
+// cancelamento e realização. CANCELADA nasce cancelada pelo paciente, com justificativa (CHECK de menos de 24 h).
+export function criarConsultaNoBanco(
+  contexto: Contexto,
+  dados: {
+    clienteId: string;
+    dentistaId: string;
+    procedimentoId: string;
+    inicio: Date;
+    duracaoMinutos?: number;
+    status?: 'CONFIRMADA' | 'REALIZADA' | 'CANCELADA';
+  },
+): Promise<Consulta> {
+  const { duracaoMinutos = 60, status = 'CONFIRMADA', ...ligacoes } = dados;
+  const agora = contexto.relogio.agora();
+  return contexto.prisma.consulta.create({
+    data: {
+      ...ligacoes,
+      fim: new Date(dados.inicio.getTime() + duracaoMinutos * 60_000),
+      status,
+      criadoEm: agora,
+      ...(status === 'CANCELADA' ? { canceladoEm: agora, canceladoPor: 'PACIENTE' as const, justificativa: 'Cancelada no teste.' } : {}),
+    },
   });
 }
 

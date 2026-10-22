@@ -23,7 +23,7 @@ export const esquemaNovoBloqueio = z
   });
 
 // ?de=&ate=: dia (AAAA-MM-DD, no fuso da clínica, o dia todo) ou instante com fuso.
-const diaOuInstante = z.union([z.iso.date(), instante]);
+export const diaOuInstante = z.union([z.iso.date(), instante]);
 export const esquemaPeriodo = z.object({ de: diaOuInstante.optional(), ate: diaOuInstante.optional() });
 
 export type NovoBloqueio = z.infer<typeof esquemaNovoBloqueio>;

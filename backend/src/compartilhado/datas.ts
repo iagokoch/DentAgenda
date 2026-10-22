@@ -56,3 +56,12 @@ export function diaDaSemana(data: string): number {
 export function diaSeguinte(data: string): string {
   return new Date(new Date(`${data}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
+
+const ehDia = (texto: string) => /^\d{4}-\d{2}-\d{2}$/.test(texto);
+
+// ?de=&ate= da API: só data = o dia todo no fuso da clínica ("de" começa à 00:00 do dia, "ate" vai até a 00:00 do
+// dia seguinte); com instante e fuso, vale o instante.
+export function limiteDoPeriodo(texto: string, limite: 'de' | 'ate'): Date {
+  if (!ehDia(texto)) return new Date(texto);
+  return instanteEmSaoPaulo(limite === 'de' ? texto : diaSeguinte(texto), '00:00');
+}
