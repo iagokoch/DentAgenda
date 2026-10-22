@@ -16,7 +16,9 @@ Confira antes de assumir qualquer coisa:
   página provisória), `AppShell` com o usuário real e Sair. **Ligado à API (F2):** busca e
   cadastro de pacientes (`/pacientes`, `/pacientes/novo`), Perfil do Paciente com dados, endereço e alertas
   reais e painel "Editar dados" (só recepção); Histórico e Resumo clínico ficam ocultos até a F3.
-  **Ainda simulado:** Início e Agenda (F3). O que ainda é simulado **será refeito**; não trate como requisito.
+  **Ligado à API (F3, D33):** Início real, Novo Agendamento (`/agenda`, também remarca com `?remarcar=<id>`), Detalhes da
+  consulta (`/consultas/:id`: cancelar, remarcar, realizar, observação com histórico) e Histórico no perfil do paciente.
+  A área do paciente (`/minha-conta`) segue provisória.
 - **Backend: em construção** em `backend/`, seguindo `docs/plano-implementacao.md` tarefa por
   tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
   validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
@@ -28,7 +30,7 @@ Confira antes de assumir qualquer coisa:
   `/confirmar`, cliente e funcionário) e autocadastro/ativação do paciente
   (`POST /api/auth/cliente/cadastro/codigo` e `/confirmar`, D15). Todas as 11 rotas de `auth`
   estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18); `GET/POST /api/funcionarios`, `PATCH /api/funcionarios/{id}` e `GET /api/dentistas` (D10, D21); seeds `db:seed` (admin inicial) e `db:seed:dev` (dados fictícios).
-  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Bloqueios e horários livres (Tarefas 16 e 17): todas as rotas de disponibilidade estão prontas. Consultas (Tarefas 18 a 21): as 9 rotas de `/api/consultas` estão prontas (criar, listar, pendentes, ver, cancelar, remarcar, realizar, observação e histórico). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite por IP em `/api/auth`. Próximo: F3 do front (Início e Agenda com dados reais, hoje rotulados como protótipo).
+  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Bloqueios e horários livres (Tarefas 16 e 17): todas as rotas de disponibilidade estão prontas. Consultas (Tarefas 18 a 21): as 9 rotas de `/api/consultas` estão prontas (criar, listar, pendentes, ver, cancelar, remarcar, realizar, observação e histórico). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite por IP em `/api/auth`. Próximo: conferir a F3 no navegador, depois Tarefa 22 (Swagger).
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
@@ -82,8 +84,11 @@ src/
                 rotas.jsx (RotaProtegida/RotaPublica)
   components/   AppShell, AuthLayout, Brand, Icon
   assets/       consultorio.png (foto do painel do login)
-  pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda
-  pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco
+  pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda,
+                DetalhesDaConsulta
+  agenda/       calendario (puro, com testes), status, CalendarioDeDias, Horarios, PacienteDaConsulta,
+                DialogoDeCancelamento, ObservacaoDaConsulta
+  pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco, HistoricoDoPaciente
   index.css     Tokens de design
   styles.css    Estilos das páginas
   App.jsx       Rotas
@@ -132,31 +137,18 @@ placeholder no front (`TabPlaceholder` em `PerfilPaciente.jsx`).
   erro de `docs/api.md` tem pelo menos um teste.
 - **Não invente campo sem justificativa.** Se não dá pra explicar por que a coluna
   existe e o que quebra sem ela, ela não entra no schema.
-- **Cuidado com dado do protótipo.** Os valores em `Agenda.jsx` (tabela de preços,
-  lista de horários) e em `PerfilPaciente.jsx` (paciente, histórico) são fictícios e
-  hardcoded. Não são requisito — mas as **estruturas** que eles implicam são, e
-  várias ainda não foram decididas. Veja `docs/documentacao.md`.
 
 ## Armadilhas conhecidas no front-end
 
 Coisas que já cravaram decisão de modelagem sem ninguém ter decidido. Entre parênteses,
 a decisão que agora vale no lugar:
 
-- `Agenda.jsx` — `procedures` é um objeto com preço em string (`'180,00'`), hardcoded.
-  (D11: `precoCentavos` inteiro + `duracaoMinutos`.)
-- `Agenda.jsx` — `times` é uma lista fixa 08:00–15:00 com `11:30` e `12:00` `disabled`
-  no código; não há noção de disponibilidade real. (D12: grade semanal + bloqueios.)
-- `Agenda.jsx` — `confirm()` sempre confirma. Não há conflito, erro nem validação.
-  (D6/D13: conflito recusado pelo banco.)
-- `PerfilPaciente.jsx` — dentista é string livre (`'Dr. Silva'`, `'Dra. Ana Costa'`).
-  (D10: `Funcionario` com categoria DENTISTA.)
-- `PerfilPaciente.jsx` — status da consulta só tem `REALIZADA` e `CANCELADA`.
-  (D13: falta `CONFIRMADA`.)
-- `Inicio.jsx` — números, consultas do dia e lembretes são fictícios. (Dashboard entra na F3.)
 - **Figma × decisões (F1):** as telas de login, cadastro e recuperação do Figma pedem e-mail e
   código de 4 dígitos. Valem as decisões: paciente entra por CPF (D1.1), cadastro pede CPF,
   telefone, código, nome e senha (D15), código tem 6 dígitos (D19). O visual do Figma foi mantido.
 
+Resolvidas na F3 (D33): preço e horários hardcoded da Agenda, `confirm()` que sempre confirmava, dentista e status
+fixos do Perfil e números fictícios do Início; tudo vem da API, e as telas não têm mais faixa de protótipo.
 Resolvidas na F2: link "Pacientes" fixo em `/pacientes/marcos-oliveira` (agora `/pacientes`, com busca) e Perfil do Paciente sem dado fictício.
 Resolvidas na F1: login por e-mail (agora CPF ou e-mail), `Dr. Silva` fixo no `AppShell`
 (agora o usuário logado), cadastro só com e-mail e senha (agora D15). Depois da F1: saudação e

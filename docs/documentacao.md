@@ -1261,6 +1261,37 @@ regra é a mesma para não haver dois formatos no banco.
 2. O contador em memória não é compartilhado entre processos; com mais de uma instância, trocar o store.
 3. Enviador real de SMS e e-mail (AUD-004): sem ele a API não sobe com `NODE_ENV=production` (D16).
 
+## D33 — Agenda e consultas no front (fatia F3)
+
+**Decisão:**
+1. **Novo Agendamento** usa só a API existente: paciente (`GET /api/pacientes?busca=`), procedimentos,
+   dentistas, `dias-disponiveis`, `horarios-livres` e `POST /api/consultas`. O "Valor Estimado" é somente
+   leitura (`precoCentavos` do procedimento). Erro 409 de horário limpa o horário escolhido, recarrega as vagas e
+   mostra mensagem pedindo outro horário.
+2. **Remarcar** reaproveita a tela de Novo Agendamento com `/agenda?remarcar=<id>`: paciente, procedimento e
+   dentista começam os da consulta original, e a confirmação chama `POST /api/consultas/{id}/remarcacao`. Não há
+   rota nova na API.
+3. **Detalhes da consulta** em `/consultas/:id` (só funcionário): cancelar (popup; a justificativa passa a ser
+   obrigatória se a API devolver `JUSTIFICATIVA_OBRIGATORIA`), remarcar, marcar como realizada e observação com
+   histórico. O Histórico da aba do paciente lista as consultas dele (`GET /api/consultas?pacienteId=`).
+4. **Início** mostra consultas de hoje, próxima consulta, total de pacientes e consultas pendentes de registro
+   (`/api/consultas/pendentes`). O cartão se chama "Pacientes cadastrados", não "ativos": a API não tem noção
+   de paciente ativo, só o total.
+5. **Encaixe fora do passo** (`janelasLivres`, só R/D) não aparece na tela: ela oferece só os horários no passo.
+   Com "qualquer dentista", cada horário aparece uma vez e vale o primeiro dentista livre.
+
+**Por quê:** fecha o fluxo marcar → ver → remarcar/cancelar/realizar sem mudar o contrato do `api.md`; a
+alternativa de editar horário na mesma consulta já estava descartada (D14).
+
+**Alternativas descartadas:**
+- *Tela própria de remarcação:* duplicaria calendário, horários e erros de horário.
+- *Rotular o total como "ativos":* o número não filtra nada; o rótulo mentiria.
+
+**Em aberto:**
+1. Encaixe fora do passo para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
+2. Área do paciente (`/minha-conta`) segue provisória (D30): cancelar e marcar pelo paciente ainda não têm tela.
+3. Valor Estimado editável pela clínica: decisão de produto, perguntar à Colzani.
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.

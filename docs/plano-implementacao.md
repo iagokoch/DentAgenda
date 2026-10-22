@@ -1536,13 +1536,13 @@ modificar `consultas.rotas.ts`, `.controller.ts`, `.schemas.ts`.
 
 ## Tarefa F3: Front — agenda e consultas (D30)
 
-- [ ] **Passo 1:** Dashboard/Início e Agenda de Consultas com consultas reais.
-- [ ] **Passo 2:** Novo Agendamento — procedimentos, dias disponíveis e horários livres reais;
+- [x] **Passo 1:** Dashboard/Início e Agenda de Consultas com consultas reais.
+- [x] **Passo 2:** Novo Agendamento — procedimentos, dias disponíveis e horários livres reais;
   409 de horário leva a escolher outro.
-- [ ] **Passo 3:** Detalhes da Consulta — cancelar, remarcar, realizar, observação.
-- [ ] **Passo 4:** apagar os dados fictícios de `Agenda.jsx` e `PerfilPaciente.jsx`; decidir a área
+- [x] **Passo 3:** Detalhes da Consulta — cancelar, remarcar, realizar, observação.
+- [x] **Passo 4:** apagar os dados fictícios de `Agenda.jsx` e `PerfilPaciente.jsx`; decidir a área
   do paciente (D30, em aberto).
-- [ ] **Passo 5:** verificação do front + docs.
+- [x] **Passo 5:** verificação do front + docs (D33). Falta só a conferência no navegador com dados reais.
 
 **Commit:** `feat: agenda e consultas ligadas à API (D30)`
 
