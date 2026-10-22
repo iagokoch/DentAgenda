@@ -1,9 +1,0 @@
-/* Telas em protótipo: faixa de aviso, etiqueta "Exemplo" e botão de confirmar desativado. */
-.faixa-prototipo{display:flex;gap:10px;align-items:flex-start;margin-bottom:18px;padding:10px 12px;border:1px solid #f5c26b;border-radius:10px;background:#fff6e5;color:#7a4a00;font-size:13px;line-height:1.45}
-.faixa-prototipo svg{flex:none;margin-top:2px}
-.faixa-prototipo strong{display:block}
-.exemplo{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid #f5c26b;border-radius:999px;background:#fff6e5;color:#7a4a00;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;vertical-align:middle}
-div.appointment{cursor:default}
-div.appointment:hover{background:#fff}
-.primary-btn:disabled{background:var(--border);color:#667085;box-shadow:none;cursor:not-allowed}
-.selection-bar>div.selection-bar__confirmar{flex:0 0 auto;display:grid;justify-items:end;gap:4px}
