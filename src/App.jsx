@@ -3,6 +3,8 @@ import Login from './pages/Login';
 import Cadastro from './pages/Cadastro';
 import RecuperarSenha from './pages/RecuperarSenha';
 import Inicio from './pages/Inicio';
+import Pacientes from './pages/Pacientes';
+import NovoPaciente from './pages/NovoPaciente';
 import PerfilPaciente from './pages/PerfilPaciente';
 import Agenda from './pages/Agenda';
 import AreaDoPaciente from './pages/AreaDoPaciente';
@@ -23,7 +25,8 @@ function App() {
           <Route path="/cadastro" element={publica(<Cadastro />)} />
           <Route path="/recuperar-senha" element={publica(<RecuperarSenha />)} />
           <Route path="/inicio" element={daClinica(<Inicio />)} />
-          <Route path="/pacientes" element={daClinica(<PerfilPaciente />)} />
+          <Route path="/pacientes" element={daClinica(<Pacientes />)} />
+          <Route path="/pacientes/novo" element={daClinica(<NovoPaciente />)} />
           <Route path="/pacientes/:pacienteId" element={daClinica(<PerfilPaciente />)} />
           <Route path="/agenda" element={daClinica(<Agenda />)} />
           <Route path="/minha-conta" element={doPaciente(<AreaDoPaciente />)} />

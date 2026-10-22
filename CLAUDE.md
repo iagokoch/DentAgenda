@@ -13,8 +13,10 @@ Confira antes de assumir qualquer coisa:
   para o login de funcionário, senão de paciente), cadastro em duas etapas (código por SMS, D15),
   recuperação de senha (6 dígitos, paciente e funcionário), sessão restaurada pelo refresh ao
   recarregar, rotas protegidas (funcionário → telas da clínica; paciente → `/minha-conta`,
-  página provisória), `AppShell` com o usuário real e Sair. **Ainda simulado:** Início, Agenda e
-  Perfil do Paciente (F2 e F3). O que ainda é simulado **será refeito**; não trate como requisito.
+  página provisória), `AppShell` com o usuário real e Sair. **Ligado à API (F2):** busca e
+  cadastro de pacientes (`/pacientes`, `/pacientes/novo`), Perfil do Paciente com dados, endereço e alertas
+  reais e painel "Editar dados" (só recepção); Histórico e Resumo clínico ficam ocultos até a F3.
+  **Ainda simulado:** Início e Agenda (F3). O que ainda é simulado **será refeito**; não trate como requisito.
 - **Backend: em construção** em `backend/`, seguindo `docs/plano-implementacao.md` tarefa por
   tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
   validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
@@ -80,7 +82,8 @@ src/
                 rotas.jsx (RotaProtegida/RotaPublica)
   components/   AppShell, AuthLayout, Brand, Icon
   assets/       consultorio.png (foto do painel do login)
-  pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, PerfilPaciente, Agenda
+  pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda
+  pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco
   index.css     Tokens de design
   styles.css    Estilos das páginas
   App.jsx       Rotas
@@ -150,11 +153,11 @@ a decisão que agora vale no lugar:
 - `PerfilPaciente.jsx` — status da consulta só tem `REALIZADA` e `CANCELADA`.
   (D13: falta `CONFIRMADA`.)
 - `Inicio.jsx` — números, consultas do dia e lembretes são fictícios. (Dashboard entra na F3.)
-- `AppShell.jsx` — o link "Pacientes" aponta para `/pacientes/marcos-oliveira`, fixo. (F2.)
 - **Figma × decisões (F1):** as telas de login, cadastro e recuperação do Figma pedem e-mail e
   código de 4 dígitos. Valem as decisões: paciente entra por CPF (D1.1), cadastro pede CPF,
   telefone, código, nome e senha (D15), código tem 6 dígitos (D19). O visual do Figma foi mantido.
 
+Resolvidas na F2: link "Pacientes" fixo em `/pacientes/marcos-oliveira` (agora `/pacientes`, com busca) e Perfil do Paciente sem dado fictício.
 Resolvidas na F1: login por e-mail (agora CPF ou e-mail), `Dr. Silva` fixo no `AppShell`
 (agora o usuário logado), cadastro só com e-mail e senha (agora D15). Depois da F1: saudação e
 data do Início com o usuário e o dia reais; painel do login com "DentAgenda" e a foto do Figma.

@@ -1185,10 +1185,10 @@ criar `src/modulos/pacientes/alertas.test.ts`, `endereco.test.ts`.
 
 ## Tarefa F2: Front — pacientes (D30)
 
-- [ ] **Passo 1:** busca e cadastro de paciente pela recepção (`GET/POST /api/pacientes`).
-- [ ] **Passo 2:** Perfil do Paciente com dados, endereço e alertas reais; abas Documentos e
+- [x] **Passo 1:** busca e cadastro de paciente pela recepção (`GET/POST /api/pacientes`).
+- [x] **Passo 2:** Perfil do Paciente com dados, endereço e alertas reais; abas Documentos e
   Financeiro continuam placeholder.
-- [ ] **Passo 3:** verificação do front + docs.
+- [x] **Passo 3:** verificação do front + docs.
 
 **Commit:** `feat: telas de pacientes ligadas à API (D30)`
 

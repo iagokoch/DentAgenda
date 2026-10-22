@@ -1,4 +1,135 @@
-import { useState } from 'react'; import { Link } from 'react-router-dom'; import AppShell from '../components/AppShell'; import Icon from '../components/Icon';
-const tabs=['Dados Pessoais','Histórico','Documentos','Financeiro'];const history=[{icon:'clipboard',color:'blue',title:'Limpeza e Profilaxia',date:'12 de Jan, 2024 • Dr. Silva',status:'REALIZADA',note:'Procedimento padrão de limpeza. Paciente apresenta excelente higiene bucal. Retorno em 6 meses.'},{icon:'tooth',color:'orange',title:'Restauração Resina',date:'15 de Nov, 2023 • Dr. Silva',status:'REALIZADA',note:'Dente 24 - Oclusal. Sem intercorrências.'},{icon:'tooth',color:'lightblue',title:'Avaliação de Canal',date:'02 de Out, 2023 • Dra. Ana Costa',status:'CANCELADA'}];
-export default function PerfilPaciente(){const [activeTab,setActiveTab]=useState('Dados Pessoais');return <AppShell title="DentAgenda" wide><section className="patient-hero"><div className="avatar avatar--patient">MO<span/></div><div className="patient-hero__name"><h1>Marcos Oliveira</h1><p>Paciente desde Março, 2022</p></div><div className="patient-actions"><a className="soft-btn" href="tel:+5511987654321"><Icon name="phone"/> Ligar</a><a className="soft-btn soft-btn--green" href="https://wa.me/5511987654321" target="_blank" rel="noreferrer"><Icon name="whatsapp"/> WhatsApp</a><Link className="primary-btn" to="/agenda"><Icon name="calendar"/> Agendar Consulta</Link></div></section><div className="tabs">{tabs.map(tab=><button className={activeTab===tab?'active':''} key={tab} onClick={()=>setActiveTab(tab)}>{tab}</button>)}</div>{activeTab==='Dados Pessoais'?<div className="patient-grid"><div className="patient-main"><section className="info-card"><div className="section-heading"><h2>Informações Gerais</h2><button className="text-button"><Icon name="edit" size={14}/> Editar</button></div><div className="info-grid"><Info icon="phone" label="TELEFONE" value="(11) 98765-4321"/><Info icon="mail" label="E-MAIL" value="marcos.oliveira@email.com"/><Info icon="id" label="CPF" value="123.456.789-00"/><Info icon="calendar" label="DATA DE NASCIMENTO" value="15 de Maio, 1985 (39 anos)"/><Info icon="clipboard" label="CONVÊNIO" value="Unimed Odonto - Plano Premium"/><Info icon="map" label="ENDEREÇO" value="Rua das Flores, 123, São Paulo - SP"/></div></section><section className="history-card"><div className="section-heading"><h2>Histórico de Consultas</h2><button className="text-button">Ver completo</button></div><div className="timeline">{history.map(item=><article key={item.title} className="timeline__item"><span className={`timeline__icon ${item.color}`}><Icon name={item.icon}/></span><div><strong>{item.title}</strong><small>{item.date}</small>{item.note&&<p>{item.note}</p>}</div><span className={`status ${item.status==='CANCELADA'?'gray':'green'}`}>{item.status}</span></article>)}</div></section></div><aside className="patient-side"><section className="clinical-summary"><span>RESUMO CLÍNICO</span><div><small>Total de Consultas</small><strong>14</strong></div><div><small>Procedimentos</small><strong>08</strong></div><p>Próxima Consulta<strong>15 de Julho, 14:30</strong></p></section><section className="info-card documents"><div className="section-heading"><h2>Documentos</h2><button className="round-add"><Icon name="plus"/></button></div><Document name="Raio-X_Panoramico.pdf" meta="2.4 MB • 10/01/24" color="pink"/><Document name="Foto_Intraoral_Sup.jpg" meta="1.1 MB • 15/11/23" color="blue"/></section><section className="info-card observations"><h2>Observações Importantes</h2><div><strong>⚠ Alergia à Penicilina</strong><p>Paciente relatou reação adversa grave em tratamento anterior (2018).</p></div></section></aside></div>:<TabPlaceholder title={activeTab}/>}</AppShell>;}
-function Info({icon,label,value}){return <div className="info-item"><span><Icon name={icon}/></span><div><small>{label}</small><strong>{value}</strong></div></div>;}function Document({name,meta,color}){return <div className="document"><span className={color}><Icon name="file"/></span><div><strong>{name}</strong><small>{meta}</small></div><button aria-label="Baixar documento"><Icon name="download"/></button></div>;}function TabPlaceholder({title}){return <section className="tab-placeholder"><span><Icon name={title==='Documentos'?'file':title==='Financeiro'?'report':'clipboard'} size={30}/></span><h2>{title}</h2><p>Esta seção está pronta para receber os dados do backend.</p></section>;}
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { api } from '../api/api.js'
+import { mensagemDoErro } from '../api/mensagens.js'
+import AppShell from '../components/AppShell'
+import Icon from '../components/Icon'
+import Alertas from '../pacientes/Alertas.jsx'
+import EditarPaciente from '../pacientes/EditarPaciente.jsx'
+import { dataLonga, desdeLongo, enderecoEmLinhas, formatarCpf, formatarTelefone, idade, iniciais } from '../pacientes/formatar.js'
+import { useSessao } from '../sessao/sessao-contexto.js'
+
+const ABAS = ['Dados Pessoais', 'Histórico', 'Documentos', 'Financeiro']
+const NAO_INFORMADO = 'Não informado'
+
+// Dados, endereço e alertas vêm da API. Histórico e Resumo clínico chegam com a agenda; Documentos e Financeiro
+// ficam fora do escopo e aparecem como "em breve".
+export default function PerfilPaciente() {
+  const { pacienteId } = useParams()
+  const { usuario } = useSessao()
+  const [resposta, setResposta] = useState({ chave: null })
+  const [aba, setAba] = useState('Dados Pessoais')
+  const [editando, setEditando] = useState(false)
+  const [tentativa, setTentativa] = useState(0)
+  // D10 e docs/api.md: só a recepção edita o cadastro.
+  const podeEditar = usuario.categoria === 'RECEPCIONISTA'
+
+  const buscar = useCallback(() => api.pedir(`/api/pacientes/${pacienteId}`), [pacienteId])
+
+  // A resposta guarda a que paciente pertence; enquanto não for a do atual, a tela está carregando.
+  const chave = `${pacienteId}|${tentativa}`
+  useEffect(() => {
+    let atual = true
+    const dono = `${pacienteId}|${tentativa}`
+    buscar().then(
+      (paciente) => atual && setResposta({ chave: dono, paciente }),
+      (falha) => atual && setResposta({ chave: dono, erro: mensagemDoErro(falha), codigo: falha.codigo }),
+    )
+    return () => {
+      atual = false
+    }
+  }, [buscar, pacienteId, tentativa])
+
+  const atualizar = useCallback(async () => {
+    const atualizado = await buscar()
+    setResposta({ chave: `${pacienteId}|${tentativa}`, paciente: atualizado })
+  }, [buscar, pacienteId, tentativa])
+  const paciente = resposta.paciente
+  const estado = resposta.chave !== chave ? 'carregando' : paciente ? 'pronto' : resposta.codigo === 'NAO_ENCONTRADO' ? 'nao-encontrado' : 'erro'
+  const erro = resposta.erro ?? ''
+  const fecharEdicao = useCallback(() => setEditando(false), [])
+
+  if (estado !== 'pronto') {
+    return (
+      <AppShell title="DentAgenda" wide>
+        <section className="tab-placeholder">
+          {estado === 'carregando' && <p className="form-info">Carregando…</p>}
+          {estado === 'nao-encontrado' && <><h2>Paciente não encontrado</h2><p>Esse cadastro não existe ou foi removido.</p><Link className="primary-btn primary-btn--solid" to="/pacientes">Voltar para Pacientes</Link></>}
+          {estado === 'erro' && <><p className="form-error" role="alert">{erro}</p><button className="soft-btn" onClick={() => setTentativa(tentativa + 1)}>Tentar de novo</button></>}
+        </section>
+      </AppShell>
+    )
+  }
+
+  const enderecoLinhas = enderecoEmLinhas(paciente.endereco)
+  return (
+    <AppShell title="DentAgenda" wide>
+      <nav className="breadcrumb" aria-label="Caminho"><Link to="/pacientes">Pacientes</Link> / {paciente.nome}</nav>
+      <section className="patient-hero">
+        <div className="avatar avatar--patient avatar--initials" aria-hidden="true">{iniciais(paciente.nome)}</div>
+        <div className="patient-hero__name"><h1>{paciente.nome}</h1><p>Paciente desde {desdeLongo(paciente.pacienteDesde)}</p></div>
+        <div className="patient-actions">
+          <a className="soft-btn" href={`tel:+55${paciente.telefone}`}><Icon name="phone" /> Ligar</a>
+          <a className="soft-btn soft-btn--green" href={`https://wa.me/55${paciente.telefone}`} target="_blank" rel="noreferrer"><Icon name="whatsapp" /> WhatsApp</a>
+          <Link className="primary-btn primary-btn--solid" to="/agenda"><Icon name="calendar" /> Agendar Consulta</Link>
+        </div>
+      </section>
+
+      <div className="tabs" role="tablist">
+        {ABAS.map((nome) => <button role="tab" aria-selected={aba === nome} className={aba === nome ? 'active' : ''} key={nome} onClick={() => setAba(nome)}>{nome}</button>)}
+      </div>
+
+      {aba === 'Dados Pessoais' ? (
+        <div className="patient-grid">
+          <div className="patient-main">
+            <section className="info-card">
+              <div className="section-heading">
+                <h2>Informações Gerais</h2>
+                {podeEditar && <button className="text-button" onClick={() => setEditando(true)}><Icon name="edit" size={14} /> Editar</button>}
+              </div>
+              <div className="info-grid">
+                <Info icon="phone" label="TELEFONE" value={formatarTelefone(paciente.telefone)} />
+                <Info icon="mail" label="E-MAIL" value={paciente.email ?? NAO_INFORMADO} />
+                <Info icon="id" label="CPF" value={formatarCpf(paciente.cpf)} />
+                <Info icon="calendar" label="DATA DE NASCIMENTO" value={paciente.nascimento ? `${dataLonga(paciente.nascimento)} (${idade(paciente.nascimento)} anos)` : NAO_INFORMADO} />
+                <Info icon="clipboard" label="CONVÊNIO" value={paciente.convenio ?? 'Particular'} />
+                <Info icon="map" label="ENDEREÇO" value={enderecoLinhas.length > 0 ? enderecoLinhas : NAO_INFORMADO} />
+              </div>
+            </section>
+          </div>
+          <aside className="patient-side">
+            <section className="info-card documents">
+              <h2>Documentos</h2>
+              <p className="documents__soon">Anexar e baixar arquivos<strong>Em breve</strong></p>
+            </section>
+            <Alertas pacienteId={paciente.id} />
+          </aside>
+        </div>
+      ) : (
+        <TabPlaceholder titulo={aba} />
+      )}
+
+      {editando && <EditarPaciente paciente={paciente} aoFechar={fecharEdicao} aoAtualizar={atualizar} />}
+    </AppShell>
+  )
+}
+
+function Info({ icon, label, value }) {
+  const linhas = Array.isArray(value) ? value : [value]
+  return (
+    <div className="info-item">
+      <span><Icon name={icon} /></span>
+      <div><small>{label}</small>{linhas.map((linha) => <strong key={linha}>{linha}</strong>)}</div>
+    </div>
+  )
+}
+
+function TabPlaceholder({ titulo }) {
+  return (
+    <section className="tab-placeholder">
+      <span><Icon name={titulo === 'Documentos' ? 'file' : titulo === 'Financeiro' ? 'report' : 'clipboard'} size={30} /></span>
+      <h2>{titulo}</h2>
+      <p>Em breve.</p>
+    </section>
+  )
+}

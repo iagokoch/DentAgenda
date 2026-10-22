@@ -6,7 +6,7 @@ parceria com a Colzani Odontologia (PAC VI — Engenharia de Software).
 ## Estado atual
 
 - **Front-end** (`src/`): login, cadastro, recuperação de senha e sessão já usam a API (fatia F1,
-  D30). Início, Agenda e Perfil do Paciente ainda mostram dados fictícios e serão ligados à API
+  D30). Busca, cadastro e Perfil do Paciente também usam a API (fatia F2). Início e Agenda ainda mostram dados fictícios e serão ligados à API
   nas fatias F2 (pacientes) e F3 (agenda e consultas).
 - **Backend** (`backend/`): em construção, tarefa por tarefa, seguindo
   `docs/plano-implementacao.md`. Prontas: as 11 rotas de autenticação, procedimentos, funcionários e dentistas, com seeds.
