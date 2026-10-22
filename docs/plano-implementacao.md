@@ -1410,7 +1410,7 @@ Dentro da transação, na ordem da D25.10: `travarDentistas(tx, [dentistaId])` �
 `observacao`, grava `HistoricoObservacao` na mesma transação (D18). Retroativa (R/D com
 `inicio < agora`) pula grade, passo e bloqueio (D22.4).
 
-- [ ] **Passo 1: testes que falham** — `consultas.criacao.test.ts` (relógio: segunda 2026-10-05
+- [x] **Passo 1: testes que falham** — `consultas.criacao.test.ts` (relógio: segunda 2026-10-05
   07:00 SP; grade seg 08:00–12:00; limpeza 60 min):
   - `it('cliente marca às 09:00 → 201 CONFIRMADA, fim 10:00, formato D24.3')`
   - `it('cliente não envia pacienteId: vem do token')`
@@ -1429,8 +1429,8 @@ Dentro da transação, na ordem da D25.10: `travarDentistas(tx, [dentistaId])` �
   - **Foco 1:** `it('grade seg 20:00–23:00 aceita 22:00 de segunda em SP (terça em UTC)')`
   - **Foco 2:** `it('dois POST simultâneos no mesmo horário → um 201 e um 409 HORARIO_INDISPONIVEL')` (`Promise.all`)
   - **Foco 3:** `it('POST de bloqueio e POST de consulta simultâneos no mesmo intervalo → só um é criado')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
 **Pronto quando:** 19 testes passam; os 6 códigos de erro de horário do api.md cobertos.
 
@@ -1446,7 +1446,7 @@ modificar `consultas.rotas.ts`, `.controller.ts`, `.schemas.ts`.
 **Interfaces (produz):** `buscarConsultaVisivel(contexto, usuario, id): Promise<ConsultaComRelacoes>` —
 lança 404 se não existe **ou** se o usuário não pode vê-la (D10, D20.5); usado pelas tarefas 20 e 21.
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('recepção filtra por de/ate (datas em SP), dentistaId, pacienteId e status')`
   - `it('lista paginada em ordem de inicio')`
   - `it('dentista recebe só a própria agenda, mesmo filtrando outro dentistaId')`
@@ -1455,8 +1455,8 @@ lança 404 se não existe **ou** se o usuário não pode vê-la (D10, D20.5); us
   - `it('GET {id} de consulta de outro dentista pelo dentista → 404')`
   - `it('pendentes: CONFIRMADAS com fim no passado, mais antigas primeiro')` (D13.4)
   - `it('pendentes do dentista: só as dele'); it('pendentes pelo cliente → 403')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
 **Pronto quando:** 9 testes passam.
 
@@ -1483,7 +1483,7 @@ Remarcação: uma transação com `cancelarConsultaNaTransacao` e depois `criarC
 (mesmo paciente; dentista e procedimento da original quando ausentes). Clínica → um SMS com o
 horário novo (D25.11).
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('cliente cancela com 48 h sem justificativa → 200, canceladoPor PACIENTE')`
   - **Foco 5:** `it('cliente exatamente 24 h antes sem justificativa → 200')`
   - **Foco 5:** `it('cliente 23 h 59 min antes sem justificativa → 422 JUSTIFICATIVA_OBRIGATORIA')`
@@ -1498,8 +1498,8 @@ horário novo (D25.11).
   - `it('remarcação para horário ocupado → 409 e a original continua CONFIRMADA')` (D22.1)
   - `it('remarcação pelo cliente com menos de 24 h sem justificativa → 422 e nada muda')`
   - `it('remarcação pela recepção manda um SMS com o horário novo')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
 **Pronto quando:** 14 testes passam.
 
@@ -1512,21 +1512,21 @@ horário novo (D25.11).
 **Arquivos:** criar `src/modulos/consultas/{observacao.service.ts,consultas.realizacao.test.ts,consultas.observacao.test.ts}`;
 modificar `consultas.rotas.ts`, `.controller.ts`, `.schemas.ts`.
 
-- [ ] **Passo 1: testes que falham** — realização:
+- [x] **Passo 1: testes que falham** — realização:
   - `it('dentista marca a própria depois do início → 200 REALIZADA')`
   - `it('antes do início → 422 CONSULTA_NAO_INICIADA')`
   - `it('consulta CANCELADA → 422 CONSULTA_NAO_CONFIRMADA')`
   - `it('recepção marca de qualquer dentista; cliente → 403')`
   - `it('REALIZADA sai de pendentes')`
-- [ ] **Passo 2: testes que falham** — observação:
+- [x] **Passo 2: testes que falham** — observação:
   - `it('PUT pelo dentista grava observacao e linha CLINICA no histórico')`
   - `it('PUT pelo cliente grava linha PACIENTE sem funcionário')`
   - `it('texto null apaga a observação e grava linha com texto null')`
   - `it('histórico guarda a versão anterior depois que o paciente sobrescreve')`
   - `it('GET histórico: mais recente primeiro, funcionario { id, nome } ou null')`
   - `it('cliente em consulta de outro → 404')`
-- [ ] **Passo 3:** `npm test` → FAIL; implementar (observação e histórico na mesma transação).
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 3:** `npm test` → FAIL; implementar (observação e histórico na mesma transação).
+- [x] **Passo 4:** verificação padrão.
 
 **Pronto quando:** 11 testes passam; as 9 rotas de consultas do api.md respondem.
 

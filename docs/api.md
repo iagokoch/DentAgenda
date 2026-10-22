@@ -2,8 +2,8 @@
 
 Contrato entre o backend e o front. As decisões por trás de cada regra estão em
 `docs/documentacao.md` (número entre parênteses). Implementado até agora: todas as rotas de
-Autenticação e de Procedimentos; o andamento das demais está nos checkboxes de
-`docs/plano-implementacao.md`.
+Autenticação, Procedimentos, Funcionários, Pacientes, Disponibilidade e Consultas; o andamento
+do restante está nos checkboxes de `docs/plano-implementacao.md`.
 
 ## Convenções (D20)
 
@@ -516,7 +516,12 @@ no passo; para **R/D** conta também janela de encaixe (D25.8).
 ### `GET /api/consultas`
 
 Filtros opcionais: `de`, `ate` (datas), `dentistaId`, `pacienteId`, `status`. Serve a agenda
-por dia/semana/mês. Paginado. **D** recebe sempre só a própria agenda; **C** só as próprias.
+por dia/semana/mês. Paginado, em ordem de `inicio`. **D** recebe sempre só a própria agenda; **C**
+só as próprias, mesmo que filtrem outro `dentistaId` ou `pacienteId`.
+
+`de` e `ate` aceitam só a data (`2026-10-05`, o dia inteiro no fuso de São Paulo) ou um instante com
+fuso. A consulta pertence ao dia em que **começa**: uma das 23:30 de segunda em São Paulo entra
+em `de=ate=2026-10-05`, mesmo sendo terça em UTC.
 
 ### `GET /api/consultas/pendentes` (D13)
 
