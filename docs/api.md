@@ -271,10 +271,14 @@ Envia só os campos a mudar.
 ### `PUT /api/pacientes/{id}/endereco` · `DELETE /api/pacientes/{id}/endereco` (D18)
 
 `PUT` cria ou substitui o endereço inteiro (todos os campos obrigatórios, exceto `complemento`).
-`DELETE` remove. **200** / **204**.
+`DELETE` remove. **200** com o endereço gravado (`complemento: null` se ausente) / **204**,
+inclusive quando o paciente não tinha endereço.
 
 ### Alertas (D18)
 
+- Cada alerta: `{ "id", "texto", "autor": "PACIENTE" | "CLINICA", "funcionario": { "id", "nome" } | null,
+  "criadoEm", "removidoEm": … | null, "removidoPor": { "id", "nome" } | null }`; a lista vem em
+  ordem de criação. `DELETE` de alerta já removido responde **204** sem trocar quem removeu.
 - `GET /api/pacientes/{id}/alertas` — ativos; `?incluirRemovidos=true` traz também os removidos,
   com quem removeu.
 - `POST /api/pacientes/{id}/alertas` — `{ "texto": "Alergia à Penicilina" }`. O autor

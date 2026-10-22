@@ -30,7 +30,7 @@ function paraResposta({ endereco, login, ...cliente }: ClienteCompleto) {
   };
 }
 
-function semClienteId({ clienteId: _clienteId, ...endereco }: EnderecoCliente) {
+export function semClienteId({ clienteId: _clienteId, ...endereco }: EnderecoCliente) {
   return endereco;
 }
 
@@ -80,7 +80,7 @@ export async function cadastrarPaciente(contexto: Contexto, entrada: NovoPacient
 }
 
 // D20.5: paciente que pede o cadastro de outro recebe 404, como se não existisse.
-function conferirAcesso(usuario: UsuarioAutenticado, id: string): void {
+export function conferirAcesso(usuario: UsuarioAutenticado, id: string): void {
   if (usuario.tipo === 'CLIENTE' && usuario.clienteId !== id) throw naoEncontrado();
 }
 

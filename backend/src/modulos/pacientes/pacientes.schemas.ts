@@ -51,3 +51,7 @@ export const esquemaBuscaDePacientes = esquemaPaginacao.extend({ busca: z.string
 export type NovoPaciente = z.infer<typeof esquemaNovoPaciente>;
 export type EdicaoDePaciente = z.infer<typeof esquemaEdicaoPelaRecepcao>;
 export type Endereco = z.infer<typeof esquemaEndereco>;
+
+// O autor (PACIENTE/CLINICA) vem do token, nunca do corpo: campos extras são descartados (D18).
+export const esquemaNovoAlerta = z.object({ texto: texto });
+export const esquemaBuscaDeAlertas = z.object({ incluirRemovidos: z.enum(['true', 'false']).default('false') });

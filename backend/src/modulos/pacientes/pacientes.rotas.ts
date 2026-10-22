@@ -12,5 +12,10 @@ export function criarRotasPacientes(contexto: Contexto): Router {
   rotas.get('/:id', exigirPapel('R', 'D', 'C'), controller.ver);
   // O 403 do dentista e a ordem dos erros ficam no service (D25.7).
   rotas.patch('/:id', exigirPapel('R', 'D', 'C'), controller.editar);
+  rotas.put('/:id/endereco', exigirPapel('R', 'C'), controller.gravarEndereco);
+  rotas.delete('/:id/endereco', exigirPapel('R', 'C'), controller.removerEndereco);
+  rotas.get('/:id/alertas', exigirPapel('R', 'D', 'C'), controller.listarAlertas);
+  rotas.post('/:id/alertas', exigirPapel('R', 'D', 'C'), controller.criarAlerta);
+  rotas.delete('/:id/alertas/:alertaId', exigirPapel('R', 'D'), controller.removerAlerta);
   return rotas;
 }

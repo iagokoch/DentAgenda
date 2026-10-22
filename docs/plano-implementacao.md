@@ -1160,13 +1160,13 @@ LIMIT $2 OFFSET $3;
 **Arquivos:** modificar `src/modulos/pacientes/{pacientes.rotas,.controller,.service,.schemas}.ts`;
 criar `src/modulos/pacientes/alertas.test.ts`, `endereco.test.ts`.
 
-- [ ] **Passo 1: testes que falham** — `endereco.test.ts`:
+- [x] **Passo 1: testes que falham** — `endereco.test.ts`:
   - `it('PUT cria o endereço; segundo PUT substitui inteiro')`
   - `it('PUT sem complemento é aceito; sem cep → 400')`
   - `it('cliente faz PUT no próprio; no de outro → 404')`
   - `it('DELETE → 204 e GET do paciente traz endereco null')`
   - `it('dentista no PUT → 403')`
-- [ ] **Passo 2: testes que falham** — `alertas.test.ts`:
+- [x] **Passo 2: testes que falham** — `alertas.test.ts`:
   - `it('POST pelo cliente grava autor PACIENTE sem funcionário')`
   - `it('POST pela recepção grava autor CLINICA com o funcionário do token')`
   - `it('corpo com autor é ignorado: autor vem do token')`
@@ -1174,10 +1174,10 @@ criar `src/modulos/pacientes/alertas.test.ts`, `endereco.test.ts`.
   - `it('DELETE pelo dentista marca removidoEm, não apaga')`
   - `it('DELETE pelo cliente → 403')` (D18)
   - `it('DELETE de alerta de outro paciente pela URL → 404')`
-- [ ] **Passo 3:** `npm test` → FAIL; implementar.
-- [ ] **Passo 4:** verificação padrão.
+- [x] **Passo 3:** `npm test` → FAIL; implementar.
+- [x] **Passo 4:** verificação padrão.
 
-**Pronto quando:** 12 testes passam; as 9 rotas de pacientes do api.md respondem.
+**Pronto quando:** 22 testes passam (12 previstos + 10 de cenários negativos); as 9 rotas de pacientes do api.md respondem.
 
 **Commit:** `feat: endereço e alertas do paciente (D18)`
 
