@@ -8,13 +8,13 @@ import { naoAutenticado } from './erros.ts';
 export const DURACAO_ACCESS_SEGUNDOS = 15 * 60;
 
 const esquemaDoAccessToken = z.discriminatedUnion('tipo', [
-  z.object({ tipo: z.literal('CLIENTE'), clienteId: z.string(), sessaoId: z.string() }),
+  z.object({ tipo: z.literal('CLIENTE'), clienteId: z.string(), sessaoId: z.uuid() }),
   z.object({
     tipo: z.literal('FUNCIONARIO'),
     funcionarioId: z.string(),
     categoria: z.enum(['RECEPCIONISTA', 'DENTISTA']),
     isAdmin: z.boolean(),
-    sessaoId: z.string(),
+    sessaoId: z.uuid(),
   }),
 ]);
 

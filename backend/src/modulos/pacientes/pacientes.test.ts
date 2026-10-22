@@ -46,7 +46,7 @@ describe('GET /api/pacientes', () => {
   it('busca "jose" acha "José da Silva"', async () => {
     const jose = await criarPaciente(contexto, { nome: 'José da Silva' });
 
-    const resposta = await buscar(tokenDe(contexto, recepcionista), '?busca=jose');
+    const resposta = await buscar(await tokenDe(contexto, recepcionista), '?busca=jose');
 
     expect(resposta.status).toBe(200);
     const ids = resposta.body.itens.map((item: { id: string }) => item.id);
@@ -63,7 +63,7 @@ describe('GET /api/pacientes', () => {
     const alvo = await criarPaciente(contexto, { nome: 'Fulana de Tal' });
     await criarPaciente(contexto, { nome: 'Outra Pessoa' });
 
-    const resposta = await buscar(tokenDe(contexto, dentista), `?busca=${alvo.cpf}`);
+    const resposta = await buscar(await tokenDe(contexto, dentista), `?busca=${alvo.cpf}`);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.itens.map((item: { id: string }) => item.id)).toEqual([alvo.id]);
@@ -73,7 +73,7 @@ describe('GET /api/pacientes', () => {
   it('busca paginada devolve { itens, total }', async () => {
     for (const sufixo of ['A', 'B', 'C']) await criarPaciente(contexto, { nome: `Paginado ${sufixo}` });
 
-    const resposta = await buscar(tokenDe(contexto, recepcionista), '?busca=paginado&pagina=2&porPagina=2');
+    const resposta = await buscar(await tokenDe(contexto, recepcionista), '?busca=paginado&pagina=2&porPagina=2');
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.total).toBe(3);
@@ -83,7 +83,7 @@ describe('GET /api/pacientes', () => {
   it('busca com % ou _ não vira curinga', async () => {
     await criarPaciente(contexto, { nome: 'Curinga Teste' });
 
-    const resposta = await buscar(tokenDe(contexto, recepcionista), '?busca=%25');
+    const resposta = await buscar(await tokenDe(contexto, recepcionista), '?busca=%25');
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.itens).toEqual([]);
@@ -93,7 +93,7 @@ describe('GET /api/pacientes', () => {
   it('busca por cliente → 403', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await buscar(tokenDe(contexto, paciente));
+    const resposta = await buscar(await tokenDe(contexto, paciente));
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
@@ -110,7 +110,7 @@ describe('POST /api/pacientes', () => {
   it('POST pela recepção cria só Cliente, sem Login; pacienteDesde ausente = hoje', async () => {
     const corpo = novoPaciente();
 
-    const resposta = await cadastrar(tokenDe(contexto, recepcionista), corpo);
+    const resposta = await cadastrar(await tokenDe(contexto, recepcionista), corpo);
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toMatchObject({
@@ -130,7 +130,7 @@ describe('POST /api/pacientes', () => {
 
   it('POST com endereco cria EnderecoCliente', async () => {
     const resposta = await cadastrar(
-      tokenDe(contexto, recepcionista),
+      await tokenDe(contexto, recepcionista),
       novoPaciente({ endereco: ENDERECO, email: 'MARCOS@Email.com', nascimento: '1985-05-15', convenio: 'Unimed Odonto' }),
     );
 
@@ -142,7 +142,7 @@ describe('POST /api/pacientes', () => {
   });
 
   it('POST com pacienteDesde informado usa a data enviada', async () => {
-    const resposta = await cadastrar(tokenDe(contexto, recepcionista), novoPaciente({ pacienteDesde: '2019-03-01' }));
+    const resposta = await cadastrar(await tokenDe(contexto, recepcionista), novoPaciente({ pacienteDesde: '2019-03-01' }));
 
     expect(resposta.status).toBe(201);
     expect(resposta.body.pacienteDesde).toBe('2019-03-01');
@@ -151,15 +151,15 @@ describe('POST /api/pacientes', () => {
   it('POST com CPF repetido → 409 CPF_JA_CADASTRADO', async () => {
     const existente = await criarPaciente(contexto);
 
-    const resposta = await cadastrar(tokenDe(contexto, recepcionista), novoPaciente({ cpf: existente.cpf }));
+    const resposta = await cadastrar(await tokenDe(contexto, recepcionista), novoPaciente({ cpf: existente.cpf }));
 
     expect(resposta.status).toBe(409);
     expect(resposta.body.erro.codigo).toBe('CPF_JA_CADASTRADO');
   });
 
   it('POST com CPF inválido ou telefone sem DDD → 400', async () => {
-    const comCpfInvalido = await cadastrar(tokenDe(contexto, recepcionista), novoPaciente({ cpf: '11111111111' }));
-    const comTelefoneCurto = await cadastrar(tokenDe(contexto, recepcionista), novoPaciente({ telefone: '987654321' }));
+    const comCpfInvalido = await cadastrar(await tokenDe(contexto, recepcionista), novoPaciente({ cpf: '11111111111' }));
+    const comTelefoneCurto = await cadastrar(await tokenDe(contexto, recepcionista), novoPaciente({ telefone: '987654321' }));
 
     expect(comCpfInvalido.status).toBe(400);
     expect(comTelefoneCurto.status).toBe(400);
@@ -169,7 +169,7 @@ describe('POST /api/pacientes', () => {
   it('POST com endereco sem cidade → 400', async () => {
     const { cidade: _cidade, ...semCidade } = ENDERECO;
 
-    const resposta = await cadastrar(tokenDe(contexto, recepcionista), novoPaciente({ endereco: semCidade }));
+    const resposta = await cadastrar(await tokenDe(contexto, recepcionista), novoPaciente({ endereco: semCidade }));
 
     expect(resposta.status).toBe(400);
     expect(resposta.body.erro.codigo).toBe('ENTRADA_INVALIDA');
@@ -178,8 +178,8 @@ describe('POST /api/pacientes', () => {
   it('POST por dentista ou cliente → 403', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const doDentista = await cadastrar(tokenDe(contexto, dentista), novoPaciente());
-    const doCliente = await cadastrar(tokenDe(contexto, paciente), novoPaciente());
+    const doDentista = await cadastrar(await tokenDe(contexto, dentista), novoPaciente());
+    const doCliente = await cadastrar(await tokenDe(contexto, paciente), novoPaciente());
 
     expect(doDentista.status).toBe(403);
     expect(doCliente.status).toBe(403);
@@ -191,7 +191,7 @@ describe('GET /api/pacientes/{id}', () => {
     const paciente = await criarPaciente(contexto, {}, { comLogin: true });
     await contexto.prisma.enderecoCliente.create({ data: { clienteId: paciente.id, ...ENDERECO } });
 
-    const resposta = await ver(tokenDe(contexto, dentista), paciente.id);
+    const resposta = await ver(await tokenDe(contexto, dentista), paciente.id);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body).toMatchObject({ id: paciente.id, cpf: paciente.cpf, endereco: ENDERECO, temLogin: true });
@@ -201,7 +201,7 @@ describe('GET /api/pacientes/{id}', () => {
   it('GET do próprio cadastro pelo cliente → 200', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await ver(tokenDe(contexto, paciente), paciente.id);
+    const resposta = await ver(await tokenDe(contexto, paciente), paciente.id);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.id).toBe(paciente.id);
@@ -211,15 +211,15 @@ describe('GET /api/pacientes/{id}', () => {
     const eu = await criarPaciente(contexto);
     const outro = await criarPaciente(contexto);
 
-    const resposta = await ver(tokenDe(contexto, eu), outro.id);
+    const resposta = await ver(await tokenDe(contexto, eu), outro.id);
 
     expect(resposta.status).toBe(404);
     expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO');
   });
 
   it('GET de id inexistente ou malformado → 404', async () => {
-    const inexistente = await ver(tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11');
-    const malformado = await ver(tokenDe(contexto, recepcionista), 'abc');
+    const inexistente = await ver(await tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11');
+    const malformado = await ver(await tokenDe(contexto, recepcionista), 'abc');
 
     expect(inexistente.status).toBe(404);
     expect(malformado.status).toBe(404);
@@ -230,7 +230,7 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH pela recepção muda nome, telefone e pacienteDesde', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await editar(tokenDe(contexto, recepcionista), paciente.id, {
+    const resposta = await editar(await tokenDe(contexto, recepcionista), paciente.id, {
       nome: 'Nome Novo',
       telefone: '11912345678',
       pacienteDesde: '2020-01-02',
@@ -243,7 +243,7 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH pelo cliente muda email, convenio e nascimento', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await editar(tokenDe(contexto, paciente), paciente.id, {
+    const resposta = await editar(await tokenDe(contexto, paciente), paciente.id, {
       email: 'Novo@Email.com',
       convenio: 'Amil',
       nascimento: '1990-02-03',
@@ -256,7 +256,7 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH com null limpa convenio (volta a particular)', async () => {
     const paciente = await criarPaciente(contexto, { convenio: 'Amil' });
 
-    const resposta = await editar(tokenDe(contexto, paciente), paciente.id, { convenio: null });
+    const resposta = await editar(await tokenDe(contexto, paciente), paciente.id, { convenio: null });
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.convenio).toBeNull();
@@ -265,7 +265,7 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH pelo cliente com telefone → 403 CAMPO_NAO_EDITAVEL', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await editar(tokenDe(contexto, paciente), paciente.id, { telefone: '11912345678' });
+    const resposta = await editar(await tokenDe(contexto, paciente), paciente.id, { telefone: '11912345678' });
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('CAMPO_NAO_EDITAVEL');
@@ -276,8 +276,8 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH com cpf → 422 CPF_IMUTAVEL, inclusive para o cliente', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const doCliente = await editar(tokenDe(contexto, paciente), paciente.id, { cpf: gerarCpfValido() });
-    const daRecepcao = await editar(tokenDe(contexto, recepcionista), paciente.id, { cpf: gerarCpfValido() });
+    const doCliente = await editar(await tokenDe(contexto, paciente), paciente.id, { cpf: gerarCpfValido() });
+    const daRecepcao = await editar(await tokenDe(contexto, recepcionista), paciente.id, { cpf: gerarCpfValido() });
 
     expect(doCliente.status).toBe(422);
     expect(doCliente.body.erro.codigo).toBe('CPF_IMUTAVEL');
@@ -288,7 +288,7 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH pelo dentista → 403', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await editar(tokenDe(contexto, dentista), paciente.id, { nome: 'Outro' });
+    const resposta = await editar(await tokenDe(contexto, dentista), paciente.id, { nome: 'Outro' });
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
@@ -298,13 +298,13 @@ describe('PATCH /api/pacientes/{id}', () => {
     const eu = await criarPaciente(contexto);
     const outro = await criarPaciente(contexto);
 
-    const resposta = await editar(tokenDe(contexto, eu), outro.id, { convenio: 'Amil' });
+    const resposta = await editar(await tokenDe(contexto, eu), outro.id, { convenio: 'Amil' });
 
     expect(resposta.status).toBe(404);
   });
 
   it('PATCH de paciente inexistente → 404', async () => {
-    const resposta = await editar(tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', {
+    const resposta = await editar(await tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', {
       nome: 'Fulano',
     });
 
@@ -314,7 +314,7 @@ describe('PATCH /api/pacientes/{id}', () => {
   it('PATCH com nome vazio → 400', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await editar(tokenDe(contexto, recepcionista), paciente.id, { nome: '  ' });
+    const resposta = await editar(await tokenDe(contexto, recepcionista), paciente.id, { nome: '  ' });
 
     expect(resposta.status).toBe(400);
   });

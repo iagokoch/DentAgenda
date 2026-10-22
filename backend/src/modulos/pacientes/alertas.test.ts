@@ -28,7 +28,7 @@ describe('POST /api/pacientes/{id}/alertas', () => {
   it('POST pelo cliente grava autor PACIENTE sem funcionário', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await criar(tokenDe(contexto, paciente), paciente.id, { texto: 'Alergia à Penicilina' });
+    const resposta = await criar(await tokenDe(contexto, paciente), paciente.id, { texto: 'Alergia à Penicilina' });
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toMatchObject({
@@ -44,7 +44,7 @@ describe('POST /api/pacientes/{id}/alertas', () => {
   it('POST pela recepção grava autor CLINICA com o funcionário do token', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await criar(tokenDe(contexto, recepcionista), paciente.id, { texto: 'Diabético' });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), paciente.id, { texto: 'Diabético' });
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toMatchObject({
@@ -56,7 +56,7 @@ describe('POST /api/pacientes/{id}/alertas', () => {
   it('corpo com autor é ignorado: autor vem do token', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const resposta = await criar(tokenDe(contexto, paciente), paciente.id, {
+    const resposta = await criar(await tokenDe(contexto, paciente), paciente.id, {
       texto: 'Pressão alta',
       autor: 'CLINICA',
       autorFuncionarioId: recepcionista.id,
@@ -70,8 +70,8 @@ describe('POST /api/pacientes/{id}/alertas', () => {
   it('POST com texto vazio ou ausente → 400', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const vazio = await criar(tokenDe(contexto, recepcionista), paciente.id, { texto: '   ' });
-    const ausente = await criar(tokenDe(contexto, recepcionista), paciente.id, {});
+    const vazio = await criar(await tokenDe(contexto, recepcionista), paciente.id, { texto: '   ' });
+    const ausente = await criar(await tokenDe(contexto, recepcionista), paciente.id, {});
 
     expect(vazio.status).toBe(400);
     expect(ausente.status).toBe(400);
@@ -82,8 +82,8 @@ describe('POST /api/pacientes/{id}/alertas', () => {
     const eu = await criarPaciente(contexto);
     const outro = await criarPaciente(contexto);
 
-    const alheio = await criar(tokenDe(contexto, eu), outro.id, { texto: 'x' });
-    const inexistente = await criar(tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', {
+    const alheio = await criar(await tokenDe(contexto, eu), outro.id, { texto: 'x' });
+    const inexistente = await criar(await tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', {
       texto: 'x',
     });
 
@@ -96,12 +96,12 @@ describe('POST /api/pacientes/{id}/alertas', () => {
 describe('GET /api/pacientes/{id}/alertas', () => {
   it('GET lista só ativos; incluirRemovidos=true traz removidos com quem removeu', async () => {
     const paciente = await criarPaciente(contexto);
-    const ativo = await criar(tokenDe(contexto, recepcionista), paciente.id, { texto: 'Alergia a látex' });
-    const removido = await criar(tokenDe(contexto, recepcionista), paciente.id, { texto: 'Gestante' });
-    await apagar(tokenDe(contexto, dentista), paciente.id, removido.body.id);
+    const ativo = await criar(await tokenDe(contexto, recepcionista), paciente.id, { texto: 'Alergia a látex' });
+    const removido = await criar(await tokenDe(contexto, recepcionista), paciente.id, { texto: 'Gestante' });
+    await apagar(await tokenDe(contexto, dentista), paciente.id, removido.body.id);
 
-    const soAtivos = await listar(tokenDe(contexto, dentista), paciente.id);
-    const todos = await listar(tokenDe(contexto, dentista), paciente.id, '?incluirRemovidos=true');
+    const soAtivos = await listar(await tokenDe(contexto, dentista), paciente.id);
+    const todos = await listar(await tokenDe(contexto, dentista), paciente.id, '?incluirRemovidos=true');
 
     expect(soAtivos.status).toBe(200);
     expect(soAtivos.body.map((alerta: { id: string }) => alerta.id)).toEqual([ativo.body.id]);
@@ -116,10 +116,10 @@ describe('GET /api/pacientes/{id}/alertas', () => {
   it('cliente lista os próprios alertas; os de outro paciente → 404', async () => {
     const eu = await criarPaciente(contexto);
     const outro = await criarPaciente(contexto);
-    await criar(tokenDe(contexto, recepcionista), eu.id, { texto: 'Meu alerta' });
+    await criar(await tokenDe(contexto, recepcionista), eu.id, { texto: 'Meu alerta' });
 
-    const proprios = await listar(tokenDe(contexto, eu), eu.id);
-    const alheios = await listar(tokenDe(contexto, eu), outro.id);
+    const proprios = await listar(await tokenDe(contexto, eu), eu.id);
+    const alheios = await listar(await tokenDe(contexto, eu), outro.id);
 
     expect(proprios.status).toBe(200);
     expect(proprios.body).toHaveLength(1);
@@ -138,9 +138,9 @@ describe('GET /api/pacientes/{id}/alertas', () => {
 describe('DELETE /api/pacientes/{id}/alertas/{alertaId}', () => {
   it('DELETE pelo dentista marca removidoEm, não apaga', async () => {
     const paciente = await criarPaciente(contexto);
-    const alerta = await criar(tokenDe(contexto, paciente), paciente.id, { texto: 'Alergia' });
+    const alerta = await criar(await tokenDe(contexto, paciente), paciente.id, { texto: 'Alergia' });
 
-    const resposta = await apagar(tokenDe(contexto, dentista), paciente.id, alerta.body.id);
+    const resposta = await apagar(await tokenDe(contexto, dentista), paciente.id, alerta.body.id);
 
     expect(resposta.status).toBe(204);
     const salvo = await contexto.prisma.alertaCliente.findUniqueOrThrow({ where: { id: alerta.body.id } });
@@ -150,10 +150,10 @@ describe('DELETE /api/pacientes/{id}/alertas/{alertaId}', () => {
 
   it('DELETE de alerta já removido → 204 e mantém quem removeu primeiro', async () => {
     const paciente = await criarPaciente(contexto);
-    const alerta = await criar(tokenDe(contexto, recepcionista), paciente.id, { texto: 'Alergia' });
-    await apagar(tokenDe(contexto, dentista), paciente.id, alerta.body.id);
+    const alerta = await criar(await tokenDe(contexto, recepcionista), paciente.id, { texto: 'Alergia' });
+    await apagar(await tokenDe(contexto, dentista), paciente.id, alerta.body.id);
 
-    const segunda = await apagar(tokenDe(contexto, recepcionista), paciente.id, alerta.body.id);
+    const segunda = await apagar(await tokenDe(contexto, recepcionista), paciente.id, alerta.body.id);
 
     expect(segunda.status).toBe(204);
     const salvo = await contexto.prisma.alertaCliente.findUniqueOrThrow({ where: { id: alerta.body.id } });
@@ -162,9 +162,9 @@ describe('DELETE /api/pacientes/{id}/alertas/{alertaId}', () => {
 
   it('DELETE pelo cliente → 403', async () => {
     const paciente = await criarPaciente(contexto);
-    const alerta = await criar(tokenDe(contexto, paciente), paciente.id, { texto: 'Alergia' });
+    const alerta = await criar(await tokenDe(contexto, paciente), paciente.id, { texto: 'Alergia' });
 
-    const resposta = await apagar(tokenDe(contexto, paciente), paciente.id, alerta.body.id);
+    const resposta = await apagar(await tokenDe(contexto, paciente), paciente.id, alerta.body.id);
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
@@ -175,9 +175,9 @@ describe('DELETE /api/pacientes/{id}/alertas/{alertaId}', () => {
   it('DELETE de alerta de outro paciente pela URL → 404', async () => {
     const dono = await criarPaciente(contexto);
     const outro = await criarPaciente(contexto);
-    const alerta = await criar(tokenDe(contexto, recepcionista), dono.id, { texto: 'Alergia' });
+    const alerta = await criar(await tokenDe(contexto, recepcionista), dono.id, { texto: 'Alergia' });
 
-    const resposta = await apagar(tokenDe(contexto, recepcionista), outro.id, alerta.body.id);
+    const resposta = await apagar(await tokenDe(contexto, recepcionista), outro.id, alerta.body.id);
 
     expect(resposta.status).toBe(404);
     const salvo = await contexto.prisma.alertaCliente.findUniqueOrThrow({ where: { id: alerta.body.id } });
@@ -188,11 +188,11 @@ describe('DELETE /api/pacientes/{id}/alertas/{alertaId}', () => {
     const paciente = await criarPaciente(contexto);
 
     const inexistente = await apagar(
-      tokenDe(contexto, recepcionista),
+      await tokenDe(contexto, recepcionista),
       paciente.id,
       '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11',
     );
-    const malformado = await apagar(tokenDe(contexto, recepcionista), paciente.id, 'abc');
+    const malformado = await apagar(await tokenDe(contexto, recepcionista), paciente.id, 'abc');
 
     expect(inexistente.status).toBe(404);
     expect(malformado.status).toBe(404);

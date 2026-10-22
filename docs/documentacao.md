@@ -1189,6 +1189,46 @@ regra é a mesma para não haver dois formatos no banco.
 1. O Figma não tem tela para o paciente logado (C). Na F1 ele cai numa página simples (nome e
    sair); a F3 decide o resto.
 
+## D31 — Ajustes de segurança da auditoria de 2026-10-22
+
+> **Status: fechada.**
+> Achados AUD-005, 007, 008, 009, 011 e 016 da auditoria; o AUD-005 muda a D19 (o access token
+> deixa de ser conferido só pela assinatura).
+
+**O quê:**
+1. **Sessão e conta conferidas no banco (muda a D19).** Toda rota autenticada lê o `RefreshToken`
+   do `sessaoId` do access token e recusa (401) sessão inexistente, revogada ou vencida, ou de outra
+   conta. Para funcionário recusa também conta desativada, e `categoria` e `isAdmin` passam a vir do
+   banco, não do token. Logout, desativação (D21.5), rebaixamento e troca de categoria valem no
+   pedido seguinte, não em até 15 min. `sessaoId` no token precisa ser UUID.
+2. `POST /api/auth/cliente/cadastro/confirmar` calcula o hash da senha antes de recusar CPF que já
+   tem login, para o tempo de resposta não revelar quem é paciente (D19, D25.5).
+3. O log de requisição grava a URL sem a query string e sem `req.query`: a busca de pacientes
+   recebe CPF em `?busca=` (D23).
+4. Senha: mínimo de 8 caracteres e máximo de **72 bytes** (D20 dizia 72 caracteres; o bcrypt trunca
+   por bytes, e acento ocupa mais de um).
+5. Corpo grande demais, charset ou encoding não suportado e requisição abortada viram 400
+   `ENTRADA_INVALIDA`, como o JSON malformado, em vez de 500.
+6. `PUT /api/dentistas/{id}/grade` trava a linha do dentista (`travarDentistas`, D22.7) antes de
+   apagar e recriar a grade, para dois PUT simultâneos não gravarem as duas listas.
+
+**Por quê:**
+1. Era o oposto do que o `docs/api.md` promete ("revoga todas as sessões"): a sessão derrubada
+   continuava autorizada até o access token vencer. Custo: uma consulta por pedido autenticado.
+2. A recusa rápida é medível e derrubava o objetivo de não revelar quem é paciente.
+3. O `redact` do pino só alcança campos de objeto, não trecho de URL.
+4. Senha de 40 letras acentuadas passava no limite de caracteres e perdia o fim no hash.
+5. Erro causado pelo cliente não é falha do servidor e não deve aparecer como `error` no log.
+6. Sem constraint nem trava, a checagem de sobreposição em memória não cobre pedidos paralelos.
+
+**Alternativas descartadas:**
+- *Reduzir o TTL do access token:* não fecha a janela, só a encurta, e multiplica as renovações.
+- *Cache da sessão por alguns segundos:* mantém uma janela de falha; só entra se a consulta por
+  pedido virar gargalo medido.
+- *`tokenVersion` na conta:* derruba todas as sessões de uma vez, mas não revoga uma sessão só (logout).
+
+**Em aberto:** nada.
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.

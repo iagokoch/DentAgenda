@@ -46,7 +46,7 @@ async function ficarComUmAdminAtivo(): Promise<Funcionario> {
 
 describe('GET /api/funcionarios', () => {
   it('GET /api/funcionarios por admin → lista sem senhaHash', async () => {
-    const resposta = await listar(tokenDe(contexto, admin));
+    const resposta = await listar(await tokenDe(contexto, admin));
 
     expect(resposta.status).toBe(200);
     expect(Array.isArray(resposta.body)).toBe(true);
@@ -56,7 +56,7 @@ describe('GET /api/funcionarios', () => {
   });
 
   it('por não admin → 403', async () => {
-    const resposta = await listar(tokenDe(contexto, recepcionista));
+    const resposta = await listar(await tokenDe(contexto, recepcionista));
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
@@ -67,7 +67,7 @@ describe('POST /api/funcionarios', () => {
   it('POST cria com senha aleatória: login com qualquer senha falha', async () => {
     const corpo = novoFuncionario();
 
-    const resposta = await criar(tokenDe(contexto, admin), corpo);
+    const resposta = await criar(await tokenDe(contexto, admin), corpo);
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toMatchObject({ nome: corpo.nome, email: corpo.email, categoria: 'RECEPCIONISTA', ativo: true });
@@ -79,21 +79,21 @@ describe('POST /api/funcionarios', () => {
   });
 
   it('POST DENTISTA sem cro → 422 CRO_OBRIGATORIO', async () => {
-    const resposta = await criar(tokenDe(contexto, admin), novoFuncionario({ categoria: 'DENTISTA' }));
+    const resposta = await criar(await tokenDe(contexto, admin), novoFuncionario({ categoria: 'DENTISTA' }));
 
     expect(resposta.status).toBe(422);
     expect(resposta.body.erro.codigo).toBe('CRO_OBRIGATORIO');
   });
 
   it('POST e-mail repetido → 409 EMAIL_JA_CADASTRADO', async () => {
-    const resposta = await criar(tokenDe(contexto, admin), novoFuncionario({ email: recepcionista.email.toUpperCase() }));
+    const resposta = await criar(await tokenDe(contexto, admin), novoFuncionario({ email: recepcionista.email.toUpperCase() }));
 
     expect(resposta.status).toBe(409);
     expect(resposta.body.erro.codigo).toBe('EMAIL_JA_CADASTRADO');
   });
 
   it('CPF repetido → 409 CPF_JA_CADASTRADO', async () => {
-    const resposta = await criar(tokenDe(contexto, admin), novoFuncionario({ cpf: recepcionista.cpf }));
+    const resposta = await criar(await tokenDe(contexto, admin), novoFuncionario({ cpf: recepcionista.cpf }));
 
     expect(resposta.status).toBe(409);
     expect(resposta.body.erro.codigo).toBe('CPF_JA_CADASTRADO');
@@ -103,7 +103,7 @@ describe('POST /api/funcionarios', () => {
     const dentista = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
 
     const resposta = await criar(
-      tokenDe(contexto, admin),
+      await tokenDe(contexto, admin),
       novoFuncionario({ categoria: 'DENTISTA', cro: dentista.cro }),
     );
 
@@ -112,7 +112,7 @@ describe('POST /api/funcionarios', () => {
   });
 
   it('POST com CPF inválido → 400', async () => {
-    const resposta = await criar(tokenDe(contexto, admin), novoFuncionario({ cpf: '11111111111' }));
+    const resposta = await criar(await tokenDe(contexto, admin), novoFuncionario({ cpf: '11111111111' }));
 
     expect(resposta.status).toBe(400);
     expect(resposta.body.erro.codigo).toBe('ENTRADA_INVALIDA');
@@ -126,7 +126,7 @@ describe('PATCH /api/funcionarios/{id}', () => {
     expect(login.status).toBe(200);
     const refreshToken = /dentagenda_refresh=([^;]*)/.exec(String(login.headers['set-cookie']))?.[1] ?? '';
 
-    const resposta = await editar(tokenDe(contexto, admin), alvo.id, { ativo: false });
+    const resposta = await editar(await tokenDe(contexto, admin), alvo.id, { ativo: false });
     const renovacao = await request(app)
       .post('/api/auth/refresh')
       .set('Cookie', `dentagenda_refresh=${refreshToken}`)
@@ -142,7 +142,7 @@ describe('PATCH /api/funcionarios/{id}', () => {
   it('PATCH tirando isAdmin do último admin ativo → 422 ULTIMO_ADMIN', async () => {
     const unico = await ficarComUmAdminAtivo();
 
-    const resposta = await editar(tokenDe(contexto, unico), unico.id, { isAdmin: false });
+    const resposta = await editar(await tokenDe(contexto, unico), unico.id, { isAdmin: false });
 
     expect(resposta.status).toBe(422);
     expect(resposta.body.erro.codigo).toBe('ULTIMO_ADMIN');
@@ -151,7 +151,7 @@ describe('PATCH /api/funcionarios/{id}', () => {
   it('PATCH desativando o último admin ativo → 422 ULTIMO_ADMIN', async () => {
     const unico = await ficarComUmAdminAtivo();
 
-    const resposta = await editar(tokenDe(contexto, unico), unico.id, { ativo: false });
+    const resposta = await editar(await tokenDe(contexto, unico), unico.id, { ativo: false });
 
     expect(resposta.status).toBe(422);
     expect(resposta.body.erro.codigo).toBe('ULTIMO_ADMIN');
@@ -162,7 +162,7 @@ describe('PATCH /api/funcionarios/{id}', () => {
   it('PATCH tirando isAdmin quando há outro admin ativo → 200', async () => {
     const outro = await criarFuncionario(contexto, { isAdmin: true });
 
-    const resposta = await editar(tokenDe(contexto, admin), outro.id, { isAdmin: false });
+    const resposta = await editar(await tokenDe(contexto, admin), outro.id, { isAdmin: false });
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.isAdmin).toBe(false);
@@ -171,14 +171,14 @@ describe('PATCH /api/funcionarios/{id}', () => {
   it('PATCH categoria para DENTISTA sem cro → 422 CRO_OBRIGATORIO', async () => {
     const alvo = await criarFuncionario(contexto);
 
-    const resposta = await editar(tokenDe(contexto, admin), alvo.id, { categoria: 'DENTISTA' });
+    const resposta = await editar(await tokenDe(contexto, admin), alvo.id, { categoria: 'DENTISTA' });
 
     expect(resposta.status).toBe(422);
     expect(resposta.body.erro.codigo).toBe('CRO_OBRIGATORIO');
   });
 
   it('PATCH de id inexistente → 404 NAO_ENCONTRADO', async () => {
-    const resposta = await editar(tokenDe(contexto, admin), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', { nome: 'Fulano' });
+    const resposta = await editar(await tokenDe(contexto, admin), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', { nome: 'Fulano' });
 
     expect(resposta.status).toBe(404);
     expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO');
@@ -190,7 +190,7 @@ describe('GET /api/dentistas', () => {
     const ativo = await criarFuncionario(contexto, { categoria: 'DENTISTA', nome: 'Dra. Ativa' });
     const inativo = await criarFuncionario(contexto, { categoria: 'DENTISTA', nome: 'Dr. Inativo', ativo: false });
 
-    const resposta = await request(app).get('/api/dentistas').set(com(tokenDe(contexto, paciente)));
+    const resposta = await request(app).get('/api/dentistas').set(com(await tokenDe(contexto, paciente)));
 
     expect(resposta.status).toBe(200);
     expect(resposta.body).toContainEqual({ id: ativo.id, nome: 'Dra. Ativa' });

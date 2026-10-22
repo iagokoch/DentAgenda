@@ -72,14 +72,22 @@ export function criarProcedimento(
   });
 }
 
-// Access token com sessaoId aleatório: as rotas protegidas não consultam a sessão (D19).
-export function tokenDe(contexto: Contexto, conta: Funcionario | Cliente): string {
-  const sessaoId = randomUUID();
+const DOZE_HORAS_EM_MS = 12 * 60 * 60 * 1000;
+
+// As rotas protegidas conferem a sessão no banco (AUD-005): o token precisa de uma sessão real, ativa e da conta.
+export async function tokenDe(contexto: Contexto, conta: Funcionario | Cliente): Promise<string> {
+  const criadoEm = contexto.relogio.agora();
+  const sessao = { tokenHash: randomUUID(), criadoEm, expiraEm: new Date(criadoEm.getTime() + DOZE_HORAS_EM_MS) };
   if ('categoria' in conta) {
+    const { id: sessaoId } = await contexto.prisma.refreshToken.create({ data: { ...sessao, funcionarioId: conta.id } });
     return gerarAccessToken(
       { tipo: 'FUNCIONARIO', funcionarioId: conta.id, categoria: conta.categoria, isAdmin: conta.isAdmin, sessaoId },
       contexto,
     );
   }
+  const login =
+    (await contexto.prisma.login.findUnique({ where: { clienteId: conta.id } })) ??
+    (await contexto.prisma.login.create({ data: { clienteId: conta.id, senhaHash: await hashDeTeste() } }));
+  const { id: sessaoId } = await contexto.prisma.refreshToken.create({ data: { ...sessao, loginId: login.id } });
   return gerarAccessToken({ tipo: 'CLIENTE', clienteId: conta.id, sessaoId }, contexto);
 }

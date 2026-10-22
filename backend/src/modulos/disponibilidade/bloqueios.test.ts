@@ -58,7 +58,7 @@ async function marcarConsulta(
 
 describe('POST /api/bloqueios', () => {
   it('recepção cria feriado para dois dentistas → 201 com dois bloqueios', async () => {
-    const resposta = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [dentista.id, colega.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [dentista.id, colega.id], ...NATAL });
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toHaveLength(2);
@@ -75,7 +75,7 @@ describe('POST /api/bloqueios', () => {
   it('ids repetidos viram um bloqueio só', async () => {
     const outro = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
 
-    const resposta = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [outro.id, outro.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [outro.id, outro.id], ...NATAL });
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toHaveLength(1);
@@ -86,7 +86,7 @@ describe('POST /api/bloqueios', () => {
     const ocupado = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
     await marcarConsulta(ocupado.id, '2026-12-24', '10:00', '11:00');
 
-    const resposta = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [livre.id, ocupado.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [livre.id, ocupado.id], ...NATAL });
 
     expect(resposta.status).toBe(409);
     expect(resposta.body.erro.codigo).toBe('CONSULTAS_NO_PERIODO');
@@ -98,7 +98,7 @@ describe('POST /api/bloqueios', () => {
     const ocupado = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
     const { consulta, paciente } = await marcarConsulta(ocupado.id, '2026-12-25', '14:00', '15:00', 'CONFIRMADA', 'Ana Lima');
 
-    const resposta = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [ocupado.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [ocupado.id], ...NATAL });
 
     expect(resposta.body.erro.consultas).toEqual([
       {
@@ -115,7 +115,7 @@ describe('POST /api/bloqueios', () => {
     await marcarConsulta(outro.id, '2026-12-24', '10:00', '11:00', 'CANCELADA');
     await marcarConsulta(outro.id, '2026-12-24', '12:00', '13:00', 'REALIZADA');
 
-    const resposta = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [outro.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [outro.id], ...NATAL });
 
     expect(resposta.status).toBe(201);
   });
@@ -128,21 +128,21 @@ describe('POST /api/bloqueios', () => {
       data: { fim: instanteEmSaoPaulo('2026-12-24', '00:00') },
     });
 
-    const resposta = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [outro.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [outro.id], ...NATAL });
 
     expect(resposta.status).toBe(201);
   });
 
   it('dentista bloqueando a própria agenda → 201', async () => {
-    const resposta = await criar(tokenDe(contexto, dentista), { dentistaIds: [dentista.id], ...NATAL });
+    const resposta = await criar(await tokenDe(contexto, dentista), { dentistaIds: [dentista.id], ...NATAL });
 
     expect(resposta.status).toBe(201);
     expect(resposta.body[0].dentistaId).toBe(dentista.id);
   });
 
   it('dentista enviando id de outro dentista → 403 SEM_PERMISSAO', async () => {
-    const sozinho = await criar(tokenDe(contexto, dentista), { dentistaIds: [colega.id], ...NATAL });
-    const misturado = await criar(tokenDe(contexto, dentista), { dentistaIds: [dentista.id, colega.id], ...NATAL });
+    const sozinho = await criar(await tokenDe(contexto, dentista), { dentistaIds: [colega.id], ...NATAL });
+    const misturado = await criar(await tokenDe(contexto, dentista), { dentistaIds: [dentista.id, colega.id], ...NATAL });
 
     expect(sozinho.status).toBe(403);
     expect(sozinho.body.erro.codigo).toBe('SEM_PERMISSAO');
@@ -152,7 +152,7 @@ describe('POST /api/bloqueios', () => {
   it('cliente → 403; sem login → 401', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const doCliente = await criar(tokenDe(contexto, paciente), { dentistaIds: [dentista.id], ...NATAL });
+    const doCliente = await criar(await tokenDe(contexto, paciente), { dentistaIds: [dentista.id], ...NATAL });
     const semLogin = await request(app).post('/api/bloqueios').send({ dentistaIds: [dentista.id], ...NATAL });
 
     expect(doCliente.status).toBe(403);
@@ -160,7 +160,7 @@ describe('POST /api/bloqueios', () => {
   });
 
   it('inicio >= fim → 400; datas sem fuso, lista vazia ou ids malformados → 400', async () => {
-    const token = tokenDe(contexto, recepcionista);
+    const token = await tokenDe(contexto, recepcionista);
 
     const invertido = await criar(token, { dentistaIds: [dentista.id], inicio: NATAL.fim, fim: NATAL.inicio });
     const igual = await criar(token, { dentistaIds: [dentista.id], inicio: NATAL.inicio, fim: NATAL.inicio });
@@ -175,8 +175,8 @@ describe('POST /api/bloqueios', () => {
   });
 
   it('id que não é de dentista ou não existe → 404 e nada é criado', async () => {
-    const comRecepcionista = await criar(tokenDe(contexto, recepcionista), { dentistaIds: [dentista.id, recepcionista.id], ...NATAL });
-    const inexistente = await criar(tokenDe(contexto, recepcionista), {
+    const comRecepcionista = await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [dentista.id, recepcionista.id], ...NATAL });
+    const inexistente = await criar(await tokenDe(contexto, recepcionista), {
       dentistaIds: ['5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11'],
       ...NATAL,
     });
@@ -191,10 +191,10 @@ describe('GET /api/dentistas/{id}/bloqueios', () => {
   it('GET de/ate pelo dentista: os próprios; de outro → 404', async () => {
     const meu = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
     const alheio = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
-    await criar(tokenDe(contexto, recepcionista), { dentistaIds: [meu.id, alheio.id], ...NATAL });
+    await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [meu.id, alheio.id], ...NATAL });
 
-    const proprios = await listar(tokenDe(contexto, meu), meu.id, '?de=2026-12-01&ate=2026-12-31');
-    const deOutro = await listar(tokenDe(contexto, meu), alheio.id);
+    const proprios = await listar(await tokenDe(contexto, meu), meu.id, '?de=2026-12-01&ate=2026-12-31');
+    const deOutro = await listar(await tokenDe(contexto, meu), alheio.id);
 
     expect(proprios.status).toBe(200);
     expect(proprios.body).toEqual([
@@ -206,13 +206,13 @@ describe('GET /api/dentistas/{id}/bloqueios', () => {
 
   it('o filtro de/ate traz só os bloqueios que tocam o período; de/ate só com data inclui o dia inteiro', async () => {
     const meu = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
-    await criar(tokenDe(contexto, recepcionista), { dentistaIds: [meu.id], ...NATAL });
+    await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [meu.id], ...NATAL });
 
-    const dentro = await listar(tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-25&ate=2026-12-25');
-    const noUltimoDia = await listar(tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-26&ate=2026-12-26');
-    const antes = await listar(tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-01&ate=2026-12-23');
-    const comHora = await listar(tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-25T23:00:00-03:00&ate=2026-12-27T00:00:00-03:00');
-    const semFiltro = await listar(tokenDe(contexto, recepcionista), meu.id);
+    const dentro = await listar(await tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-25&ate=2026-12-25');
+    const noUltimoDia = await listar(await tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-26&ate=2026-12-26');
+    const antes = await listar(await tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-01&ate=2026-12-23');
+    const comHora = await listar(await tokenDe(contexto, recepcionista), meu.id, '?de=2026-12-25T23:00:00-03:00&ate=2026-12-27T00:00:00-03:00');
+    const semFiltro = await listar(await tokenDe(contexto, recepcionista), meu.id);
 
     expect(dentro.body).toHaveLength(1);
     expect(noUltimoDia.body).toEqual([]); // o bloqueio termina às 00:00 do dia 26
@@ -224,10 +224,10 @@ describe('GET /api/dentistas/{id}/bloqueios', () => {
   it('recepção lista de qualquer dentista; cliente → 403; de/ate inválido → 400; não-dentista → 404', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const daRecepcao = await listar(tokenDe(contexto, recepcionista), dentista.id);
-    const doCliente = await listar(tokenDe(contexto, paciente), dentista.id);
-    const invalido = await listar(tokenDe(contexto, recepcionista), dentista.id, '?de=ontem');
-    const naoDentista = await listar(tokenDe(contexto, recepcionista), recepcionista.id);
+    const daRecepcao = await listar(await tokenDe(contexto, recepcionista), dentista.id);
+    const doCliente = await listar(await tokenDe(contexto, paciente), dentista.id);
+    const invalido = await listar(await tokenDe(contexto, recepcionista), dentista.id, '?de=ontem');
+    const naoDentista = await listar(await tokenDe(contexto, recepcionista), recepcionista.id);
 
     expect(daRecepcao.status).toBe(200);
     expect(doCliente.status).toBe(403);
@@ -239,9 +239,9 @@ describe('GET /api/dentistas/{id}/bloqueios', () => {
 describe('DELETE /api/bloqueios/{id}', () => {
   it('DELETE apaga a linha → 204', async () => {
     const meu = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
-    const [bloqueio] = (await criar(tokenDe(contexto, recepcionista), { dentistaIds: [meu.id], ...NATAL })).body;
+    const [bloqueio] = (await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [meu.id], ...NATAL })).body;
 
-    const resposta = await apagar(tokenDe(contexto, recepcionista), bloqueio.id);
+    const resposta = await apagar(await tokenDe(contexto, recepcionista), bloqueio.id);
 
     expect(resposta.status).toBe(204);
     expect(await contexto.prisma.bloqueio.findUnique({ where: { id: bloqueio.id } })).toBeNull();
@@ -250,12 +250,12 @@ describe('DELETE /api/bloqueios/{id}', () => {
   it('dentista apaga o próprio; o de outro dentista → 404 e nada some', async () => {
     const meu = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
     const alheio = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
-    const criados = (await criar(tokenDe(contexto, recepcionista), { dentistaIds: [meu.id, alheio.id], ...NATAL })).body;
+    const criados = (await criar(await tokenDe(contexto, recepcionista), { dentistaIds: [meu.id, alheio.id], ...NATAL })).body;
     const doMeu = criados.find((bloqueio: { dentistaId: string }) => bloqueio.dentistaId === meu.id);
     const doAlheio = criados.find((bloqueio: { dentistaId: string }) => bloqueio.dentistaId === alheio.id);
 
-    const dele = await apagar(tokenDe(contexto, meu), doAlheio.id);
-    const proprio = await apagar(tokenDe(contexto, meu), doMeu.id);
+    const dele = await apagar(await tokenDe(contexto, meu), doAlheio.id);
+    const proprio = await apagar(await tokenDe(contexto, meu), doMeu.id);
 
     expect(dele.status).toBe(404);
     expect(await contexto.prisma.bloqueio.findUnique({ where: { id: doAlheio.id } })).not.toBeNull();
@@ -265,9 +265,9 @@ describe('DELETE /api/bloqueios/{id}', () => {
   it('DELETE de bloqueio inexistente ou id malformado → 404; cliente → 403', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const inexistente = await apagar(tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11');
-    const malformado = await apagar(tokenDe(contexto, recepcionista), 'abc');
-    const doCliente = await apagar(tokenDe(contexto, paciente), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11');
+    const inexistente = await apagar(await tokenDe(contexto, recepcionista), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11');
+    const malformado = await apagar(await tokenDe(contexto, recepcionista), 'abc');
+    const doCliente = await apagar(await tokenDe(contexto, paciente), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11');
 
     expect(inexistente.status).toBe(404);
     expect(malformado.status).toBe(404);

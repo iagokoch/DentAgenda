@@ -72,7 +72,7 @@ describe('GET /api/horarios-livres', () => {
   it('cliente recebe só horarios no passo, sem janelasLivres', async () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
 
-    const resposta = await horarios(doCliente(), consulta(dentista.id));
+    const resposta = await horarios(await doCliente(), consulta(dentista.id));
 
     expect(resposta.status).toBe(200);
     expect(resposta.body).toEqual({
@@ -88,7 +88,7 @@ describe('GET /api/horarios-livres', () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
     await ocupar(dentista.id, '08:30', '09:00');
 
-    const resposta = await horarios(daRecepcao(), consulta(dentista.id));
+    const resposta = await horarios(await daRecepcao(), consulta(dentista.id));
 
     expect(resposta.status).toBe(200);
     expect(inicios(resposta.body)).toEqual(['09:00', '10:00', '11:00']);
@@ -101,7 +101,7 @@ describe('GET /api/horarios-livres', () => {
   it('dentista também recebe janelasLivres', async () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
 
-    const resposta = await horarios(tokenDe(contexto, dentista), consulta(dentista.id));
+    const resposta = await horarios(await tokenDe(contexto, dentista), consulta(dentista.id));
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.janelasLivres).toEqual([
@@ -114,7 +114,7 @@ describe('GET /api/horarios-livres', () => {
     const outro = await dentistaComGrade([{ diaSemana: 1, inicio: '14:00', fim: '16:00' }]);
     const inativo = await dentistaComGrade(SEGUNDA_MANHA, { ativo: false });
 
-    const resposta = await horarios(doCliente(), `procedimentoId=${limpeza.id}&data=2026-10-05`);
+    const resposta = await horarios(await doCliente(), `procedimentoId=${limpeza.id}&data=2026-10-05`);
 
     expect(resposta.status).toBe(200);
     const donos = new Set(resposta.body.horarios.map((horario: { dentistaId: string }) => horario.dentistaId));
@@ -129,8 +129,8 @@ describe('GET /api/horarios-livres', () => {
     const meu = await dentistaComGrade(SEGUNDA_MANHA);
     const alheio = await dentistaComGrade([{ diaSemana: 1, inicio: '14:00', fim: '16:00' }]);
 
-    const pedindoOutro = await horarios(tokenDe(contexto, meu), consulta(alheio.id));
-    const semPedir = await horarios(tokenDe(contexto, meu), `procedimentoId=${limpeza.id}&data=2026-10-05`);
+    const pedindoOutro = await horarios(await tokenDe(contexto, meu), consulta(alheio.id));
+    const semPedir = await horarios(await tokenDe(contexto, meu), `procedimentoId=${limpeza.id}&data=2026-10-05`);
 
     for (const resposta of [pedindoOutro, semPedir]) {
       expect(resposta.status).toBe(200);
@@ -144,7 +144,7 @@ describe('GET /api/horarios-livres', () => {
     await ocupar(dentista.id, '09:00', '10:00', 'REALIZADA');
     await ocupar(dentista.id, '10:00', '11:00', 'CANCELADA');
 
-    const resposta = await horarios(doCliente(), consulta(dentista.id));
+    const resposta = await horarios(await doCliente(), consulta(dentista.id));
 
     expect(inicios(resposta.body)).toEqual(['10:00', '11:00']);
   });
@@ -153,7 +153,7 @@ describe('GET /api/horarios-livres', () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
     await bloquear(dentista.id, '2026-10-05T09:30:00-03:00', '2026-10-05T10:30:00-03:00');
 
-    const resposta = await horarios(doCliente(), consulta(dentista.id));
+    const resposta = await horarios(await doCliente(), consulta(dentista.id));
 
     expect(inicios(resposta.body)).toEqual(['08:00', '11:00']);
   });
@@ -162,8 +162,8 @@ describe('GET /api/horarios-livres', () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
     contexto.relogio.definir(instanteEmSaoPaulo('2026-10-05', '09:10'));
 
-    const resposta = await horarios(doCliente(), consulta(dentista.id));
-    const daClinica = await horarios(daRecepcao(), consulta(dentista.id));
+    const resposta = await horarios(await doCliente(), consulta(dentista.id));
+    const daClinica = await horarios(await daRecepcao(), consulta(dentista.id));
 
     expect(inicios(resposta.body)).toEqual(['10:00', '11:00']);
     // Encaixe: a janela começa no próximo múltiplo de 5 min depois de agora.
@@ -175,7 +175,7 @@ describe('GET /api/horarios-livres', () => {
   it('dia sem grade → listas vazias', async () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
 
-    const resposta = await horarios(daRecepcao(), `procedimentoId=${limpeza.id}&data=2026-10-06&dentistaId=${dentista.id}`);
+    const resposta = await horarios(await daRecepcao(), `procedimentoId=${limpeza.id}&data=2026-10-06&dentistaId=${dentista.id}`);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body).toEqual({ horarios: [], janelasLivres: [] });
@@ -184,7 +184,7 @@ describe('GET /api/horarios-livres', () => {
   it('a virada de dia no fuso: grade de segunda 20:00–23:00 oferece 22:00 em São Paulo (terça em UTC)', async () => {
     const dentista = await dentistaComGrade([{ diaSemana: 1, inicio: '20:00', fim: '23:00' }]);
 
-    const resposta = await horarios(doCliente(), consulta(dentista.id));
+    const resposta = await horarios(await doCliente(), consulta(dentista.id));
 
     expect(inicios(resposta.body)).toEqual(['20:00', '21:00', '22:00']);
   });
@@ -195,10 +195,10 @@ describe('GET /api/horarios-livres', () => {
     const inativo = await dentistaComGrade(SEGUNDA_MANHA, { ativo: false });
     const base = `data=2026-10-05&dentistaId=${dentista.id}`;
 
-    const procInativo = await horarios(daRecepcao(), `procedimentoId=${inativoProc.id}&${base}`);
-    const procInexistente = await horarios(daRecepcao(), `procedimentoId=5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11&${base}`);
-    const dentistaInativo = await horarios(doCliente(), consulta(inativo.id));
-    const naoDentista = await horarios(doCliente(), consulta(recepcionista.id));
+    const procInativo = await horarios(await daRecepcao(), `procedimentoId=${inativoProc.id}&${base}`);
+    const procInexistente = await horarios(await daRecepcao(), `procedimentoId=5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11&${base}`);
+    const dentistaInativo = await horarios(await doCliente(), consulta(inativo.id));
+    const naoDentista = await horarios(await doCliente(), consulta(recepcionista.id));
 
     for (const resposta of [procInativo, procInexistente, dentistaInativo, naoDentista]) {
       expect(resposta.status).toBe(404);
@@ -207,9 +207,9 @@ describe('GET /api/horarios-livres', () => {
   });
 
   it('parâmetros ausentes ou inválidos → 400; sem login → 401', async () => {
-    const semData = await horarios(doCliente(), `procedimentoId=${limpeza.id}`);
-    const dataInvalida = await horarios(doCliente(), `procedimentoId=${limpeza.id}&data=2026-13-40`);
-    const procMalformado = await horarios(doCliente(), 'procedimentoId=abc&data=2026-10-05');
+    const semData = await horarios(await doCliente(), `procedimentoId=${limpeza.id}`);
+    const dataInvalida = await horarios(await doCliente(), `procedimentoId=${limpeza.id}&data=2026-13-40`);
+    const procMalformado = await horarios(await doCliente(), 'procedimentoId=abc&data=2026-10-05');
     const semLogin = await request(app).get(`/api/horarios-livres?procedimentoId=${limpeza.id}&data=2026-10-05`);
 
     for (const resposta of [semData, dataInvalida, procMalformado]) {
@@ -227,7 +227,7 @@ describe('GET /api/dias-disponiveis', () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
     await bloquear(dentista.id, '2026-10-12T00:00:00-03:00', '2026-10-13T00:00:00-03:00');
 
-    const resposta = await dias(doCliente(), mes(dentista.id));
+    const resposta = await dias(await doCliente(), mes(dentista.id));
 
     expect(resposta.status).toBe(200);
     // Segundas de outubro: 5 (hoje, 07:00), 12 (bloqueada), 19 e 26.
@@ -238,7 +238,7 @@ describe('GET /api/dias-disponiveis', () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
     await ocupar(dentista.id, '08:00', '12:00', 'CONFIRMADA', '2026-10-19');
 
-    const resposta = await dias(doCliente(), mes(dentista.id));
+    const resposta = await dias(await doCliente(), mes(dentista.id));
 
     expect(resposta.body.dias).toEqual(['2026-10-05', '2026-10-12', '2026-10-26']);
   });
@@ -248,8 +248,8 @@ describe('GET /api/dias-disponiveis', () => {
     await ocupar(dentista.id, '08:00', '08:30', 'CONFIRMADA', '2026-10-06');
     await ocupar(dentista.id, '09:30', '10:30', 'CONFIRMADA', '2026-10-06');
 
-    const doCliente_ = await dias(doCliente(), mes(dentista.id));
-    const daRecepcao_ = await dias(daRecepcao(), mes(dentista.id));
+    const doCliente_ = await dias(await doCliente(), mes(dentista.id));
+    const daRecepcao_ = await dias(await daRecepcao(), mes(dentista.id));
 
     expect(doCliente_.body.dias).not.toContain('2026-10-06');
     expect(daRecepcao_.body.dias).toContain('2026-10-06');
@@ -259,7 +259,7 @@ describe('GET /api/dias-disponiveis', () => {
     const dentista = await dentistaComGrade([{ diaSemana: 3, inicio: '08:00', fim: '12:00' }]);
     const inativo = await dentistaComGrade([{ diaSemana: 4, inicio: '08:00', fim: '12:00' }], { ativo: false });
 
-    const resposta = await dias(doCliente(), `procedimentoId=${limpeza.id}&mes=2026-10`);
+    const resposta = await dias(await doCliente(), `procedimentoId=${limpeza.id}&mes=2026-10`);
 
     expect(resposta.body.dias).toContain('2026-10-07'); // quarta do dentista ativo
     expect(resposta.body.dias).not.toContain('2026-10-08'); // quinta só do inativo (a menos que outro ativo atenda)
@@ -269,9 +269,9 @@ describe('GET /api/dias-disponiveis', () => {
   it('mes inválido "2026-13" → 400; mes ou procedimentoId ausente → 400', async () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
 
-    const treze = await dias(doCliente(), `procedimentoId=${limpeza.id}&mes=2026-13&dentistaId=${dentista.id}`);
-    const semMes = await dias(doCliente(), `procedimentoId=${limpeza.id}`);
-    const semProcedimento = await dias(doCliente(), 'mes=2026-10');
+    const treze = await dias(await doCliente(), `procedimentoId=${limpeza.id}&mes=2026-13&dentistaId=${dentista.id}`);
+    const semMes = await dias(await doCliente(), `procedimentoId=${limpeza.id}`);
+    const semProcedimento = await dias(await doCliente(), 'mes=2026-10');
 
     for (const resposta of [treze, semMes, semProcedimento]) {
       expect(resposta.status).toBe(400);
@@ -283,9 +283,9 @@ describe('GET /api/dias-disponiveis', () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
     const inativoProc = await criarProcedimento(contexto, { ativo: false });
 
-    const inativo = await dias(doCliente(), `procedimentoId=${inativoProc.id}&mes=2026-10`);
+    const inativo = await dias(await doCliente(), `procedimentoId=${inativoProc.id}&mes=2026-10`);
     const semLogin = await request(app).get(`/api/dias-disponiveis?procedimentoId=${limpeza.id}&mes=2026-10`);
-    const mesPassado = await dias(doCliente(), `procedimentoId=${limpeza.id}&mes=2025-01&dentistaId=${dentista.id}`);
+    const mesPassado = await dias(await doCliente(), `procedimentoId=${limpeza.id}&mes=2025-01&dentistaId=${dentista.id}`);
 
     expect(inativo.status).toBe(404);
     expect(semLogin.status).toBe(401);

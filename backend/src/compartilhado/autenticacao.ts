@@ -23,12 +23,31 @@ declare module 'express-serve-static-core' {
 }
 
 export function autenticar(contexto: Contexto): RequestHandler {
-  return (req, _res, next) => {
+  return async (req, _res, next) => {
     const cabecalho = req.headers.authorization;
     if (!cabecalho?.startsWith('Bearer ')) throw naoAutenticado();
-    req.usuario = lerAccessToken(cabecalho.slice('Bearer '.length), contexto);
+    const usuarioDoToken = lerAccessToken(cabecalho.slice('Bearer '.length), contexto);
+    req.usuario = await conferirSessaoEConta(contexto, usuarioDoToken);
     next();
   };
+}
+
+// AUD-005: o token vale 15 min, mas logout, desativação, rebaixamento e troca de categoria valem já no pedido
+// seguinte. Categoria e isAdmin vêm do banco, não do token.
+async function conferirSessaoEConta(contexto: Contexto, usuario: UsuarioAutenticado): Promise<UsuarioAutenticado> {
+  const sessao = await contexto.prisma.refreshToken.findUnique({
+    where: { id: usuario.sessaoId },
+    include: { funcionario: true, login: true },
+  });
+  if (!sessao || sessao.revogadoEm || sessao.expiraEm <= contexto.relogio.agora()) throw naoAutenticado();
+
+  if (usuario.tipo === 'CLIENTE') {
+    if (sessao.login?.clienteId !== usuario.clienteId) throw naoAutenticado();
+    return usuario;
+  }
+  const funcionario = sessao.funcionario;
+  if (funcionario?.id !== usuario.funcionarioId || !funcionario.ativo) throw naoAutenticado();
+  return { ...usuario, categoria: funcionario.categoria, isAdmin: funcionario.isAdmin };
 }
 
 export function exigirPapel(...papeis: Papel[]): RequestHandler {

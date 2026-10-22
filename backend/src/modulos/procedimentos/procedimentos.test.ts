@@ -32,8 +32,8 @@ describe('GET /api/procedimentos', () => {
     const ativo = await criarProcedimento(contexto, { nome: nomeUnico('Ativo') });
     const inativo = await criarProcedimento(contexto, { nome: nomeUnico('Inativo'), ativo: false });
 
-    const doCliente = await listar(tokenDe(contexto, paciente));
-    const doFuncionario = await listar(tokenDe(contexto, recepcionista));
+    const doCliente = await listar(await tokenDe(contexto, paciente));
+    const doFuncionario = await listar(await tokenDe(contexto, recepcionista));
 
     expect(doCliente.status).toBe(200);
     const idsDoCliente = doCliente.body.map((procedimento: { id: string }) => procedimento.id);
@@ -51,7 +51,7 @@ describe('GET /api/procedimentos', () => {
   });
 
   it('lista em ordem alfabética de nome', async () => {
-    const resposta = await listar(tokenDe(contexto, recepcionista));
+    const resposta = await listar(await tokenDe(contexto, recepcionista));
 
     const nomes = resposta.body.map((procedimento: { nome: string }) => procedimento.nome);
     expect(nomes).toEqual([...nomes].sort((a, b) => a.localeCompare(b, 'pt-BR')));
@@ -69,14 +69,14 @@ describe('POST /api/procedimentos', () => {
   it('POST por admin → 201 { id, nome, duracaoMinutos, precoCentavos, ativo: true }', async () => {
     const nome = nomeUnico('Limpeza');
 
-    const resposta = await criar(tokenDe(contexto, admin), { nome, duracaoMinutos: 45, precoCentavos: 15000 });
+    const resposta = await criar(await tokenDe(contexto, admin), { nome, duracaoMinutos: 45, precoCentavos: 15000 });
 
     expect(resposta.status).toBe(201);
     expect(resposta.body).toEqual({ id: expect.any(String), nome, duracaoMinutos: 45, precoCentavos: 15000, ativo: true });
   });
 
   it('POST por recepcionista sem isAdmin → 403 SEM_PERMISSAO', async () => {
-    const resposta = await criar(tokenDe(contexto, recepcionista), {
+    const resposta = await criar(await tokenDe(contexto, recepcionista), {
       nome: nomeUnico('Clareamento'),
       duracaoMinutos: 60,
       precoCentavos: 50000,
@@ -89,14 +89,14 @@ describe('POST /api/procedimentos', () => {
   it('POST com nome repetido → 409 NOME_JA_CADASTRADO', async () => {
     const existente = await criarProcedimento(contexto, { nome: nomeUnico('Canal') });
 
-    const resposta = await criar(tokenDe(contexto, admin), { nome: existente.nome, duracaoMinutos: 90, precoCentavos: 80000 });
+    const resposta = await criar(await tokenDe(contexto, admin), { nome: existente.nome, duracaoMinutos: 90, precoCentavos: 80000 });
 
     expect(resposta.status).toBe(409);
     expect(resposta.body.erro.codigo).toBe('NOME_JA_CADASTRADO');
   });
 
   it('POST com duracaoMinutos 0 ou preço negativo → 400 ENTRADA_INVALIDA', async () => {
-    const token = tokenDe(contexto, admin);
+    const token = await tokenDe(contexto, admin);
 
     const semDuracao = await criar(token, { nome: nomeUnico('Zero'), duracaoMinutos: 0, precoCentavos: 100 });
     const precoNegativo = await criar(token, { nome: nomeUnico('Negativo'), duracaoMinutos: 30, precoCentavos: -1 });
@@ -112,11 +112,11 @@ describe('PATCH /api/procedimentos/{id}', () => {
   it('PATCH ativo=false some da lista do cliente', async () => {
     const procedimento = await criarProcedimento(contexto, { nome: nomeUnico('Restauração') });
 
-    const resposta = await editar(tokenDe(contexto, admin), procedimento.id, { ativo: false });
+    const resposta = await editar(await tokenDe(contexto, admin), procedimento.id, { ativo: false });
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.ativo).toBe(false);
-    const doCliente = await listar(tokenDe(contexto, paciente));
+    const doCliente = await listar(await tokenDe(contexto, paciente));
     expect(doCliente.body.map((item: { id: string }) => item.id)).not.toContain(procedimento.id);
   });
 
@@ -137,7 +137,7 @@ describe('PATCH /api/procedimentos/{id}', () => {
       },
     });
 
-    const resposta = await editar(tokenDe(contexto, admin), procedimento.id, { duracaoMinutos: 90 });
+    const resposta = await editar(await tokenDe(contexto, admin), procedimento.id, { duracaoMinutos: 90 });
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.duracaoMinutos).toBe(90);
@@ -149,21 +149,21 @@ describe('PATCH /api/procedimentos/{id}', () => {
     const primeiro = await criarProcedimento(contexto, { nome: nomeUnico('Faceta') });
     const segundo = await criarProcedimento(contexto, { nome: nomeUnico('Lente') });
 
-    const resposta = await editar(tokenDe(contexto, admin), segundo.id, { nome: primeiro.nome });
+    const resposta = await editar(await tokenDe(contexto, admin), segundo.id, { nome: primeiro.nome });
 
     expect(resposta.status).toBe(409);
     expect(resposta.body.erro.codigo).toBe('NOME_JA_CADASTRADO');
   });
 
   it('PATCH de id inexistente → 404 NAO_ENCONTRADO', async () => {
-    const resposta = await editar(tokenDe(contexto, admin), randomUUID(), { ativo: false });
+    const resposta = await editar(await tokenDe(contexto, admin), randomUUID(), { ativo: false });
 
     expect(resposta.status).toBe(404);
     expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO');
   });
 
   it('PATCH com id que não é UUID → 404 NAO_ENCONTRADO', async () => {
-    const resposta = await editar(tokenDe(contexto, admin), 'nao-e-uuid', { ativo: false });
+    const resposta = await editar(await tokenDe(contexto, admin), 'nao-e-uuid', { ativo: false });
 
     expect(resposta.status).toBe(404);
     expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO');

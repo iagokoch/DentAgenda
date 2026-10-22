@@ -35,10 +35,10 @@ const MANHA_E_TARDE: Faixa[] = [
 
 describe('PUT /api/dentistas/{id}/grade', () => {
   it('PUT por admin substitui a semana e GET devolve a nova', async () => {
-    await gravar(tokenDe(contexto, admin), dentista.id, [{ diaSemana: 3, inicio: '09:00', fim: '10:00' }]);
+    await gravar(await tokenDe(contexto, admin), dentista.id, [{ diaSemana: 3, inicio: '09:00', fim: '10:00' }]);
 
-    const resposta = await gravar(tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
-    const leitura = await ler(tokenDe(contexto, admin), dentista.id);
+    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
+    const leitura = await ler(await tokenDe(contexto, admin), dentista.id);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.grade).toEqual(MANHA_E_TARDE);
@@ -48,18 +48,18 @@ describe('PUT /api/dentistas/{id}/grade', () => {
   });
 
   it('PUT com lista vazia limpa a grade', async () => {
-    await gravar(tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
+    await gravar(await tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
 
-    const resposta = await gravar(tokenDe(contexto, admin), dentista.id, []);
+    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, []);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.grade).toEqual([]);
   });
 
   it('PUT com faixas sobrepostas no mesmo dia → 422 FAIXAS_SOBREPOSTAS', async () => {
-    await gravar(tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
+    await gravar(await tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
 
-    const resposta = await gravar(tokenDe(contexto, admin), dentista.id, [
+    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 2, inicio: '08:00', fim: '12:00' },
       { diaSemana: 2, inicio: '11:00', fim: '14:00' },
     ]);
@@ -67,7 +67,7 @@ describe('PUT /api/dentistas/{id}/grade', () => {
     expect(resposta.status).toBe(422);
     expect(resposta.body.erro.codigo).toBe('FAIXAS_SOBREPOSTAS');
     // A recusa não mexe na grade que já existia.
-    expect((await ler(tokenDe(contexto, admin), dentista.id)).body).toEqual(MANHA_E_TARDE);
+    expect((await ler(await tokenDe(contexto, admin), dentista.id)).body).toEqual(MANHA_E_TARDE);
   });
 
   it('faixas encostadas 08:00–12:00 e 12:00–14:00 são aceitas', async () => {
@@ -76,14 +76,14 @@ describe('PUT /api/dentistas/{id}/grade', () => {
       { diaSemana: 2, inicio: '12:00', fim: '14:00' },
     ];
 
-    const resposta = await gravar(tokenDe(contexto, admin), dentista.id, encostadas);
+    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, encostadas);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.grade).toEqual(encostadas);
   });
 
   it('mesmo horário em dias diferentes não é sobreposição', async () => {
-    const resposta = await gravar(tokenDe(contexto, admin), dentista.id, [
+    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 1, inicio: '08:00', fim: '12:00' },
       { diaSemana: 2, inicio: '08:00', fim: '12:00' },
     ]);
@@ -92,10 +92,10 @@ describe('PUT /api/dentistas/{id}/grade', () => {
   });
 
   it('PUT com inicio >= fim → 422 FAIXA_INVALIDA', async () => {
-    const invertida = await gravar(tokenDe(contexto, admin), dentista.id, [
+    const invertida = await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 1, inicio: '12:00', fim: '08:00' },
     ]);
-    const vazia = await gravar(tokenDe(contexto, admin), dentista.id, [{ diaSemana: 1, inicio: '08:00', fim: '08:00' }]);
+    const vazia = await gravar(await tokenDe(contexto, admin), dentista.id, [{ diaSemana: 1, inicio: '08:00', fim: '08:00' }]);
 
     expect(invertida.status).toBe(422);
     expect(invertida.body.erro.codigo).toBe('FAIXA_INVALIDA');
@@ -104,13 +104,13 @@ describe('PUT /api/dentistas/{id}/grade', () => {
   });
 
   it('PUT com formato inválido → 400 ENTRADA_INVALIDA', async () => {
-    const diaInvalido = await gravar(tokenDe(contexto, admin), dentista.id, [
+    const diaInvalido = await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 7, inicio: '08:00', fim: '12:00' },
     ]);
-    const horaInvalida = await gravar(tokenDe(contexto, admin), dentista.id, [
+    const horaInvalida = await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 1, inicio: '8:00', fim: '25:00' },
     ]);
-    const naoELista = await gravar(tokenDe(contexto, admin), dentista.id, { diaSemana: 1 });
+    const naoELista = await gravar(await tokenDe(contexto, admin), dentista.id, { diaSemana: 1 });
 
     for (const resposta of [diaInvalido, horaInvalida, naoELista]) {
       expect(resposta.status).toBe(400);
@@ -119,7 +119,7 @@ describe('PUT /api/dentistas/{id}/grade', () => {
   });
 
   it('PUT lista consultasForaDaGrade futuras e não cancela nenhuma', async () => {
-    await gravar(tokenDe(contexto, admin), dentista.id, [
+    await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 1, inicio: '08:00', fim: '18:00' },
       { diaSemana: 2, inicio: '08:00', fim: '18:00' },
     ]);
@@ -145,7 +145,7 @@ describe('PUT /api/dentistas/{id}/grade', () => {
     await marcar('2026-10-13', '10:00', '11:00', 'CANCELADA'); // cancelada: não interessa
     await marcar('2026-10-01', '14:00', '15:00'); // passada: não interessa
 
-    const resposta = await gravar(tokenDe(contexto, admin), dentista.id, [
+    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 1, inicio: '08:00', fim: '18:00' },
     ]);
 
@@ -163,29 +163,29 @@ describe('PUT /api/dentistas/{id}/grade', () => {
   });
 
   it('PUT em id de recepcionista → 404', async () => {
-    const resposta = await gravar(tokenDe(contexto, admin), recepcionista.id, MANHA_E_TARDE);
+    const resposta = await gravar(await tokenDe(contexto, admin), recepcionista.id, MANHA_E_TARDE);
 
     expect(resposta.status).toBe(404);
     expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO');
   });
 
   it('PUT em id inexistente ou malformado → 404', async () => {
-    const inexistente = await gravar(tokenDe(contexto, admin), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', MANHA_E_TARDE);
-    const malformado = await gravar(tokenDe(contexto, admin), 'abc', MANHA_E_TARDE);
+    const inexistente = await gravar(await tokenDe(contexto, admin), '5b0f6a9e-1d4c-4c53-9c1e-0c3a9f6d2b11', MANHA_E_TARDE);
+    const malformado = await gravar(await tokenDe(contexto, admin), 'abc', MANHA_E_TARDE);
 
     expect(inexistente.status).toBe(404);
     expect(malformado.status).toBe(404);
   });
 
   it('PUT por recepcionista sem isAdmin → 403', async () => {
-    const resposta = await gravar(tokenDe(contexto, recepcionista), dentista.id, MANHA_E_TARDE);
+    const resposta = await gravar(await tokenDe(contexto, recepcionista), dentista.id, MANHA_E_TARDE);
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
   });
 
   it('PUT pelo próprio dentista sem isAdmin → 403', async () => {
-    const resposta = await gravar(tokenDe(contexto, dentista), dentista.id, MANHA_E_TARDE);
+    const resposta = await gravar(await tokenDe(contexto, dentista), dentista.id, MANHA_E_TARDE);
 
     expect(resposta.status).toBe(403);
   });
@@ -193,10 +193,10 @@ describe('PUT /api/dentistas/{id}/grade', () => {
 
 describe('GET /api/dentistas/{id}/grade', () => {
   it('GET pelo próprio dentista → 200; da grade de outro → 404', async () => {
-    await gravar(tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
+    await gravar(await tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
 
-    const propria = await ler(tokenDe(contexto, dentista), dentista.id);
-    const alheia = await ler(tokenDe(contexto, colega), dentista.id);
+    const propria = await ler(await tokenDe(contexto, dentista), dentista.id);
+    const alheia = await ler(await tokenDe(contexto, colega), dentista.id);
 
     expect(propria.status).toBe(200);
     expect(propria.body).toEqual(MANHA_E_TARDE);
@@ -207,9 +207,9 @@ describe('GET /api/dentistas/{id}/grade', () => {
   it('GET pela recepção e pelo admin → 200; por cliente → 403', async () => {
     const paciente = await criarPaciente(contexto);
 
-    const daRecepcao = await ler(tokenDe(contexto, recepcionista), dentista.id);
-    const doAdmin = await ler(tokenDe(contexto, admin), dentista.id);
-    const doCliente = await ler(tokenDe(contexto, paciente), dentista.id);
+    const daRecepcao = await ler(await tokenDe(contexto, recepcionista), dentista.id);
+    const doAdmin = await ler(await tokenDe(contexto, admin), dentista.id);
+    const doCliente = await ler(await tokenDe(contexto, paciente), dentista.id);
 
     expect(daRecepcao.status).toBe(200);
     expect(doAdmin.status).toBe(200);
@@ -217,7 +217,7 @@ describe('GET /api/dentistas/{id}/grade', () => {
   });
 
   it('GET de quem não é dentista → 404; sem login → 401', async () => {
-    const naoDentista = await ler(tokenDe(contexto, admin), recepcionista.id);
+    const naoDentista = await ler(await tokenDe(contexto, admin), recepcionista.id);
     const semLogin = await request(app).get(`/api/dentistas/${dentista.id}/grade`);
 
     expect(naoDentista.status).toBe(404);
@@ -225,13 +225,13 @@ describe('GET /api/dentistas/{id}/grade', () => {
   });
 
   it('devolve as faixas ordenadas por dia e hora', async () => {
-    await gravar(tokenDe(contexto, admin), dentista.id, [
+    await gravar(await tokenDe(contexto, admin), dentista.id, [
       { diaSemana: 5, inicio: '14:00', fim: '18:00' },
       { diaSemana: 1, inicio: '14:00', fim: '18:00' },
       { diaSemana: 1, inicio: '08:00', fim: '12:00' },
     ]);
 
-    const resposta = await ler(tokenDe(contexto, admin), dentista.id);
+    const resposta = await ler(await tokenDe(contexto, admin), dentista.id);
 
     expect(resposta.body).toEqual([
       { diaSemana: 1, inicio: '08:00', fim: '12:00' },

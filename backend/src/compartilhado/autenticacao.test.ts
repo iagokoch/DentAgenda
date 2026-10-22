@@ -33,7 +33,7 @@ describe('autenticação e papéis', () => {
     const recepcionista = await criarFuncionario(contexto, { categoria: 'RECEPCIONISTA' });
     const outroSegredo = { ...contexto, config: { ...contexto.config, jwtSegredo: 'outro-segredo-'.repeat(4) } };
 
-    const resposta = await comToken('/recepcao-ou-cliente', tokenDe(outroSegredo, recepcionista));
+    const resposta = await comToken('/recepcao-ou-cliente', await tokenDe(outroSegredo, recepcionista));
 
     expect(resposta.status).toBe(401);
     expect(resposta.body.erro.codigo).toBe('NAO_AUTENTICADO');
@@ -41,7 +41,7 @@ describe('autenticação e papéis', () => {
 
   it('token vencido (relógio +16 min) → 401', async () => {
     const recepcionista = await criarFuncionario(contexto, { categoria: 'RECEPCIONISTA' });
-    const token = tokenDe(contexto, recepcionista);
+    const token = await tokenDe(contexto, recepcionista);
 
     contexto.relogio.avancarMinutos(16);
     const resposta = await comToken('/recepcao-ou-cliente', token);
@@ -53,7 +53,7 @@ describe('autenticação e papéis', () => {
 
   it('token ainda válido com 14 min → 200', async () => {
     const recepcionista = await criarFuncionario(contexto, { categoria: 'RECEPCIONISTA' });
-    const token = tokenDe(contexto, recepcionista);
+    const token = await tokenDe(contexto, recepcionista);
 
     contexto.relogio.avancarMinutos(14);
     const resposta = await comToken('/recepcao-ou-cliente', token);
@@ -65,7 +65,7 @@ describe('autenticação e papéis', () => {
   it('dentista em rota de R e C → 403 SEM_PERMISSAO', async () => {
     const dentista = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
 
-    const resposta = await comToken('/recepcao-ou-cliente', tokenDe(contexto, dentista));
+    const resposta = await comToken('/recepcao-ou-cliente', await tokenDe(contexto, dentista));
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
@@ -74,7 +74,7 @@ describe('autenticação e papéis', () => {
   it('recepcionista com isAdmin passa em rota A', async () => {
     const admin = await criarFuncionario(contexto, { categoria: 'RECEPCIONISTA', isAdmin: true });
 
-    const resposta = await comToken('/admin', tokenDe(contexto, admin));
+    const resposta = await comToken('/admin', await tokenDe(contexto, admin));
 
     expect(resposta.status).toBe(200);
   });
@@ -82,7 +82,7 @@ describe('autenticação e papéis', () => {
   it('dentista sem isAdmin em rota A → 403', async () => {
     const dentista = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
 
-    const resposta = await comToken('/admin', tokenDe(contexto, dentista));
+    const resposta = await comToken('/admin', await tokenDe(contexto, dentista));
 
     expect(resposta.status).toBe(403);
     expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
