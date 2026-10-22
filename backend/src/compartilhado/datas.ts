@@ -51,3 +51,8 @@ export function minutosDoDiaEmSaoPaulo(instante: Date): number {
 export function diaDaSemana(data: string): number {
   return new Date(`${data}T00:00:00Z`).getUTCDay();
 }
+
+// 'AAAA-MM-DD' + 1 dia (calendário puro, sem fuso).
+export function diaSeguinte(data: string): string {
+  return new Date(new Date(`${data}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
