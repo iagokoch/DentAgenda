@@ -14,7 +14,8 @@ O fluxo principal da clínica funciona de ponta a ponta, do login à consulta re
   (D31, D32) e Swagger gerado dos schemas Zod, só fora de produção (D34).
 - **Front-end** (`src/`): ligado à API (D30, D33). Login, cadastro, recuperação de senha, busca e cadastro de
   pacientes, Perfil do Paciente (com Histórico de consultas), Início, Novo Agendamento, remarcação e Detalhes da
-  Consulta (cancelar, remarcar, realizar, observação com histórico). 57 testes.
+  Consulta (cancelar, remarcar, realizar, observação com histórico). Área do paciente: ver, cancelar e marcar as próprias
+  consultas (D35). 74 testes, com testes de tela (D36).
 - **Não conferido no navegador:** a fatia F3 (agenda e consultas) passou em testes, lint e build, mas ninguém percorreu o
   fluxo real com a clínica de teste montada. Faça isso primeiro (veja o passo 1 abaixo).
 
@@ -110,7 +111,8 @@ docs/           Decisões, spec, plano, contrato da API e pendências com a clí
 | `/pacientes/:pacienteId` | Funcionário da clínica  | Ligada à API                              |
 | `/agenda`                | Funcionário da clínica  | Ligada à API (`?pacienteId=` e `?remarcar=`) |
 | `/consultas/:consultaId` | Funcionário da clínica  | Ligada à API                              |
-| `/minha-conta`           | Paciente                | **Página provisória** (D30, em aberto)    |
+| `/minha-conta`           | Paciente                | Ligada à API: próximas e histórico, cancelar (D35) |
+| `/minha-conta/agendar`   | Paciente                | Ligada à API: marcar consulta (D35)       |
 
 ## O que falta para finalizar
 
@@ -121,9 +123,7 @@ Ordem sugerida. Os números entre parênteses são as issues do GitHub (`iagokoc
 1. **Conferir a F3 no navegador** (15 min), seguindo `docs/ponta-a-ponta.md`. A API já passou pelo mesmo fluxo no
    teste `backend/src/e2e/ponta-a-ponta.test.ts`; falta ver as telas.
 2. ~~Fechamento da Tarefa 23~~: feito. `npm run conferir:codigos` confere que todo código de erro do `api.md` tem teste (D23).
-3. **Decidir a área do paciente** (`/minha-conta`, D30). Hoje é provisória. Ou se fazem as telas do paciente (ver as
-   próprias consultas, cancelar com justificativa quando faltar menos de 24 h, marcar), ou se registra na D30 que ficou
-   fora do MVP. A API já está pronta para o papel de paciente (C).
+3. ~~Área do paciente~~: feita (D35). Falta conferir no navegador com um paciente cadastrado pelo autocadastro.
 4. **Telas de administração** (3 a 4 h): funcionários, procedimentos, grade semanal e bloqueios existem só na API.
    Sem elas, qualquer demonstração depende de chamar a API na mão.
 5. **README e apresentação**: manter este arquivo e o `CLAUDE.md` em dia a cada entrega.

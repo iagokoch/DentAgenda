@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/api.js'
 import { mensagemDoErro, mensagemDoHorario } from '../api/mensagens.js'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
+import { useEscolhaDeHorario } from '../agenda/useEscolhaDeHorario.js'
 import CalendarioDeDias from '../agenda/CalendarioDeDias.jsx'
 import Horarios from '../agenda/Horarios.jsx'
 import PacienteDaConsulta from '../agenda/PacienteDaConsulta.jsx'
@@ -32,8 +33,6 @@ export default function Agenda() {
   return <NovoAgendamento key={rodada} original={original.dados} aoMarcarOutra={() => setRodada(rodada + 1)} />
 }
 
-const consultaDaApi = (caminho, parametros) => `${caminho}?${new URLSearchParams(parametros)}`
-
 function NovoAgendamento({ original, aoMarcarOutra }) {
   const { usuario } = useSessao()
   const [parametros] = useSearchParams()
@@ -44,17 +43,13 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
   const [pacienteEscolhido, setPacienteEscolhido] = useState(original?.paciente)
   const [procedimentoId, setProcedimentoId] = useState(original?.procedimento.id ?? '')
   const [dentistaId, setDentistaId] = useState(ehDentista ? usuario.id : (original?.dentista.id ?? ''))
-  const [mes, setMes] = useState(mesDaData(new Date()))
-  const [dia, setDia] = useState(null)
-  const [horario, setHorario] = useState(null)
   const [observacao, setObservacao] = useState('')
   const [envio, setEnvio] = useState({ estado: 'parado' })
 
   const procedimentos = useDadosDaApi('/api/procedimentos')
   const dentistas = useDadosDaApi('/api/dentistas')
-  const filtroDeDentista = dentistaId ? { dentistaId } : {}
-  const dias = useDadosDaApi(procedimentoId ? consultaDaApi('/api/dias-disponiveis', { procedimentoId, mes, ...filtroDeDentista }) : null)
-  const horarios = useDadosDaApi(procedimentoId && dia ? consultaDaApi('/api/horarios-livres', { procedimentoId, data: dia, ...filtroDeDentista }) : null)
+  const escolha = useEscolhaDeHorario({ procedimentoId, dentistaId })
+  const { mes, dia, horario, dias, horarios } = escolha
 
   const paciente = pacienteEscolhido !== undefined ? pacienteEscolhido : pacienteDoLink.dados ? { id: pacienteDoLink.dados.id, nome: pacienteDoLink.dados.nome } : null
   const procedimento = procedimentos.dados?.find((item) => item.id === procedimentoId)
@@ -72,19 +67,17 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
   }
 
   function mudarMes(novoMes) {
-    setMes(novoMes)
-    limparDiaEHorario()
+    escolha.mudarMes(novoMes)
+    setEnvio({ estado: 'parado' })
   }
 
   function limparDiaEHorario() {
-    setDia(null)
-    setHorario(null)
+    escolha.limpar()
     setEnvio({ estado: 'parado' })
   }
 
   function escolherDia(data) {
-    setDia(data)
-    setHorario(null)
+    escolha.escolherDia(data)
     setEnvio({ estado: 'parado' })
   }
 
@@ -111,9 +104,7 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
       const mensagemDeHorario = mensagemDoHorario(falha)
       if (mensagemDeHorario) {
         // O horário escolhido não vale mais: recarrega as vagas para a pessoa escolher outro.
-        setHorario(null)
-        dias.recarregar()
-        horarios.recarregar()
+        escolha.recarregarVagas()
       }
       setEnvio({ estado: 'erro', mensagem: mensagemDeHorario ?? mensagemDoErro(falha) })
     }
@@ -152,7 +143,7 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
         </div>
         <aside className="schedule-side">
           <CalendarioDeDias mes={mes} mesMinimo={mesDaData(new Date())} dias={dias} diaEscolhido={dia} aoMudarMes={mudarMes} aoEscolher={escolherDia} />
-          <Horarios horarios={horarios} horarioEscolhido={horario} aviso={avisoDoHorario} aoEscolher={(escolhido) => { setHorario(escolhido); setEnvio({ estado: 'parado' }) }} />
+          <Horarios horarios={horarios} horarioEscolhido={horario} aviso={avisoDoHorario} aoEscolher={(escolhido) => { escolha.escolherHorario(escolhido); setEnvio({ estado: 'parado' }) }} />
         </aside>
       </div>
       <footer className="selection-bar">

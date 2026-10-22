@@ -35,11 +35,13 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
 | D28  | E-mail sempre em minúsculas                     | Fechada                      |
 | D29  | Rotação do refresh mantém o prazo da sessão     | Fechada                      |
-| D30  | Front integrado à API em fatias                 | Fechada (área do paciente em aberto) |
+| D30  | Front integrado à API em fatias                 | Fechada (área do paciente na D35, testes de tela na D36) |
 | D31  | Ajustes de segurança da auditoria               | Fechada                      |
 | D32  | Defesas de borda: helmet, limite por IP, CORS   | Fechada (trust proxy no deploy) |
 | D33  | Agenda e consultas no front (F3)                | Fechada                      |
 | D34  | Swagger gerado dos schemas Zod                  | Fechada                      |
+| D35  | Área do paciente no front                       | Fechada (pendência Colzani)  |
+| D36  | Testes de tela no front                         | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1172,7 +1174,7 @@ regra é a mesma para não haver dois formatos no banco.
 3. O contrato é `docs/api.md`. Se o front precisar de algo que a API não dá, vira decisão nova e
    mudança no `api.md`; não se contorna no front.
 4. Visual: as 8 telas do Figma listadas no `CLAUDE.md`.
-5. **Verificação do front:** Vitest só no cliente HTTP (token em memória, renovação no 401, formato
+5. **Verificação do front** (mudada pela D36, que acrescenta testes de tela): Vitest só no cliente HTTP (token em memória, renovação no 401, formato
    de erro); as telas são conferidas com `npm run lint`, `npm run build` e uso no navegador contra a
    API rodando.
 
@@ -1190,8 +1192,8 @@ regra é a mesma para não haver dois formatos no banco.
 - *Vitest + Testing Library nas telas:* 1–2 h a mais por fatia em telas que serão refeitas.
 
 **Em aberto:**
-1. O Figma não tem tela para o paciente logado (C). Na F1 ele cai numa página simples (nome e
-   sair); a F3 decide o resto.
+1. ~~O Figma não tem tela para o paciente logado (C).~~ Resolvido na D35. Na F1 ele caía numa página simples (nome e
+   sair).
 
 ## D31 — Ajustes de segurança da auditoria de 2026-10-22
 
@@ -1293,7 +1295,7 @@ alternativa de editar horário na mesma consulta já estava descartada (D14).
 
 **Em aberto:**
 1. Encaixe fora do passo para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
-2. Área do paciente (`/minha-conta`) segue provisória (D30): cancelar e marcar pelo paciente ainda não têm tela.
+2. ~~Área do paciente (`/minha-conta`) provisória~~: resolvida na D35.
 3. Valor Estimado editável pela clínica: decisão de produto, perguntar à Colzani.
 
 ## D34 — Swagger gerado dos schemas Zod, só fora de produção
@@ -1324,6 +1326,70 @@ de resumo e o papel de cada rota são escritos à mão, e o teste pega rota esqu
 1. Respostas de sucesso sem schema: só valem o `api.md`. Se o grupo quiser, dá para tipar os objetos de resposta (D24).
 2. O Swagger fica visível a qualquer um em desenvolvimento; em produção não existe (nada a configurar).
 
+## D35 — Área do paciente no front
+
+> **Status: fechada.** Aprovada pelo usuário em 2026-10-22 (opção "telas do paciente"); fecha o "Em aberto" da D30 e o
+> item 2 da D33. A pergunta à Colzani "o paciente vai marcar pelo sistema?" continua aberta (seção 6 das pendências).
+
+**O quê:**
+1. Duas rotas, só para o paciente logado (C): `/minha-conta` (Minhas consultas) e `/minha-conta/agendar` (Marcar
+   consulta). Nenhuma rota nova na API: tudo o que a tela usa já atende o papel C (`docs/api.md`).
+2. **Layout:** o mesmo `AppShell` das telas da clínica, com a navegação do paciente (Minhas consultas, Marcar consulta,
+   Sair) e sem a busca de pacientes e o botão "Novo Agendamento". O Figma não tem tela do paciente; vale o visual das
+   telas existentes.
+3. **Minhas consultas** (C recebe só as próprias): "Próximas" vêm de `GET /api/consultas?status=CONFIRMADA&de=<hoje>`
+   e mostram as que ainda não começaram, da mais perto para a mais longe. "Histórico" vem de
+   `GET /api/consultas?porPagina=100`, sem as próximas, da mais nova para a mais antiga; se `total` passar de 100, a tela
+   avisa quantas mostra. Duas leituras porque a lista é em ordem de `inicio` e a paginação cortaria as mais novas.
+4. **Cancelar:** o mesmo popup da F3 (D33). Se faltar menos de 24 h pelo relógio do navegador, a justificativa já abre
+   obrigatória; a regra continua sendo da API (`JUSTIFICATIVA_OBRIGATORIA` torna o campo obrigatório,
+   `CONSULTA_JA_INICIADA` vira mensagem). Consulta que já começou não tem botão de cancelar. O texto do popup muda: quem
+   cancela é o paciente, e o SMS só sai quando a clínica cancela (D14).
+5. **Marcar:** procedimento (para C a API só devolve os ativos), dentista ou "qualquer dentista", calendário
+   (`dias-disponiveis`) e horários (`horarios-livres`, só no passo — D12), e `POST /api/consultas` sem `pacienteId`
+   (vem do token). Erro 409 de horário recarrega as vagas, como na F3.
+6. **Fora desta decisão:** remarcar pelo paciente (ele cancela e marca outra; a API permite remarcação por C, mas sem
+   tela), editar os próprios dados e alertas, e observação do paciente na consulta.
+
+**Por quê:** a API já cobria o papel C desde o backend do MVP, e a apresentação mostra os três papéis (D10). Reaproveitar o
+calendário, os horários e o popup da F3 mantém as mesmas regras e mensagens nas duas pontas.
+
+**Alternativas descartadas:**
+- *Reaproveitar a tela de Novo Agendamento com um modo "paciente":* ela tem busca e cadastro de paciente, remarcação e
+  dentista travado para D; os condicionais iam passar do que a tela do paciente precisa. A tela nova usa os mesmos
+  componentes (`CalendarioDeDias`, `Horarios`).
+- *Layout próprio (o `AuthLayout` do login):* duas navegações para manter; o `AppShell` já resolve topo, menu e celular.
+- *Deixar a área fora do MVP* (opção "b"): recusada pelo usuário.
+
+**Em aberto:**
+1. Se a Colzani responder que só a recepção agenda, basta tirar a rota `/minha-conta/agendar` e o link do menu.
+
+## D36 — Testes de tela no front (Testing Library + jsdom)
+
+> **Status: fechada.** Muda o item 5 da D30 ("Vitest só no cliente HTTP") e a alternativa descartada de lá.
+
+**O quê:**
+1. Telas testadas com `@testing-library/react` 16.3.3, `@testing-library/dom` 10.4.2, `@testing-library/user-event`
+   14.6.7 e `jsdom` 30.1.2 (só `devDependencies`, versões exatas).
+2. Cada teste de tela declara `// @vitest-environment jsdom` no topo; os testes de funções puras continuam no ambiente
+   `node`, sem pagar a subida do jsdom.
+3. A API é simulada no `fetch` (`src/testes/tela.jsx`), por método e caminho: o teste passa pelo cliente HTTP real
+   (formato de erro, `ErroDaApi`, mensagens). A sessão entra por um `SessaoContexto` com o usuário do teste, e as rotas
+   por `MemoryRouter`.
+4. Testam os fluxos principais (o que o usuário faz e o que a tela mostra), não detalhe de markup.
+
+**Por quê:** a D30 descartou teste de tela porque as telas seriam refeitas; depois da F3 elas estão ligadas à API e
+estáveis, e as telas novas (área do paciente, administração) têm regra que só aparece na tela: campo que vira
+obrigatório, botão que some, mensagem do código de erro certo.
+
+**Alternativas descartadas:**
+- *Playwright contra a API rodando:* precisa do navegador e do Postgres no `npm test` do front; o fluxo inteiro da API já
+  está no ponta a ponta do backend (`backend/src/e2e/`).
+- *MSW para simular a API:* mais uma dependência para o que um `fetch` falso por caminho já faz.
+- *happy-dom:* mais rápido, mas com mais diferenças de comportamento do navegador que o jsdom.
+
+**Em aberto:** nada.
+
 ## Próximo
 
 Estado em 2026-10-22: backend completo para o MVP (43 rotas, 381 testes) e front ligado à API até a F3. O resto está no
@@ -1332,7 +1398,7 @@ README, seção "O que falta para finalizar". Em resumo:
 1. ~~Spec, plano, backend, Swagger e as fatias F1 a F3 do front.~~ Feitos (`docs/plano-implementacao.md`).
 2. **Conferir a F3 no navegador** com a dentista com grade semanal definida (`docs/ponta-a-ponta.md`).
 3. ~~Fechamento da Tarefa 23~~: `npm run conferir:codigos` e o ponta a ponta automatizado (`backend/src/e2e/`).
-4. **Área do paciente** (`/minha-conta`): decidir se entra no MVP (D30, D33 em aberto).
+4. ~~Área do paciente~~ (`/minha-conta`): feita (D35), com testes de tela (D36).
 5. **Telas de administração** (funcionários, procedimentos, grade, bloqueios): hoje só pela API.
 6. **Produção:** enviador real de SMS e e-mail, `trust proxy` (D32), índices e retenção de dados.
 7. Pendências que **não** travam o código (dependem da clínica): `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3 e

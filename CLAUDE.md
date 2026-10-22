@@ -12,13 +12,13 @@ Confira antes de assumir qualquer coisa:
   react-router-dom, em `src/`. **Ligado à API (F1):** login (um campo "CPF ou e-mail": com `@` vai
   para o login de funcionário, senão de paciente), cadastro em duas etapas (código por SMS, D15),
   recuperação de senha (6 dígitos, paciente e funcionário), sessão restaurada pelo refresh ao
-  recarregar, rotas protegidas (funcionário → telas da clínica; paciente → `/minha-conta`,
-  página provisória), `AppShell` com o usuário real e Sair. **Ligado à API (F2):** busca e
+  recarregar, rotas protegidas (funcionário → telas da clínica; paciente → `/minha-conta`), `AppShell` com o usuário real e Sair. **Ligado à API (F2):** busca e
   cadastro de pacientes (`/pacientes`, `/pacientes/novo`), Perfil do Paciente com dados, endereço e alertas
   reais e painel "Editar dados" (só recepção).
   **Ligado à API (F3, D33):** Início real, Novo Agendamento (`/agenda`, também remarca com `?remarcar=<id>`), Detalhes da
   consulta (`/consultas/:id`: cancelar, remarcar, realizar, observação com histórico) e Histórico no perfil do paciente.
-  A área do paciente (`/minha-conta`) segue provisória.
+  **Área do paciente (D35):** `/minha-conta` (próximas e histórico, cancelar; justificativa já obrigatória a menos de
+  24 h) e `/minha-conta/agendar` (marcar), no mesmo `AppShell` com a navegação do paciente.
 - **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (Tarefas 0 a 23 feitas,
   plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (381 testes): `auth` (11),
   pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
@@ -30,8 +30,7 @@ Confira antes de assumir qualquer coisa:
   inteiro, só com login real, está em `src/e2e/ponta-a-ponta.test.ts` (roteiro manual em `docs/ponta-a-ponta.md`).
   Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
 - **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador (`docs/ponta-a-ponta.md`);
-  (2) ~~Tarefa 23~~ feita; (3) decidir a área do paciente `/minha-conta`
-  (D30); (4) telas de administração (funcionários, procedimentos, grade, bloqueios), hoje só pela API; (5) para produção:
+  (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) telas de administração (funcionários, procedimentos, grade, bloqueios), hoje só pela API; (5) para produção:
   enviador real de SMS e e-mail (issue #1), `trust proxy` (D32), índices e retenção (#4). Issues #1 a #7 no GitHub cobrem
   produção e qualidade.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
@@ -56,7 +55,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint     # oxlint
-npm test         # Vitest do front: cliente HTTP, formatação, endereço, calendário da agenda
+npm test         # Vitest do front: funções puras e telas (Testing Library + jsdom, D36)
 ```
 
 Front + API juntos: suba a API (`backend`, `npm run dev`) e o front (`npm run dev` na raiz); o
@@ -86,10 +85,12 @@ src/
                 rotas.jsx (RotaProtegida/RotaPublica)
   components/   AppShell, AuthLayout, Brand, Icon
   assets/       consultorio.png (foto do painel do login)
-  pages/        Login, Cadastro, RecuperarSenha, AreaDoPaciente, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda,
-                DetalhesDaConsulta
-  agenda/       calendario (puro, com testes), status, CalendarioDeDias, Horarios, PacienteDaConsulta,
-                DialogoDeCancelamento, ObservacaoDaConsulta
+  pages/        Login, Cadastro, RecuperarSenha, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda,
+                DetalhesDaConsulta, MinhasConsultas e MarcarConsulta (paciente, D35); *.test.jsx = testes de tela
+  agenda/       calendario (puro, com testes), status, useEscolhaDeHorario (mês/dia/horário e vagas), CalendarioDeDias,
+                Horarios, PacienteDaConsulta, DialogoDeCancelamento, ObservacaoDaConsulta
+  minha-conta/  consultas-do-paciente (puro: próximas, histórico, regra das 24 h)
+  testes/       tela.jsx: API simulada no fetch, sessão e rotas para os testes de tela (D36)
   pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco, HistoricoDoPaciente
   index.css     Tokens de design
   styles.css    Estilos das páginas
