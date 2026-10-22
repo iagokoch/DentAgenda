@@ -30,4 +30,17 @@ export function mensagemDoErro(erro) {
   return erro?.mensagem ?? 'Algo deu errado. Tente de novo.'
 }
 
+// Erros 409 de docs/api.md ("Erros de horário"): todos pedem para escolher outro horário.
+const MENSAGEM_DO_HORARIO = {
+  HORARIO_INDISPONIVEL: 'Esse horário acabou de ser ocupado. Escolha outro horário.',
+  PACIENTE_COM_CONSULTA_NO_HORARIO: 'O paciente já tem uma consulta nesse horário. Escolha outro horário.',
+  FORA_DA_GRADE: 'Esse horário está fora da agenda do dentista. Escolha outro horário.',
+  HORARIO_BLOQUEADO: 'O dentista não atende nesse horário. Escolha outro horário.',
+  FORA_DO_PASSO: 'Esse horário não é um dos oferecidos. Escolha outro horário.',
+  FORA_DOS_5_MINUTOS: 'O horário precisa estar em múltiplos de 5 minutos. Escolha outro horário.',
+}
+
+// null quando o erro não é de horário: a tela mostra então a mensagem comum.
+export const mensagemDoHorario = (erro) => (erro?.status === 409 ? (MENSAGEM_DO_HORARIO[erro.codigo] ?? null) : null)
+
 export const somenteDigitos = (texto) => texto.replace(/\D/g, '')

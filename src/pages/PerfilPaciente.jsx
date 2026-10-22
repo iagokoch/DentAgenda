@@ -6,14 +6,15 @@ import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
 import Alertas from '../pacientes/Alertas.jsx'
 import EditarPaciente from '../pacientes/EditarPaciente.jsx'
+import HistoricoDoPaciente from '../pacientes/HistoricoDoPaciente.jsx'
 import { dataLonga, desdeLongo, enderecoEmLinhas, formatarCpf, formatarTelefone, idade, iniciais } from '../pacientes/formatar.js'
 import { useSessao } from '../sessao/sessao-contexto.js'
 
 const ABAS = ['Dados Pessoais', 'Histórico', 'Documentos', 'Financeiro']
 const NAO_INFORMADO = 'Não informado'
 
-// Dados, endereço e alertas vêm da API. Histórico e Resumo clínico chegam com a agenda; Documentos e Financeiro
-// ficam fora do escopo e aparecem como "em breve".
+// Dados, endereço, alertas e histórico de consultas vêm da API; Documentos e Financeiro ficam fora do escopo e
+// aparecem como "em breve".
 export default function PerfilPaciente() {
   const { pacienteId } = useParams()
   const { usuario } = useSessao()
@@ -71,7 +72,7 @@ export default function PerfilPaciente() {
         <div className="patient-actions">
           <a className="soft-btn" href={`tel:+55${paciente.telefone}`}><Icon name="phone" /> Ligar</a>
           <a className="soft-btn soft-btn--green" href={`https://wa.me/55${paciente.telefone}`} target="_blank" rel="noreferrer"><Icon name="whatsapp" /> WhatsApp</a>
-          <Link className="primary-btn primary-btn--solid" to="/agenda"><Icon name="calendar" /> Agendar Consulta</Link>
+          <Link className="primary-btn primary-btn--solid" to={`/agenda?pacienteId=${paciente.id}`}><Icon name="calendar" /> Agendar Consulta</Link>
         </div>
       </section>
 
@@ -105,6 +106,8 @@ export default function PerfilPaciente() {
             <Alertas pacienteId={paciente.id} />
           </aside>
         </div>
+      ) : aba === 'Histórico' ? (
+        <HistoricoDoPaciente pacienteId={paciente.id} />
       ) : (
         <TabPlaceholder titulo={aba} />
       )}
