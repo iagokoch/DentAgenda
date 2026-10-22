@@ -88,7 +88,7 @@ Devolvido no login e em `GET /api/auth/eu`:
 
 ### Senha
 
-8 a 72 caracteres, sem regra de composição (D20).
+Mínimo de 8 caracteres e máximo de 72 bytes, sem regra de composição (D20, D31).
 
 ### Paginação
 

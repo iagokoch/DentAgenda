@@ -1,6 +1,7 @@
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { dataEmSaoPaulo, diaDaSemana, formatarEmSaoPaulo, instanteEmSaoPaulo, type Intervalo } from '../../compartilhado/datas.ts';
 import { ErroDeNegocio, naoEncontrado } from '../../compartilhado/erros.ts';
+import { travarDentistas } from '../../compartilhado/travas.ts';
 
 export type Faixa = { diaSemana: number; inicio: string; fim: string };
 
@@ -57,6 +58,8 @@ function conferirFaixas(faixas: Faixa[]): void {
 export async function substituirGrade(contexto: Contexto, dentistaId: string, faixas: Faixa[]) {
   conferirFaixas(faixas);
   await contexto.prisma.$transaction(async (tx) => {
+    // Sem a trava, dois PUT em dentista sem grade passam pelo deleteMany juntos e gravam as duas listas.
+    await travarDentistas(tx, [dentistaId]);
     await tx.gradeHorario.deleteMany({ where: { dentistaId } });
     await tx.gradeHorario.createMany({
       data: faixas.map((faixa) => ({

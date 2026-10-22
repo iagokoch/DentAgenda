@@ -2,6 +2,7 @@ import cookieParser from 'cookie-parser';
 import express, { type Express } from 'express';
 import { pinoHttp } from 'pino-http';
 import type { Contexto } from './compartilhado/contexto.ts';
+import { serializarRequisicao } from './compartilhado/logger.ts';
 import { criarMiddlewareDeErro, rotaInexistente } from './compartilhado/middleware-de-erro.ts';
 import { criarRotasAuth } from './modulos/auth/auth.rotas.ts';
 import { criarRotasDentistas, criarRotasFuncionarios } from './modulos/funcionarios/funcionarios.rotas.ts';
@@ -13,7 +14,7 @@ import { criarRotasProcedimentos } from './modulos/procedimentos/procedimentos.r
 export function criarApp(contexto: Contexto): Express {
   const app = express();
   app.disable('x-powered-by');
-  app.use(pinoHttp({ logger: contexto.logger }));
+  app.use(pinoHttp({ logger: contexto.logger, serializers: { req: serializarRequisicao } }));
   app.use(express.json());
   app.use(cookieParser());
 

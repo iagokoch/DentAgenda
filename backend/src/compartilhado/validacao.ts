@@ -8,8 +8,15 @@ export const esquemaCpf = z.string().refine(cpfValido, { error: 'CPF inválido.'
 // D28: e-mail sempre em minúsculas, na entrada e no banco.
 export const esquemaEmail = z.email().toLowerCase();
 
-// D20: 8 a 72 caracteres (72 é o limite do bcrypt), sem regra de composição.
-export const esquemaSenha = z.string().min(8).max(72);
+// D20: mínimo de 8 caracteres e máximo de 72 bytes (limite do bcrypt, que trunca o resto em silêncio; acento e
+// emoji ocupam mais de um byte), sem regra de composição.
+const LIMITE_DE_BYTES_DO_BCRYPT = 72;
+export const esquemaSenha = z
+  .string()
+  .min(8)
+  .refine((senha) => Buffer.byteLength(senha, 'utf8') <= LIMITE_DE_BYTES_DO_BCRYPT, {
+    error: `Senha com no máximo ${LIMITE_DE_BYTES_DO_BCRYPT} bytes.`,
+  });
 
 // Lança o ZodError; o middleware de erro o traduz para 400 ENTRADA_INVALIDA.
 export function validar<T>(esquema: z.ZodType<T>, dado: unknown): T {

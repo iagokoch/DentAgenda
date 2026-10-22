@@ -48,8 +48,9 @@ export async function pedirCodigoDeCadastro(contexto: Contexto, pedido: PedidoDe
 
 export async function confirmarCadastro(contexto: Contexto, entrada: ConfirmacaoDeCadastro): Promise<ResultadoDoLogin> {
   const cliente = await contexto.prisma.cliente.findUnique({ where: { cpf: entrada.cpf }, include: { login: true } });
-  if (cliente?.login) throw codigoInvalido();
+  // O hash vem antes da recusa: recusar sem pagar o bcrypt revelaria pelo tempo quais CPFs já têm conta (D19, D25.5).
   const senhaHash = await gerarHashDeSenha(entrada.senha);
+  if (cliente?.login) throw codigoInvalido();
 
   // Paciente que a recepção cadastrou depois do pedido de CADASTRO não tem código ATIVACAO: cai aqui como inválido.
   if (cliente) {

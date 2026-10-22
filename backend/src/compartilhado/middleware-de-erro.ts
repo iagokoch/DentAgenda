@@ -41,7 +41,7 @@ function traduzirErro(erro: unknown): RespostaDeErro {
     const campos = erro.issues.map((problema) => ({ caminho: problema.path.join('.'), mensagem: problema.message }));
     return entradaInvalida(campos);
   }
-  if (jsonMalformado(erro)) return entradaInvalida([]);
+  if (erroDoCorpo(erro)) return entradaInvalida([]);
   const violacao = violacaoDoBanco(erro);
   if (violacao?.codigoSql === '23P01' && violacao.restricao) {
     return CONFLITOS_DE_HORARIO[violacao.restricao] ?? ERRO_INTERNO;
@@ -53,7 +53,17 @@ function entradaInvalida(campos: { caminho: string; mensagem: string }[]): Respo
   return { status: 400, corpo: { codigo: 'ENTRADA_INVALIDA', mensagem: 'Dados inválidos.', campos } };
 }
 
-// Erro do express.json() quando o corpo não é JSON válido.
-function jsonMalformado(erro: unknown): boolean {
-  return typeof erro === 'object' && erro !== null && 'type' in erro && erro.type === 'entity.parse.failed';
+// Erros do express.json() causados pelo cliente: JSON inválido, corpo acima do limite, charset ou encoding que
+// ele não lê. Todos são entrada inválida (400), não falha do servidor.
+const ERROS_DO_CORPO = new Set([
+  'entity.parse.failed',
+  'entity.too.large',
+  'charset.unsupported',
+  'encoding.unsupported',
+  'request.aborted',
+  'request.size.invalid',
+]);
+
+function erroDoCorpo(erro: unknown): boolean {
+  return typeof erro === 'object' && erro !== null && 'type' in erro && ERROS_DO_CORPO.has(String(erro.type));
 }

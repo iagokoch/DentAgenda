@@ -96,6 +96,25 @@ describe('middleware de erro', () => {
     expect(resposta.body.erro.codigo).toBe('ENTRADA_INVALIDA');
   });
 
+  it('corpo maior que o limite vira 400 ENTRADA_INVALIDA, não 500', async () => {
+    const corpoGrande = JSON.stringify({ texto: 'x'.repeat(200_000) });
+
+    const resposta = await request(appDeTeste).post('/eco').set('Content-Type', 'application/json').send(corpoGrande);
+
+    expect(resposta.status).toBe(400);
+    expect(resposta.body.erro.codigo).toBe('ENTRADA_INVALIDA');
+  });
+
+  it('charset não suportado vira 400 ENTRADA_INVALIDA, não 500', async () => {
+    const resposta = await request(appDeTeste)
+      .post('/eco')
+      .set('Content-Type', 'application/json; charset=nao-existe')
+      .send('{"a":1}');
+
+    expect(resposta.status).toBe(400);
+    expect(resposta.body.erro.codigo).toBe('ENTRADA_INVALIDA');
+  });
+
   it('violação de sobreposição do dentista vira 409 HORARIO_INDISPONIVEL', async () => {
     const resposta = await request(appDeTeste).post('/sobreposicao/dentista');
 
