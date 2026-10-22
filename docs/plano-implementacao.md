@@ -1131,7 +1131,7 @@ ORDER BY nome
 LIMIT $2 OFFSET $3;
 ```
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('busca "jose" acha "José da Silva"')`; `it('busca por CPF exato')`;
     `it('busca paginada devolve { itens, total }')`
   - `it('busca por cliente → 403')`
@@ -1146,10 +1146,10 @@ LIMIT $2 OFFSET $3;
   - `it('PATCH pelo cliente com telefone → 403 CAMPO_NAO_EDITAVEL')` (D21.2)
   - `it('PATCH com cpf → 422 CPF_IMUTAVEL, inclusive para o cliente')` (D25.7)
   - `it('PATCH pelo dentista → 403')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
-**Pronto quando:** 15 testes passam.
+**Pronto quando:** 26 testes passam (15 previstos + 11 de regressão e cenários negativos).
 
 **Commit:** `feat: rotas de pacientes com busca sem acento (D1, D4, D21)`
 
