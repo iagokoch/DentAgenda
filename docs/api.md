@@ -395,13 +395,25 @@ Substitui a semana inteira do dentista.
 Um bloqueio por dentista, criados juntos (feriado em lote). **Tudo ou nada:** se um dentista
 tiver consulta CONFIRMADA no período, nenhum bloqueio é criado.
 
-- **201** `[{ "id", "dentistaId", "inicio", "fim" }]`.
+`inicio` e `fim` são instantes com fuso (`-03:00` ou `Z`); `inicio < fim`, senão **400**. `dentistaIds`
+tem ao menos 1 id; ids repetidos valem uma vez; id que não é de dentista → **404** (nada é criado).
+Só consulta **CONFIRMADA** impede; cancelada e realizada não.
+
+- **201** `[{ "id", "dentistaId", "inicio", "fim" }]`, na ordem de `dentistaIds`.
 - **409** `CONSULTAS_NO_PERIODO` com `consultas: [{ "id", "dentistaId", "inicio", "paciente" }]`.
 - **403** dentista enviando id de outro dentista.
 
+### `GET /api/dentistas/{id}/bloqueios?de=&ate=`
+
+**200** `[{ "id", "dentistaId", "inicio", "fim" }]` em ordem de `inicio`: os bloqueios que tocam o
+período (os que só encostam numa ponta ficam de fora). `de` e `ate` são opcionais e aceitam um dia
+`AAAA-MM-DD` (no fuso da clínica; `ate` vale até o fim desse dia) ou um instante com fuso. O dentista
+só lista os próprios; o de um colega → **404**. Formato inválido → **400**.
+
 ### `DELETE /api/bloqueios/{id}`
 
-Apaga a linha — nada aponta para bloqueio. **204**.
+Apaga a linha — nada aponta para bloqueio. **204**. Dentista só apaga os próprios; o de um colega
+ou id inexistente → **404**.
 
 ---
 
@@ -414,7 +426,10 @@ Apaga a linha — nada aponta para bloqueio. **204**.
 
 Cálculo (D12): faixas da grade − bloqueios − consultas não canceladas. Horário que já passou
 nunca aparece. `dentistaId` opcional (ausente = todos os dentistas ativos); para **D** é sempre
-ele mesmo. Procedimento inexistente ou inativo → **404** `NAO_ENCONTRADO` (D25.9).
+ele mesmo. Procedimento inexistente ou inativo → **404** `NAO_ENCONTRADO` (D25.9); `dentistaId`
+inexistente, inativo ou que não é dentista → **404** também. Parâmetro ausente ou mal formado
+(`data`, `mes`, ids) → **400** `ENTRADA_INVALIDA`. Ocupam o horário os bloqueios e as consultas
+CONFIRMADA e REALIZADA; a cancelada não. Resposta ordenada por `inicio` e depois por `dentistaId`.
 
 ### `GET /api/horarios-livres` — um dia (`data=AAAA-MM-DD`)
 

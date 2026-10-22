@@ -1336,7 +1336,7 @@ export async function travarDentistas(tx, dentistaIds: string[]): Promise<void>;
 // SELECT id FROM "Funcionario" WHERE id = ANY($1::uuid[]) ORDER BY id FOR UPDATE
 ```
 
-- [ ] **Passo 1: testes que falham:**
+- [x] **Passo 1: testes que falham:**
   - `it('recepção cria feriado para dois dentistas → 201 com dois bloqueios')`
   - `it('um dentista com consulta CONFIRMADA no período → 409 CONSULTAS_NO_PERIODO e nenhum bloqueio criado')` (D21.3)
   - `it('o 409 lista { id, dentistaId, inicio, paciente: { id, nome } }')` (D24.4)
@@ -1347,11 +1347,11 @@ export async function travarDentistas(tx, dentistaIds: string[]): Promise<void>;
   - `it('inicio >= fim → 400')`
   - `it('GET de/ate pelo dentista: os próprios; de outro → 404')`
   - `it('DELETE apaga a linha → 204'); it('DELETE de bloqueio de outro dentista pelo dentista → 404')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar. Dentro da transação: `travarDentistas` →
+- [x] **Passo 2:** `npm test` → FAIL; implementar. Dentro da transação: `travarDentistas` →
   busca consultas CONFIRMADAS sobrepostas → se houver, lança 409 com a lista → senão insere.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 3:** verificação padrão.
 
-**Pronto quando:** 11 testes passam; as rotas de bloqueio do api.md respondem.
+**Pronto quando:** 17 testes passam (11 previstos + 6 de fronteira e cenários negativos); as rotas de bloqueio do api.md respondem.
 
 **Commit:** `feat: bloqueios em lote, tudo ou nada, com trava do dentista (D12, D21, D22)`
 
@@ -1369,7 +1369,7 @@ export function calcularDia(contexto, entrada: { dentistaId: string; procediment
   modo: 'passo' | 'encaixe'): Promise<{ horarios: Date[]; janelas: Intervalo[] }>;
 ```
 
-- [ ] **Passo 1: testes que falham** — `horarios.rotas.test.ts` (relógio: segunda 2026-10-05 07:00 SP):
+- [x] **Passo 1: testes que falham** — `horarios.rotas.test.ts` (relógio: segunda 2026-10-05 07:00 SP):
   - `it('cliente recebe só horarios no passo, sem janelasLivres')`
   - `it('recepção recebe horarios e janelasLivres')`
   - `it('sem dentistaId junta todos os dentistas ativos; dentista inativo fica de fora')`
@@ -1381,10 +1381,10 @@ export function calcularDia(contexto, entrada: { dentistaId: string; procediment
   - `it('dias-disponiveis de outubro: dia todo bloqueado não aparece')`
   - `it('dias-disponiveis: dia só com janela fora do passo aparece para recepção e não para cliente')` (D25.8)
   - `it('mes inválido "2026-13" → 400')`
-- [ ] **Passo 2:** `npm test` → FAIL; implementar.
-- [ ] **Passo 3:** verificação padrão.
+- [x] **Passo 2:** `npm test` → FAIL; implementar.
+- [x] **Passo 3:** verificação padrão.
 
-**Pronto quando:** 11 testes passam.
+**Pronto quando:** 18 testes passam (11 previstos + 7 de cenários negativos e regressão).
 
 **Commit:** `feat: rotas de horários livres e dias disponíveis (D12, D22)`
 

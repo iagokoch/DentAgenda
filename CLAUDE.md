@@ -28,7 +28,7 @@ Confira antes de assumir qualquer coisa:
   `/confirmar`, cliente e funcionário) e autocadastro/ativação do paciente
   (`POST /api/auth/cliente/cadastro/codigo` e `/confirmar`, D15). Todas as 11 rotas de `auth`
   estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18); `GET/POST /api/funcionarios`, `PATCH /api/funcionarios/{id}` e `GET /api/dentistas` (D10, D21); seeds `db:seed` (admin inicial) e `db:seed:dev` (dados fictícios).
-  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Próximo: bloqueios e rotas de horários (Tarefas 16 e 17).
+  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Bloqueios e horários livres (Tarefas 16 e 17): todas as rotas de disponibilidade estão prontas. Próximo: consultas (Tarefas 18 a 21).
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
