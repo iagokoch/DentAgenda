@@ -49,3 +49,20 @@ clínica; anotar a resposta embaixo da pergunta e depois atualizar a decisão co
   - Resposta:
 - [ ] Quando a clínica cancela, como o paciente é avisado hoje? (D14)
   - Resposta:
+
+## 6. Produto e produção (surgiram na F3 e no fechamento)
+
+- [ ] O "Valor Estimado" de uma consulta deve poder ser editado pela clínica, ou é sempre o preço do procedimento? (D33)
+  - Resposta:
+- [ ] O paciente vai marcar, ver e cancelar as próprias consultas pelo sistema? Ou só a recepção agenda? (D30, D33)
+  - Resposta:
+- [ ] Qual provedor de SMS e de e-mail a clínica aceita contratar, e quem paga? Sem isso a API não sobe em produção. (D16)
+  - Resposta:
+- [ ] Por quanto tempo a clínica quer guardar tentativas de login, códigos de verificação e sessões antigas? (LGPD)
+  - Resposta:
+- [ ] O que é um paciente "ativo": quem teve consulta nos últimos meses? Quantos? Hoje o Início só mostra o total de
+  cadastrados. (D33)
+  - Resposta:
+- [ ] A recepção precisa marcar consulta fora do passo dos horários (encaixe de 5 em 5 minutos) pela tela? A API já
+  oferece as janelas livres. (D22, D33)
+  - Resposta:

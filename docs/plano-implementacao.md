@@ -4,6 +4,10 @@
 > `superpowers:executing-plans`, tarefa por tarefa. Passos com checkbox (`- [ ]`).
 > Toda tarefa segue TDD (`superpowers:test-driven-development`): o teste falha antes do código.
 
+**Estado em 2026-10-22:** Tarefas 0 a 22 e F1 a F3 feitas. **Só a Tarefa 23 tem passos abertos** (2 a 6: script de
+cobertura dos códigos de erro, ponta a ponta, atualização final dos docs e `build`). A conferência da F3 no navegador
+também está pendente. O que vem depois (área do paciente, telas de administração, produção) está no README.
+
 **Objetivo:** implementar em `backend/` todas as rotas de `docs/api.md`, com as regras de
 D1–D23 garantidas por teste contra Postgres real. Tarefas F1–F3 ligam o front à API em fatias (D30).
 

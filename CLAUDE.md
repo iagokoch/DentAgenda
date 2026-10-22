@@ -15,24 +15,23 @@ Confira antes de assumir qualquer coisa:
   recarregar, rotas protegidas (funcionário → telas da clínica; paciente → `/minha-conta`,
   página provisória), `AppShell` com o usuário real e Sair. **Ligado à API (F2):** busca e
   cadastro de pacientes (`/pacientes`, `/pacientes/novo`), Perfil do Paciente com dados, endereço e alertas
-  reais e painel "Editar dados" (só recepção); Histórico e Resumo clínico ficam ocultos até a F3.
+  reais e painel "Editar dados" (só recepção).
   **Ligado à API (F3, D33):** Início real, Novo Agendamento (`/agenda`, também remarca com `?remarcar=<id>`), Detalhes da
   consulta (`/consultas/:id`: cancelar, remarcar, realizar, observação com histórico) e Histórico no perfil do paciente.
   A área do paciente (`/minha-conta`) segue provisória.
-- **Backend: em construção** em `backend/`, seguindo `docs/plano-implementacao.md` tarefa por
-  tarefa (checkboxes marcam o que está feito). Já existe: ambiente (Docker, TypeScript, Vitest,
-  validação de env), `prisma/schema.prisma` com os modelos da D18/D19 e a migration `inicial`
-  com exclusion constraints e CHECKs escritos à mão; app Express com middleware de erro único,
-  logger que oculta dado sensível e mensageria simulada no log; hash de senha, JWT e middleware
-  de papéis. **Rotas prontas:** `POST /api/auth/cliente/login` e `/api/auth/funcionario/login`
-  (com bloqueio após 3 falhas, D5/D19/D27), `POST /api/auth/refresh` (rotativo, D29),
-  `POST /api/auth/logout`, `GET /api/auth/eu`, recuperação de senha (`.../recuperacao/codigo` e
-  `/confirmar`, cliente e funcionário) e autocadastro/ativação do paciente
-  (`POST /api/auth/cliente/cadastro/codigo` e `/confirmar`, D15). Todas as 11 rotas de `auth`
-  estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18); `GET/POST /api/funcionarios`, `PATCH /api/funcionarios/{id}` e `GET /api/dentistas` (D10, D21); seeds `db:seed` (admin inicial) e `db:seed:dev` (dados fictícios).
-  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Bloqueios e horários livres (Tarefas 16 e 17): todas as rotas de disponibilidade estão prontas. Consultas (Tarefas 18 a 21): as 9 rotas de `/api/consultas` estão prontas (criar, listar, pendentes, ver, cancelar, remarcar, realizar, observação e histórico). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite por IP em `/api/auth`. Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção. Próximo: conferir a F3 no navegador e o fechamento (script de cobertura dos códigos de erro, ponta a ponta).
-  Em caso de
-  conflito entre código e documento, vale `docs/documentacao.md`.
+- **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (só a Tarefa 23, o fechamento,
+  tem passos abertos). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (375 testes): `auth` (11),
+  pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
+  horários livres e dias disponíveis, e as 9 rotas de `/api/consultas`. Seeds: `db:seed` (admin inicial) e `db:seed:dev`
+  (dados fictícios). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite
+  por IP em `/api/auth`. Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção; cada
+  `*.rotas.ts` exporta `rotasDocumentadas<Dominio>` e `src/modulos-documentados.ts` as liga aos routers.
+  Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
+- **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador, porque só passou em testes;
+  (2) fechamento da Tarefa 23 (script `conferir:codigos`, ponta a ponta); (3) decidir a área do paciente `/minha-conta`
+  (D30); (4) telas de administração (funcionários, procedimentos, grade, bloqueios), hoje só pela API; (5) para produção:
+  enviador real de SMS e e-mail (issue #1), `trust proxy` (D32), índices e retenção (#4). Issues #1 a #7 no GitHub cobrem
+  produção e qualidade.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
   Express 5 + cookie-parser, swagger-ui-express (D34), pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
@@ -55,7 +54,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint     # oxlint
-npm test         # Vitest do cliente HTTP (D30)
+npm test         # Vitest do front: cliente HTTP, formatação, endereço, calendário da agenda
 ```
 
 Front + API juntos: suba a API (`backend`, `npm run dev`) e o front (`npm run dev` na raiz); o

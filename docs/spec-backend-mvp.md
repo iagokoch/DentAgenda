@@ -1,5 +1,7 @@
 # Spec — Backend do MVP do DentAgenda
 
+**Estado (2026-10-22): implementada.** O que falta está no README (seção "O que falta para finalizar").
+
 Visão geral para revisão do grupo. Não repete regras: aponta para a decisão (`Dx` em
 `docs/documentacao.md`) e para o contrato (`docs/api.md`). Em caso de conflito, valem esses
 dois documentos.

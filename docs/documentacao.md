@@ -35,7 +35,11 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
 | D28  | E-mail sempre em minúsculas                     | Fechada                      |
 | D29  | Rotação do refresh mantém o prazo da sessão     | Fechada                      |
-| D30  | Front integrado à API em fatias                 | Fechada                      |
+| D30  | Front integrado à API em fatias                 | Fechada (área do paciente em aberto) |
+| D31  | Ajustes de segurança da auditoria               | Fechada                      |
+| D32  | Defesas de borda: helmet, limite por IP, CORS   | Fechada (trust proxy no deploy) |
+| D33  | Agenda e consultas no front (F3)                | Fechada                      |
+| D34  | Swagger gerado dos schemas Zod                  | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1322,14 +1326,14 @@ de resumo e o papel de cada rota são escritos à mão, e o teste pega rota esqu
 
 ## Próximo
 
-1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
-2. ~~Plano de implementação.~~ Feito: `docs/plano-implementacao.md`. Execução tarefa por tarefa;
-   progresso nos checkboxes do plano (Tarefas 0–10 feitas: ambiente, schema Prisma e migration
-   com as restrições do banco, utilitários de relógio, fuso, CPF e paginação, app Express com
-   middleware de erro, logger e mensageria, senhas, JWT e papéis, login com bloqueio, refresh,
-   logout e `eu`, códigos de verificação e recuperação de senha, autocadastro e ativação, procedimentos; e a
-   fatia F1 do front, autenticação ligada à API — D30).
-3. Pendências que **não** travam os endpoints (dependem de dados ou respostas da Colzani):
-   D11.1, D11.3, D15.3, D18 (`dataInicio`).
-4. Analisar o Figma (8 primeiras telas) e cruzar com `docs/api.md` — desbloqueado: usar a
-   cópia com acesso de edição indicada no `CLAUDE.md`.
+Estado em 2026-10-22: backend completo para o MVP (43 rotas, 375 testes) e front ligado à API até a F3. O resto está no
+README, seção "O que falta para finalizar". Em resumo:
+
+1. ~~Spec, plano, backend, Swagger e as fatias F1 a F3 do front.~~ Feitos (`docs/plano-implementacao.md`).
+2. **Conferir a F3 no navegador** com a dentista com grade semanal definida.
+3. **Fechamento da Tarefa 23:** script de cobertura dos códigos de erro e ponta a ponta.
+4. **Área do paciente** (`/minha-conta`): decidir se entra no MVP (D30, D33 em aberto).
+5. **Telas de administração** (funcionários, procedimentos, grade, bloqueios): hoje só pela API.
+6. **Produção:** enviador real de SMS e e-mail, `trust proxy` (D32), índices e retenção de dados.
+7. Pendências que **não** travam o código (dependem da clínica): `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3 e
+   `dataInicio` da D18, além das perguntas novas da seção 6).

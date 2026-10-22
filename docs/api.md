@@ -1,9 +1,9 @@
 # Contrato da API — DentAgenda
 
 Contrato entre o backend e o front. As decisões por trás de cada regra estão em
-`docs/documentacao.md` (número entre parênteses). Implementado até agora: todas as rotas de
-Autenticação, Procedimentos, Funcionários, Pacientes, Disponibilidade e Consultas; o andamento
-do restante está nos checkboxes de `docs/plano-implementacao.md`.
+`docs/documentacao.md` (número entre parênteses). Implementado: **todas as 43 rotas** (Autenticação, Procedimentos, Funcionários, Pacientes, Disponibilidade e
+Consultas). Fora de produção, `/api/docs` mostra o Swagger gerado dos schemas Zod e `/api/docs.json` o OpenAPI (D34); este
+documento continua sendo o contrato (status, códigos de erro e regras).
 
 ## Convenções (D20)
 
