@@ -1,0 +1,15 @@
+/* Acessibilidade (#2, D39). Carregado por último para valer sobre os estilos das telas. */
+
+/* Foco visível de 2px em tudo que recebe foco pelo teclado; #00577a tem contraste de 7:1 com o branco e 6:1 com os
+   fundos azulados das telas (mínimo de 3:1). */
+:focus-visible{outline:2px solid #00577a;outline-offset:2px}
+
+/* Campo dentro de invólucro (ícone + input): o contorno vai no invólucro inteiro, não no input sem borda. */
+.input-wrap:focus-within,.search-box:focus-within{outline:2px solid #00577a;outline-offset:2px}
+.input-wrap input:focus-visible,.search-box input:focus-visible{outline:0}
+
+/* Atalhos do Início viraram links (#3). */
+.quick-grid a{text-decoration:none;text-align:center}
+
+/* Texto só para leitor de tela. */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}

@@ -5,7 +5,7 @@ import Brand from './Brand';
 import Icon from './Icon';
 import { termoDeBusca } from '../pacientes/formatar.js';
 
-const LINKS_DA_CLINICA = [{to:'/inicio',label:'Início',icon:'home'},{to:'/agenda',label:'Agenda',icon:'calendar'},{to:'/pacientes',label:'Pacientes',icon:'users'},{to:'/disponibilidade',label:'Disponibilidade',icon:'clock'},{to:'/inicio#relatorios',label:'Relatórios',icon:'report'},{to:'/inicio#configuracoes',label:'Configurações',icon:'settings'}];
+const LINKS_DA_CLINICA = [{to:'/inicio',label:'Início',icon:'home'},{to:'/agenda',label:'Agenda',icon:'calendar'},{to:'/pacientes',label:'Pacientes',icon:'users'},{to:'/disponibilidade',label:'Disponibilidade',icon:'clock'}];
 // D37: o menu só mostra o que o papel abre (a API é quem garante).
 const LINKS_DO_ADMIN = [{to:'/admin/equipe',label:'Equipe',icon:'id'},{to:'/admin/procedimentos',label:'Procedimentos',icon:'clipboard'}];
 // D35: o paciente usa o mesmo layout, com a navegação dele e sem a busca de pacientes.
@@ -20,7 +20,6 @@ function Profissional({ usuario, className }) {
 }
 
 function estaAtivo(link, pathname) {
-  if (link.to.includes('#')) return false;
   return link.exato ? pathname === link.to : pathname === link.to || pathname.startsWith(link.to + '/');
 }
 
@@ -35,7 +34,8 @@ export default function AppShell({ children, title, wide = false }) {
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
+      {/* Com nome próprio: a página pode ter outro <aside>, e os dois landmarks precisam se distinguir (#2). */}
+      <aside className="sidebar" aria-label="Menu lateral">
         <Brand compact/>
         <Profissional usuario={usuario} className="professional--mobile-hidden"/>
         <nav className="sidebar__nav" aria-label="Navegação principal">
@@ -45,20 +45,19 @@ export default function AppShell({ children, title, wide = false }) {
         <Profissional usuario={usuario} className="sidebar__footer"/>
         <button className="text-button sidebar__sair" onClick={sair}><Icon name="arrowLeft"/><span>Sair</span></button>
       </aside>
-      <section className="shell-main">
+      <div className="shell-main">
         <header className="topbar">
           <button className="icon-button topbar__back" onClick={() => navigate(-1)} aria-label="Voltar"><Icon name="arrowLeft"/></button>
           <strong className="topbar__title">{title}</strong>
+          <button type="button" className="text-button topbar__sair" onClick={sair}>Sair</button>
           {daClinica && (
             <div className="topbar__actions">
               <form className="search-box" role="search" onSubmit={buscarPaciente}><Icon name="search"/><input aria-label="Buscar pacientes" placeholder="Buscar pacientes..." value={busca} onChange={(e)=>setBusca(e.target.value)}/></form>
-              <button className="icon-button" aria-label="Notificações"><Icon name="bell"/></button>
-              <button className="icon-button" aria-label="Perfil"><Icon name="user"/></button>
             </div>
           )}
         </header>
         <main className={`page-content ${wide ? 'page-content--wide' : ''}`}>{children}</main>
-      </section>
+      </div>
     </div>
   );
 }

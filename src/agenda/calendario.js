@@ -38,7 +38,7 @@ export const horaDoInstante = (instante) => instante.slice(11, 16)
 export const precoEmReais = (centavos) =>
   (centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-export const dataDeHoje = (agora = new Date()) => dataDoDia(mesDaData(agora), agora.getDate())
+export const dataDeHoje = (agora) => dataDoDia(mesDaData(agora), agora.getDate())
 
 // "05/10/2026 às 09:30", a partir do instante da API.
 export const dataEHoraLegiveis = (instante) => {

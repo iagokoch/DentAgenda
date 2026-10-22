@@ -22,7 +22,7 @@ Confira antes de assumir qualquer coisa:
   **Administração (D37):** `/admin/equipe` e `/admin/procedimentos` (só admin; `RotaProtegida permitir={ehAdmin}`) e
   `/disponibilidade` (grade: A edita, R e D leem; bloqueios: R de todos, em lote; D os próprios).
 - **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (Tarefas 0 a 23 feitas,
-  plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (381 testes): `auth` (11),
+  plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (608 testes): `auth` (11),
   pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
   horários livres e dias disponíveis, e as 9 rotas de `/api/consultas`. Seeds: `db:seed` (admin inicial) e `db:seed:dev`
   (dados fictícios). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite
@@ -30,6 +30,9 @@ Confira antes de assumir qualquer coisa:
   `*.rotas.ts` exporta `rotasDocumentadas<Dominio>` e `src/modulos-documentados.ts` as liga aos routers.
   `npm run conferir:codigos` falha se algum código de erro do `api.md` não aparecer em teste (D23); o fluxo da clínica
   inteiro, só com login real, está em `src/e2e/ponta-a-ponta.test.ts` (roteiro manual em `docs/ponta-a-ponta.md`).
+  `src/matriz-de-papeis.test.ts` chama as 43 rotas com cada papel e confere contra o `api.md` e `docs/matriz-de-papeis.md`
+  (#5); `auth.concorrencia.test.ts` fixa as corridas de login, refresh e códigos (D38). O relógio dos testes volta ao
+  instante inicial a cada teste; as suítes passam com `npm run test:embaralhado`.
   Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
 - **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador (`docs/ponta-a-ponta.md`);
   (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) ~~telas de administração~~ feitas (D37); (5) para produção:
@@ -57,7 +60,7 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint     # oxlint
-npm test         # Vitest do front: funções puras e telas (Testing Library + jsdom, D36)
+npm test         # Vitest do front: funções puras, telas (Testing Library + jsdom, D36) e axe (D39)
 ```
 
 Front + API juntos: suba a API (`backend`, `npm run dev`) e o front (`npm run dev` na raiz); o
@@ -96,9 +99,11 @@ src/
   admin/        formatos (puro: preço em reais, fuso da clínica, grade por dia, diff do PATCH), GavetaDeFuncionario,
                 GavetaDeProcedimento
   disponibilidade/ GradeSemanal (A edita; R e D leem), Bloqueios (R em lote; D os próprios)
-  testes/       tela.jsx: API simulada no fetch, sessão e rotas para os testes de tela (D36)
+  testes/       tela.jsx: API simulada no fetch, sessão, rotas e relógio fixo para os testes de tela (D36, D39)
+  relogio.js    useRelogio(): toda tela lê "agora" daqui; os testes injetam um relógio fixo (#7)
+  acessibilidade.test.jsx, botoes.test.js  axe nas telas (#2) e nenhum botão sem ação (#3)
   pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco, HistoricoDoPaciente
-  index.css     Tokens de design
+  index.css     Tokens de design; importa styles, pacientes, agenda, admin, celular (400px) e acessibilidade (foco)
   styles.css    Estilos das páginas
   App.jsx       Rotas
   main.jsx      Entrada
@@ -122,6 +127,9 @@ docs/
   documentacao.md        Registro de decisões de arquitetura e modelagem (D1, D2, ...)
   pendencias-colzani.md  Perguntas que só a clínica responde
   api.md                 Contrato da API (rotas, entrada, saída, erros)
+  matriz-de-papeis.md    Rota × papel com o status esperado (testado contra o api.md e o código)
+  ponta-a-ponta.md       Roteiro manual do fluxo da clínica (o mesmo do teste e2e)
+  acessibilidade.md      Como conferir acessibilidade e 400px no navegador, e a última conferência
 ```
 
 ## Escopo do MVP do backend

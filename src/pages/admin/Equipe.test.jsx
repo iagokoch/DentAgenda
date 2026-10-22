@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../../testes/tela.jsx'
 import Equipe from './Equipe.jsx'
-
-beforeEach(() => vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-05T12:00:00Z') }))
-afterEach(() => vi.useRealTimers())
 
 const ana = { id: 'f-ana', nome: 'Ana Costa', cpf: '52998224725', email: 'ana@colzani.com.br', categoria: 'DENTISTA', cro: 'SP-12345', dataInicio: '2026-01-01', isAdmin: false, ativo: true }
 const rita = { id: 'f-rita', nome: 'Rita Lima', cpf: '11144477735', email: 'rita@colzani.com.br', categoria: 'RECEPCIONISTA', cro: null, dataInicio: '2026-01-01', isAdmin: true, ativo: true }

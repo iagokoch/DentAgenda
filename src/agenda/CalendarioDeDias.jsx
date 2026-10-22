@@ -1,5 +1,11 @@
 import { dataDoDia, deslocarMes, diaDoMes, nomeDoMes, posicaoDoPrimeiroDia, quantidadeDeDias } from './calendario.js'
 
+// #2: o leitor de tela anuncia "6 de outubro de 2026", não só "6".
+const nomeDoDia = (mes, dia) => {
+  const [nome, ano] = nomeDoMes(mes).split(' ')
+  return `${dia} de ${nome.toLowerCase()} de ${ano}`
+}
+
 const DIAS_DA_SEMANA = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
 
 // Marca os dias do mês com vaga (GET /api/dias-disponiveis); os outros ficam desativados.
@@ -26,6 +32,7 @@ export default function Calendario({ mes, mesMinimo, dias, diaEscolhido, aoMudar
             type="button"
             key={dia}
             disabled={!comVaga.has(dia)}
+            aria-label={nomeDoDia(mes, dia)}
             aria-pressed={dataDoDia(mes, dia) === diaEscolhido}
             className={dataDoDia(mes, dia) === diaEscolhido ? 'active' : ''}
             onClick={() => aoEscolher(dataDoDia(mes, dia))}

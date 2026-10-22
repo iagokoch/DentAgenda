@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
+import { useRelogio } from '../relogio.js'
 import { mesDaData } from './calendario.js'
 
 const consultaDaApi = (caminho, parametros) => `${caminho}?${new URLSearchParams(parametros)}`
@@ -8,7 +9,9 @@ const consultaDaApi = (caminho, parametros) => `${caminho}?${new URLSearchParams
 // Agendamento da clínica (D33) e pela marcação do paciente (D35); quem chama limpa a escolha ao trocar procedimento
 // ou dentista.
 export function useEscolhaDeHorario({ procedimentoId, dentistaId }) {
-  const [mes, setMes] = useState(() => mesDaData(new Date()))
+  const relogio = useRelogio()
+  const [mesMinimo] = useState(() => mesDaData(relogio.agora()))
+  const [mes, setMes] = useState(mesMinimo)
   const [dia, setDia] = useState(null)
   const [horario, setHorario] = useState(null)
 
@@ -18,6 +21,8 @@ export function useEscolhaDeHorario({ procedimentoId, dentistaId }) {
 
   return {
     mes,
+    // O calendário não volta para antes do mês de hoje.
+    mesMinimo,
     dia,
     horario,
     dias,

@@ -9,14 +9,14 @@ O fluxo principal da clínica funciona de ponta a ponta, do login à consulta re
 **O que falta está na seção "O que falta para finalizar" mais abaixo.**
 
 - **Backend** (`backend/`): todas as 43 rotas de `docs/api.md` estão prontas e testadas contra
-  Postgres real (381 testes, um deles o ponta a ponta da clínica): autenticação (11 rotas), pacientes, funcionários e dentistas,
+  Postgres real (608 testes: o ponta a ponta da clínica, a matriz rota × papel e as corridas de login, refresh e códigos): autenticação (11 rotas), pacientes, funcionários e dentistas,
   procedimentos, grade semanal, bloqueios, horários livres e consultas (9 rotas). Defesas de borda
   (D31, D32) e Swagger gerado dos schemas Zod, só fora de produção (D34).
 - **Front-end** (`src/`): ligado à API (D30, D33). Login, cadastro, recuperação de senha, busca e cadastro de
   pacientes, Perfil do Paciente (com Histórico de consultas), Início, Novo Agendamento, remarcação e Detalhes da
   Consulta (cancelar, remarcar, realizar, observação com histórico). Área do paciente: ver, cancelar e marcar as próprias
-  consultas (D35). Administração: equipe, procedimentos, grade semanal e bloqueios (D37). 102 testes, com testes de
-  tela (D36).
+  consultas (D35). Administração: equipe, procedimentos, grade semanal e bloqueios (D37). 175 testes, com testes de
+  tela (D36) e axe em 14 telas (D39).
 - **Não conferido no navegador:** a fatia F3 (agenda e consultas) passou em testes, lint e build, mas ninguém percorreu o
   fluxo real com a clínica de teste montada. Faça isso primeiro (veja o passo 1 abaixo).
 
@@ -74,6 +74,7 @@ no navegador: `docs/ponta-a-ponta.md`.
 
 ```bash
 npm run lint; npm test; npm run build                                  # raiz (front)
+npm run test:embaralhado                                               # raiz e backend: ordem aleatória (#7)
 cd backend; npm run lint; npm run typecheck; npm test; npm run conferir:codigos; npm run build   # backend
 ```
 
@@ -141,16 +142,15 @@ Ordem sugerida. Os números entre parênteses são as issues do GitHub (`iagokoc
 
 **Qualidade**
 
-- Acessibilidade (#2), botões sem ação no `AppShell` e no Início (#3), matriz de papéis por rota (#5), concorrência de
-  login, refresh e cadastro (#6), relógio e mais testes do front (#7).
-- Layout em celular (400px) nunca foi validado de verdade.
+- ~~#2, #3, #5, #6, #7 e layout em 400px~~: feitos (D38, D39). Matriz em `docs/matriz-de-papeis.md`, conferência de
+  acessibilidade e celular em `docs/acessibilidade.md`.
 
 **Fora do escopo por decisão**: abas Documentos e Financeiro do Perfil do Paciente (continuam "em breve") e o encaixe
 fora do passo para a recepção (`janelasLivres`, sem tela; D33).
 
 ## Regras do grupo
 
-- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D35**)
+- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D40**)
   antes de virar código.
 - **Backend em TDD**, com nomes em português (D23). Biblioteca nova: conferir versão e API no context7 antes de usar.
 - **Se o front precisar de algo que a API não dá**, vira decisão e mudança no `docs/api.md`, não gambiarra no front.
@@ -158,9 +158,12 @@ fora do passo para a recepção (`janelasLivres`, sem tela; D33).
 
 ## Documentação
 
-- `docs/documentacao.md`: decisões de arquitetura e modelagem (D1 a D34). Em conflito com o
+- `docs/documentacao.md`: decisões de arquitetura e modelagem (D1 a D39). Em conflito com o
   código, vale este documento.
 - `docs/api.md`: contrato da API (rotas, entrada, saída, erros).
+- `docs/matriz-de-papeis.md`: quem chama cada rota da API e cada tela do front, com o status esperado.
+- `docs/ponta-a-ponta.md`: roteiro do fluxo da clínica para conferir no navegador.
+- `docs/acessibilidade.md`: conferência de acessibilidade e de layout em 400px.
 - `docs/spec-backend-mvp.md`: visão geral do backend do MVP.
 - `docs/plano-implementacao.md`: plano tarefa por tarefa, com o progresso nos checkboxes (só a Tarefa 23 tem passos abertos).
 - `docs/pendencias-colzani.md`: perguntas que só a clínica responde.

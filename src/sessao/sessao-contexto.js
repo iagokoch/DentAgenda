@@ -13,3 +13,4 @@ export function telaInicialDe(usuario) {
 
 // Papéis do docs/api.md (D10) usados pelas rotas e pelo menu do front (D37). Admin é flag somada à categoria.
 export const ehAdmin = (usuario) => usuario.isAdmin === true
+export const ehRecepcao = (usuario) => usuario.categoria === 'RECEPCIONISTA'

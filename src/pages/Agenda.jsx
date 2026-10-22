@@ -7,7 +7,7 @@ import { useEscolhaDeHorario } from '../agenda/useEscolhaDeHorario.js'
 import CalendarioDeDias from '../agenda/CalendarioDeDias.jsx'
 import Horarios from '../agenda/Horarios.jsx'
 import PacienteDaConsulta from '../agenda/PacienteDaConsulta.jsx'
-import { dataEHoraLegiveis, horaDoInstante, mesDaData, precoEmReais } from '../agenda/calendario.js'
+import { dataEHoraLegiveis, horaDoInstante, precoEmReais } from '../agenda/calendario.js'
 import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
 import { dataBR } from '../pacientes/formatar.js'
@@ -117,6 +117,7 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
 
   return (
     <AppShell title={remarcando ? 'Remarcar Consulta' : 'Novo Agendamento'} wide>
+      <h1 className="sr-only">{remarcando ? 'Remarcar consulta' : 'Novo agendamento'}</h1>
       {remarcando && <p className="form-info agenda-aviso">Remarcando a consulta de {dataEHoraLegiveis(original.inicio)}. Ela só é cancelada quando o novo horário for confirmado.</p>}
       <div className="schedule-grid">
         <div className="schedule-main">
@@ -142,7 +143,7 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
           />
         </div>
         <aside className="schedule-side">
-          <CalendarioDeDias mes={mes} mesMinimo={mesDaData(new Date())} dias={dias} diaEscolhido={dia} aoMudarMes={mudarMes} aoEscolher={escolherDia} />
+          <CalendarioDeDias mes={mes} mesMinimo={escolha.mesMinimo} dias={dias} diaEscolhido={dia} aoMudarMes={mudarMes} aoEscolher={escolherDia} />
           <Horarios horarios={horarios} horarioEscolhido={horario} aviso={avisoDoHorario} aoEscolher={(escolhido) => { escolha.escolherHorario(escolhido); setEnvio({ estado: 'parado' }) }} />
         </aside>
       </div>

@@ -28,7 +28,7 @@ type ConfirmacaoDeCadastro = PedidoDeCadastro & {
 export async function pedirCodigoDeCadastro(contexto: Contexto, pedido: PedidoDeCadastro): Promise<void> {
   const cliente = await contexto.prisma.cliente.findUnique({ where: { cpf: pedido.cpf }, include: { login: true } });
   const emitir = (finalidade: 'CADASTRO' | 'ATIVACAO', destino: string | null) =>
-    emitirCodigo(contexto.prisma, contexto, { identificador: pedido.cpf, tipo: 'CLIENTE', finalidade, destino });
+    emitirCodigo(contexto, { identificador: pedido.cpf, tipo: 'CLIENTE', finalidade, destino });
 
   if (!cliente) {
     const codigo = await emitir('CADASTRO', pedido.telefone);

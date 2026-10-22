@@ -42,7 +42,7 @@ export default function ObservacaoDaConsulta({ consulta, aoSalvar }) {
           {erro && <p className="form-error" role="alert">{erro}</p>}
           <div className="dialogo__acoes">
             <button type="button" className="soft-btn" onClick={() => { setTexto(null); setErro('') }}>Cancelar</button>
-            <button className="primary-btn primary-btn--solid" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar observação'}</button>
+            <button type="submit" className="primary-btn primary-btn--solid" disabled={salvando}>{salvando ? 'Salvando…' : 'Salvar observação'}</button>
           </div>
         </form>
       ) : (

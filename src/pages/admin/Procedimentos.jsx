@@ -55,7 +55,7 @@ export default function Procedimentos() {
         {aviso.tipo === 'erro' && <p className="form-error" role="alert">{aviso.texto}</p>}
       </div>
 
-      <section className="panel patient-table" role="table" aria-label="Procedimentos" aria-busy={procedimentos.estado === 'carregando'}>
+      <div className="panel patient-table" role="table" aria-label="Procedimentos" aria-busy={procedimentos.estado === 'carregando'}>
         <div className="patient-row patient-row--head admin-row" role="row">
           <span role="columnheader">Procedimento</span><span role="columnheader">Duração e preço</span><span role="columnheader">Situação</span><span role="columnheader"><span className="sr-only">Ações</span></span>
         </div>
@@ -80,7 +80,7 @@ export default function Procedimentos() {
             </span>
           </div>
         ))}
-      </section>
+      </div>
 
       {gaveta && <GavetaDeProcedimento procedimento={gaveta.procedimento} aoSalvar={salvar} aoFechar={() => setGaveta(null)} />}
     </AppShell>

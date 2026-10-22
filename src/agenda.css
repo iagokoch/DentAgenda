@@ -13,10 +13,10 @@
 .consulta-marcada p{margin:0 0 8px}
 .consulta-marcada__acoes{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
 a.appointment{text-decoration:none;color:inherit}
-.primary-btn:disabled{background:var(--border);color:#667085;box-shadow:none;cursor:not-allowed}
+.primary-btn:disabled{background:var(--border);color:#626c80;box-shadow:none;cursor:not-allowed}
 .selection-bar>div.selection-bar__confirmar{flex:0 0 auto;display:grid;justify-items:end;gap:4px}
 .stat-card__erro{color:#b42318!important}
-.form-sucesso{padding:10px 14px;border-radius:9px;background:#e8f8ef;color:#109059}
+.form-sucesso{padding:10px 14px;border-radius:9px;background:#e8f8ef;color:#0e7c4d}
 .acoes-da-consulta{display:flex;flex-direction:column;gap:12px}
 .acoes-da-consulta .soft-btn,.acoes-da-consulta .primary-btn{justify-content:center}
 .soft-btn--perigo{color:#b42318}

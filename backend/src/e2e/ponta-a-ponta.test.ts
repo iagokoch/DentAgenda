@@ -38,7 +38,8 @@ async function contratar(tokenDoAdmin: string, dados: Record<string, unknown>): 
   return resposta.body;
 }
 
-describe('ponta a ponta: da grade da dentista à consulta realizada', () => {
+// As etapas são uma sequência: não embaralham com --sequence.shuffle.
+describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle: false }, () => {
   let recepcao: string;
   let dentista: string;
   let dentistaId: string;
@@ -48,8 +49,7 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', () => {
   let consultaDoMarcos: string;
 
   beforeAll(async () => {
-    // Segunda, 2026-10-05, 07:00 em São Paulo; as consultas são na segunda seguinte.
-    contexto.relogio.definir(instanteEmSaoPaulo('2026-10-05', '07:00'));
+    // Relógio no instante inicial dos testes (segunda, 2026-10-05, 09:00 em São Paulo); as consultas são na segunda seguinte.
     const admin = await criarFuncionario(contexto, { isAdmin: true, email: 'admin@colzani.com.br' });
     expect(admin.isAdmin).toBe(true);
     const tokenDoAdmin = await entrar('admin@colzani.com.br', SENHA_DE_TESTE);

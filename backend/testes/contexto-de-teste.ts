@@ -1,3 +1,4 @@
+import { beforeEach } from 'vitest';
 import { carregarConfig } from '../src/config/env.ts';
 import { criarPrisma } from '../src/compartilhado/banco.ts';
 import type { Contexto } from '../src/compartilhado/contexto.ts';
@@ -45,11 +46,15 @@ export type ContextoDeTeste = Contexto & { relogio: RelogioFixo; enviador: Envia
 // Segunda, 09:00 em São Paulo.
 export const INSTANTE_INICIAL_DOS_TESTES = new Date('2026-10-05T12:00:00Z');
 
+// #7: o relógio volta ao instante inicial antes de cada teste, para nenhum teste depender de quem avançou o relógio antes
+// (a suíte passa com --sequence.shuffle). O beforeEach do próprio arquivo, que roda depois deste, ainda pode mudá-lo.
 export function criarContextoDeTeste(): ContextoDeTeste {
   const config = { ...carregarConfig(process.env), nodeEnv: 'test' as const };
+  const relogio = new RelogioFixo(INSTANTE_INICIAL_DOS_TESTES);
+  beforeEach(() => relogio.definir(INSTANTE_INICIAL_DOS_TESTES));
   return {
     prisma: criarPrisma(config.databaseUrl),
-    relogio: new RelogioFixo(INSTANTE_INICIAL_DOS_TESTES),
+    relogio,
     enviador: new EnviadorEmMemoria(),
     config,
     logger: criarLogger(undefined, 'silent'),

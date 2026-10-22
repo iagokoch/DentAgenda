@@ -5,13 +5,15 @@ import { mensagemDoErro } from '../api/mensagens.js'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
 import { instanteDaClinica } from '../admin/formatos.js'
 import { dataDeHoje, dataEHoraLegiveis } from '../agenda/calendario.js'
+import { useRelogio } from '../relogio.js'
 
 const periodo = (bloqueio) => `${dataEHoraLegiveis(bloqueio.inicio)} até ${dataEHoraLegiveis(bloqueio.fim)}`
 
 // Bloqueios do dentista (D12, D37): R vê e cria para qualquer dentista, em lote (feriado); D só os próprios.
 // `dentistas` é a lista para o lote; vazia, o bloqueio é só do dentista da tela.
 export default function Bloqueios({ dentistaId, dentistas }) {
-  const [hoje] = useState(() => dataDeHoje(new Date()))
+  const relogio = useRelogio()
+  const [hoje] = useState(() => dataDeHoje(relogio.agora()))
   const leitura = useDadosDaApi(`/api/dentistas/${dentistaId}/bloqueios?${new URLSearchParams({ de: hoje })}`)
   const [aviso, setAviso] = useState({ tipo: null, texto: '' })
 
@@ -120,7 +122,7 @@ function NovoBloqueio({ dentistaId, dentistas, aoCriar }) {
           )}
         </div>
       )}
-      <button className="primary-btn primary-btn--solid" disabled={envio.estado === 'enviando' || (dentistas.length > 0 && escolhidos.length === 0)}>
+      <button type="submit" className="primary-btn primary-btn--solid" disabled={envio.estado === 'enviando' || (dentistas.length > 0 && escolhidos.length === 0)}>
         {envio.estado === 'enviando' ? 'Bloqueando…' : 'Bloquear'}
       </button>
     </form>

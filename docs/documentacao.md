@@ -43,6 +43,8 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D35  | Área do paciente no front                       | Fechada (pendência Colzani)  |
 | D36  | Testes de tela no front                         | Fechada                      |
 | D37  | Telas de administração e disponibilidade        | Fechada                      |
+| D38  | Pedidos simultâneos em login, refresh e códigos | Fechada                      |
+| D39  | Qualidade: acessibilidade, botões, papéis, relógio | Fechada                    |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1433,6 +1435,93 @@ porque os dois respondem à mesma pergunta ("quando este dentista atende?").
 **Em aberto:**
 1. Se o Brasil voltar a ter horário de verão, o `-03:00` fixo do bloqueio precisa virar cálculo pelo fuso
    `America/Sao_Paulo` (a API já calcula assim).
+
+## D38 — Pedidos simultâneos em login, refresh e códigos (issue #6)
+
+> **Status: fechada.** Detalha D5, D19, D25.3 e D27 para pedidos que chegam juntos; muda a D19 só na reapresentação de
+> refresh dentro de 10 s. Cada caso tem teste com `Promise.all` em `auth.concorrencia.test.ts`.
+
+**O quê:**
+1. **Login:** o bcrypt roda fora de transação; depois, a decisão (ler as falhas, bloquear ou não, registrar a tentativa,
+   criar a sessão) roda numa transação curta com trava consultiva do Postgres (`pg_advisory_xact_lock`) por
+   `(tipo, identificador)`. Três senhas erradas juntas → duas 401 e uma 423 (D27); oito juntas → duas 401 e seis 423.
+   Conta já bloqueada também paga o bcrypt antes do 423.
+2. **Refresh:** a sessão é lida com `FOR UPDATE` na mesma transação da rotação. Um token revogado há menos de **10 s**
+   (`JANELA_DE_CORRIDA_DO_REFRESH_MS`) e reapresentado recebe 401 **sem** derrubar as outras sessões: é a segunda aba que
+   pediu junto. Depois de 10 s vale a D19 (reapresentação derruba todas as sessões da conta).
+3. **Pedido de código:** `emitirCodigo` roda na própria transação com trava consultiva por `(tipo, identificador)`;
+   cinco pedidos juntos → três 202 e dois 429 (D25.3).
+4. **Tentativa de código:** a tentativa é reservada antes da comparação, num `UPDATE ... SET tentativas = tentativas + 1
+   WHERE tentativas < 3` atômico; sem tentativa disponível, `CODIGO_INVALIDO`. Seis códigos errados juntos gastam três
+   tentativas, e o código certo depois não vale mais.
+5. **Confirmação de cadastro em dobro:** já era segura (o uso do código é condicional e o CPF é único); agora tem teste.
+
+**Por quê:**
+1. Cada tentativa lia "0 falhas" antes do bcrypt (~250 ms) e só gravava depois: oito tentativas paralelas passavam como
+   oito primeiras, e o bloqueio de 3 tentativas (D5) não valia contra quem dispara em paralelo.
+2. Duas abas abertas renovam o mesmo cookie quando o access token vence. Com a regra antiga, a aba que chegasse logo
+   depois da rotação derrubava a sessão de todas: o usuário era deslogado sem ter feito nada.
+3. Pedidos em paralelo liam a contagem antes de qualquer gravação: o limite de SMS não segurava rajada.
+4. Pelo mesmo motivo, um código de 6 dígitos aceitava muito mais que 3 chutes, e o incremento em paralelo chegava a dar
+   500.
+
+**Alternativas descartadas:**
+- *Transação longa com o bcrypt dentro:* cada tentativa seguraria uma conexão do pool por ~250 ms enquanto as outras da
+  mesma conta esperam; uma rajada contra uma conta esgotaria o pool de todos.
+- *Registrar a tentativa como FALHA antes do bcrypt e trocar para SUCESSO depois:* um login certo em andamento contaria
+  como falha para as tentativas paralelas, e a 3ª derrubaria a sessão que acabou de nascer.
+- *Coluna "substituído por" no refresh para reconhecer a rotação:* resolve o mesmo caso com mais uma coluna; a janela
+  de tempo não muda o schema.
+- *Janela maior (1 min):* deixaria um token roubado ser reapresentado sem alarme por mais tempo.
+
+**Em aberto:** nada.
+
+## D39 — Qualidade: acessibilidade, controles sem ação, matriz de papéis e relógio (issues #2, #3, #5, #7)
+
+> **Status: fechada.** Fecha os critérios das issues #2, #3, #5 e #7 e a conferência de layout em 400px.
+
+**O quê:**
+1. **Acessibilidade (#2).**
+   - `axe-core` 4.14.0 (devDependency, sem dependências próprias) roda em 14 telas com dados no `npm test`
+     (`src/acessibilidade.test.jsx`). O jsdom não calcula cor nem layout, então a regra de contraste fica desligada ali;
+     o contraste foi medido com o mesmo axe no Edge, em todas as telas e papéis (`docs/acessibilidade.md`).
+   - Cores de texto escurecidas até 4,5:1 contra o fundo mais exigente em que aparecem (14 cores; `--muted` e
+     `--primary-dark` incluídas). Ícones coloridos dos cartões ficam como estão (gráfico pede 3:1).
+   - Fonte mínima de 12px; `:focus-visible` de 2px em `#00577a` (7:1 com o branco); campo dentro de invólucro mostra o
+     foco no invólucro (`:focus-within`).
+   - Foco preso nos painéis modais (`useFocoPreso`: gaveta, edição do paciente, popup de cancelamento).
+   - Abas do perfil com `tablist`/`tab`/`tabpanel`, `aria-controls` e setas, Home e End.
+   - Landmarks: o menu lateral é `<aside aria-label="Menu lateral">`, o topo é `<header>` fora de `<section>` (banner);
+     telas sem título visível têm `<h1>` só para leitor de tela. Dias do calendário anunciam a data inteira.
+2. **Controles sem ação (#3):** saíram Relatórios, Configurações, Notificações e Perfil (não há tela nem decisão para
+   eles); os atalhos do Início viraram links para telas que o papel abre. `src/botoes.test.js` falha se algum `<button>`
+   não tiver `onClick` nem `type="submit"`.
+3. **Matriz de papéis (#5):** `backend/src/matriz-de-papeis.test.ts` deriva a matriz das colunas "Quem" do `api.md`,
+   confere que ela é igual a `docs/matriz-de-papeis.md` e que tem exatamente as 43 rotas registradas, e chama cada rota com
+   cada papel (anônimo, R, R-admin, D, C): 215 casos. No front, `/pacientes/novo` passa a ser só da recepção
+   (`permitir={ehRecepcao}`), como o `POST /api/pacientes`.
+4. **Relógio (#7):**
+   - Front: toda leitura de "agora" passa por `useRelogio()` (`src/relogio.js`); os testes de tela injetam um relógio
+     fixo, sem timers falsos. Funções puras recebem o instante (sem `new Date()` por padrão).
+   - Backend: `criarContextoDeTeste` repõe o relógio no instante inicial antes de cada teste; o ponta a ponta é sequência
+     declarada (`shuffle: false`). As duas suítes passam com `npm run test:embaralhado`.
+   - Testes novos de `RotaProtegida`, `RotaPublica`, `SessaoProvider`, Início, Detalhes da consulta e Perfil.
+5. **Layout em 400px**, conferido no Edge: o Sair vai para o topo (a barra de baixo não tinha espaço e o escondia), a barra
+   de baixo rola quando o admin tem mais itens do que cabem, cartões laterais ocupam a largura toda e os seletores fora do
+   cartão de agendamento ganharam o mesmo visual (`src/celular.css`).
+
+**Por quê:** cada item é um critério escrito nas issues; o teste de cada um falha se a regressão voltar.
+
+**Alternativas descartadas:**
+- *`vitest-axe`/`jest-axe`:* embrulham o mesmo `axe-core` em mais uma dependência.
+- *Lighthouse/pa11y no CI:* precisam de navegador e da API rodando no `npm test`.
+- *Matriz escrita à mão no teste:* seria uma terceira fonte para divergir; derivar do `api.md` faz o contrato mandar.
+- *Timers falsos do Vitest no lugar do relógio injetado:* funcionam, mas trocam o `Date` global de todo o teste,
+  inclusive o da biblioteca de testes.
+
+**Em aberto:**
+1. Telas com Figma: as cores escurecidas e a fonte mínima mudam um pouco o visual do protótipo. Se o grupo quiser, ajustar
+   o Figma para as cores novas.
 
 ## Próximo
 

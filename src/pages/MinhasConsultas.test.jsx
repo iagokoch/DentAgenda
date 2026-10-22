@@ -1,13 +1,9 @@
 // @vitest-environment jsdom
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import MinhasConsultas from './MinhasConsultas.jsx'
-
-// Segunda, 2026-10-05, 09:00 em São Paulo.
-beforeEach(() => vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-05T12:00:00Z') }))
-afterEach(() => vi.useRealTimers())
 
 const consulta = (id, inicio, status = 'CONFIRMADA', extra = {}) => ({
   id,

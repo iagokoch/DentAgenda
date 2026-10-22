@@ -62,7 +62,7 @@ export default function GavetaDeProcedimento({ procedimento, aoSalvar, aoFechar 
         {erro && <p className="form-error" role="alert">{erro}</p>}
         <div className="drawer__footer">
           <button type="button" className="soft-btn" onClick={aoFechar}>Cancelar</button>
-          <button className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar'}</button>
+          <button type="submit" className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar'}</button>
         </div>
       </form>
     </Gaveta>

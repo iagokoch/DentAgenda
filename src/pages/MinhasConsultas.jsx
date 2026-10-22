@@ -8,6 +8,7 @@ import { STATUS_DA_CONSULTA } from '../agenda/status.js'
 import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
 import { faltamMenosDe24Horas, historicoDoPaciente, jaComecou, proximasDoPaciente } from '../minha-conta/consultas-do-paciente.js'
+import { useRelogio } from '../relogio.js'
 import { useSessao } from '../sessao/sessao-contexto.js'
 
 const POR_PAGINA = '100'
@@ -17,7 +18,8 @@ const AVISO_DE_MENOS_DE_24_HORAS = 'Faltam menos de 24 h para a consulta: conte 
 // Área do paciente (D35): as próximas consultas, com cancelamento, e o histórico. Só o paciente logado (C) chega aqui.
 export default function MinhasConsultas() {
   const { usuario } = useSessao()
-  const [abertaEm] = useState(() => new Date())
+  const relogio = useRelogio()
+  const [abertaEm] = useState(() => relogio.agora())
   const proximas = useDadosDaApi(`/api/consultas?${new URLSearchParams({ status: 'CONFIRMADA', de: dataDeHoje(abertaEm), porPagina: POR_PAGINA })}`)
   const todas = useDadosDaApi(`/api/consultas?${new URLSearchParams({ porPagina: POR_PAGINA })}`)
   const [cancelando, setCancelando] = useState(null)
@@ -33,7 +35,7 @@ export default function MinhasConsultas() {
 
   function abrirCancelamento(consulta) {
     setAviso('')
-    setCancelando({ consulta, justificativaObrigatoria: faltamMenosDe24Horas(consulta, new Date()) })
+    setCancelando({ consulta, justificativaObrigatoria: faltamMenosDe24Horas(consulta, relogio.agora()) })
   }
 
   return (
@@ -48,7 +50,7 @@ export default function MinhasConsultas() {
       <div aria-live="polite">{aviso && <p className="form-info form-sucesso">{aviso}</p>}</div>
 
       <div className="minha-conta">
-        <ListaDeConsultas titulo="Próximas consultas" leitura={proximas} vazio="Você não tem consultas marcadas." filtrar={(itens) => proximasDoPaciente(itens, abertaEm)} aoCancelar={abrirCancelamento} />
+        <ListaDeConsultas titulo="Próximas consultas" agora={abertaEm} leitura={proximas} vazio="Você não tem consultas marcadas." filtrar={(itens) => proximasDoPaciente(itens, abertaEm)} aoCancelar={abrirCancelamento} />
         <ListaDeConsultas titulo="Histórico" leitura={todas} vazio="Nenhuma consulta anterior." filtrar={(itens) => historicoDoPaciente(itens, abertaEm)} />
       </div>
 
@@ -69,7 +71,7 @@ const textoDoStatus = (consulta) => {
   return consulta.canceladoPor === 'PACIENTE' ? 'Cancelada por você' : 'Cancelada pela clínica'
 }
 
-function ListaDeConsultas({ titulo, leitura, vazio, filtrar, aoCancelar }) {
+function ListaDeConsultas({ titulo, agora, leitura, vazio, filtrar, aoCancelar }) {
   const idDoTitulo = `titulo-${titulo.toLowerCase().replace(/\s+/g, '-')}`
   const consultas = leitura.estado === 'pronto' ? filtrar(leitura.dados.itens) : []
 
@@ -95,7 +97,7 @@ function ListaDeConsultas({ titulo, leitura, vazio, filtrar, aoCancelar }) {
                 <small>{consulta.dentista.nome}</small>
               </span>
               <span className={`status ${STATUS_DA_CONSULTA[consulta.status].cor}`}>{textoDoStatus(consulta)}</span>
-              {aoCancelar && !jaComecou(consulta, new Date()) && (
+              {aoCancelar && !jaComecou(consulta, agora) && (
                 <button type="button" className="soft-btn soft-btn--perigo" aria-label={`Cancelar consulta de ${dataEHoraLegiveis(consulta.inicio)}`} onClick={() => aoCancelar(consulta)}>
                   Cancelar
                 </button>
