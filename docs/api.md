@@ -37,6 +37,7 @@ Todo erro tem o mesmo formato:
 | 422    | Regra de negócio violada (ex.: justificativa obrigatória)    | (específico da rota)             |
 | 423    | Conta bloqueada (D5, D19)                                    | (específico da rota)             |
 | 429    | Limite de pedidos de código atingido (D19)                   | (específico da rota)             |
+| 429    | Mais de 200 pedidos do mesmo IP em 15 min em `/api/auth/*` (D32) | `codigo: "LIMITE_DE_REQUISICOES"` |
 | 500    | Erro inesperado; detalhe só no log do servidor (D23)         | `codigo: "ERRO_INTERNO"`         |
 
 Rotas com código próprio para 400/401/403 (`CODIGO_INVALIDO`, `CREDENCIAIS_INVALIDAS`,

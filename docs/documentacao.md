@@ -1229,6 +1229,38 @@ regra é a mesma para não haver dois formatos no banco.
 
 **Em aberto:** nada.
 
+## D32 — Defesas de borda da API: helmet, limite por IP e CORS
+
+> **Status: fechada**, com um ponto em aberto que depende do deploy (item 3 de "Em aberto").
+> Achados AUD-006 e AUD-010 da auditoria de 2026-10-22; aprovada pelo usuário.
+
+**O quê:**
+1. `helmet` em todas as respostas (cabeçalhos de segurança padrão).
+2. Limite de **200 pedidos por IP a cada 15 min** em `/api/auth/*` (`express-rate-limit`, memória do
+   processo). Acima disso: 429 com `codigo: "LIMITE_DE_REQUISICOES"`. Vale para login, recuperação,
+   cadastro e refresh.
+3. **Sem CORS.** A API e o front são servidos na mesma origem (em dev, o proxy do Vite). Cabeçalhos
+   de CORS só entram se o front passar a ser servido de outra origem; isso vira decisão nova.
+4. Dependências: `prisma`, `@prisma/client` e `@prisma/adapter-pg` de 7.10.0 para **7.10.1**, que
+   zerou o `npm audit` do backend (`deepmerge-ts` e `mysql2` transitivos, em 4 avisos altos).
+
+**Por quê:**
+1. É custo zero e fecha a classe inteira de cabeçalhos ausentes.
+2. O bloqueio por conta (D19) não impede um IP de mandar milhares de logins com CPFs diferentes,
+   cada um gastando bcrypt de custo 12. 200 por 15 min cobre uma clínica inteira atrás de um IP.
+3. Sem CORS, nenhuma origem de fora lê a API com o navegador de um usuário logado.
+
+**Alternativas descartadas:**
+- *Limite por IP em todas as rotas:* o risco está no bcrypt e nos códigos por SMS, que só existem em `/api/auth`.
+- *Redis para o contador:* um processo só no MVP; o contador em memória reinicia com o servidor.
+- *Pacote `cors` com lista de origens:* configuração que ninguém usa enquanto o front for same-origin.
+
+**Em aberto:**
+1. Atrás de proxy reverso, todo pedido chega com o IP do proxy e o limite vira um só para todos os
+   usuários. No deploy, configurar `app.set('trust proxy', <saltos>)` com o número real de proxies.
+2. O contador em memória não é compartilhado entre processos; com mais de uma instância, trocar o store.
+3. Enviador real de SMS e e-mail (AUD-004): sem ele a API não sobe com `NODE_ENV=production` (D16).
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.
