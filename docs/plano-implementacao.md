@@ -1554,19 +1554,23 @@ modificar `consultas.rotas.ts`, `.controller.ts`, `.schemas.ts`.
 modificar `src/app.ts` e os `*.rotas.ts` (exportar `rotasDocumentadas<Dominio>` se ainda não
 exportam).
 
-- [ ] **Passo 1: conferir no context7** a lib que gera OpenAPI a partir da versão do Zod
+- [x] **Passo 1 (feito, D34): conferir no context7** a lib que gera OpenAPI a partir da versão do Zod
   instalada (D23: compatibilidade). Candidatas: conversão nativa do Zod para JSON Schema +
   `swagger-ui-express`, ou uma lib Zod→OpenAPI. Escolher a de menos dependências que suporte a
   versão instalada; registrar a escolha na mensagem de commit.
-- [ ] **Passo 2: testes que falham:**
+- [x] **Passo 2: testes que falham:**
   - `it('GET /api/docs.json fora de produção → 200 com todas as rotas do api.md')` — compara o
     conjunto `metodo + caminho` com uma lista das 43 rotas no próprio teste
   - `it('GET /api/docs fora de produção → 200 HTML')`
   - `it('com NODE_ENV=production, /api/docs e /api/docs.json → 404 NAO_ENCONTRADO')` (D23)
-- [ ] **Passo 3:** `npm test` → FAIL; implementar.
-- [ ] **Passo 4:** verificação padrão + abrir `http://localhost:<PORTA>/api/docs` com `npm run dev`.
+- [x] **Passo 3:** `npm test` → FAIL; implementar.
+- [x] **Passo 4:** verificação padrão + abrir `http://localhost:<PORTA>/api/docs` com `npm run dev`.
 
 **Pronto quando:** 3 testes passam; Swagger abre no navegador.
+
+
+**Como ficou (D34):** `z.toJSONSchema` nativo + `swagger-ui-express`; `rotasDocumentadas<Dominio>` em cada
+`*.rotas.ts`, ligadas aos routers em `src/modulos-documentados.ts`; o teste compara com as rotas registradas.
 
 **Commit:** `feat: documentação Swagger gerada dos schemas Zod, só fora de produção (D23)`
 

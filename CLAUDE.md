@@ -30,12 +30,12 @@ Confira antes de assumir qualquer coisa:
   `/confirmar`, cliente e funcionário) e autocadastro/ativação do paciente
   (`POST /api/auth/cliente/cadastro/codigo` e `/confirmar`, D15). Todas as 11 rotas de `auth`
   estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18); `GET/POST /api/funcionarios`, `PATCH /api/funcionarios/{id}` e `GET /api/dentistas` (D10, D21); seeds `db:seed` (admin inicial) e `db:seed:dev` (dados fictícios).
-  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Bloqueios e horários livres (Tarefas 16 e 17): todas as rotas de disponibilidade estão prontas. Consultas (Tarefas 18 a 21): as 9 rotas de `/api/consultas` estão prontas (criar, listar, pendentes, ver, cancelar, remarcar, realizar, observação e histórico). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite por IP em `/api/auth`. Próximo: conferir a F3 no navegador, depois Tarefa 22 (Swagger).
+  Pacientes completos: busca, cadastro, consulta, edição, endereço e alertas (Tarefas 12 e 13). Grade semanal dos dentistas (Tarefa 14). Cálculo de horários livres (Tarefa 15, função pura). Bloqueios e horários livres (Tarefas 16 e 17): todas as rotas de disponibilidade estão prontas. Consultas (Tarefas 18 a 21): as 9 rotas de `/api/consultas` estão prontas (criar, listar, pendentes, ver, cancelar, remarcar, realizar, observação e histórico). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite por IP em `/api/auth`. Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção. Próximo: conferir a F3 no navegador e o fechamento (script de cobertura dos códigos de erro, ponta a ponta).
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
-  Express 5 + cookie-parser, pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
+  Express 5 + cookie-parser, swagger-ui-express (D34), pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
   MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
@@ -103,6 +103,7 @@ backend/
                          banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
   src/modulos/auth/      Login, sessões (refresh em cookie), bloqueio de login, códigos, recuperação e autocadastro
   src/modulos/procedimentos/  Listar (cliente só ativos), criar e editar (admin)
+  src/modulos-documentados.ts Liga cada router ao que o Swagger mostra dele (D34)
   src/generated/         Client do Prisma, gerado (fora do git)
   testes/                Apoio aos testes: migrations, limpeza do banco, contexto com relógio
                          fixo e enviador em memória, fábricas (paciente, funcionário, token)

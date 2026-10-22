@@ -1292,6 +1292,34 @@ alternativa de editar horário na mesma consulta já estava descartada (D14).
 2. Área do paciente (`/minha-conta`) segue provisória (D30): cancelar e marcar pelo paciente ainda não têm tela.
 3. Valor Estimado editável pela clínica: decisão de produto, perguntar à Colzani.
 
+## D34 — Swagger gerado dos schemas Zod, só fora de produção
+
+**Decisão:**
+1. `GET /api/docs.json` (OpenAPI 3.0.3) e `GET /api/docs` (Swagger UI) existem só com `NODE_ENV` diferente de
+   `production`; em produção caem no 404 `NAO_ENCONTRADO` padrão (D23).
+2. Cada `*.rotas.ts` exporta `rotasDocumentadas<Dominio>` (prefixo, tag e, por rota: método, caminho no estilo do
+   Express, resumo, quem acessa e os schemas Zod de corpo e de consulta). `src/compartilhado/openapi.ts` converte com o
+   `z.toJSONSchema` nativo do Zod 4 (`target: 'openapi-3.0'`, `io: 'input'`).
+3. `src/modulos-documentados.ts` liga cada lista ao router correspondente, e `openapi.test.ts` falha se a lista e as
+   rotas registradas divergirem, ou se o conjunto não for exatamente as 43 rotas do `api.md`.
+4. A interface vem do pacote `swagger-ui-express` (dependência de runtime nova), servida pelo próprio servidor: não
+   precisa de internet nem de liberar domínio na CSP do helmet (D32).
+5. As respostas aparecem como `2XX` (sucesso) e `default` (erro no formato único). O status exato de cada rota e os
+   códigos de erro continuam no `api.md`, que segue sendo o contrato.
+
+**Por quê:** corpo e parâmetros vêm dos mesmos schemas que validam a entrada, então não envelhecem sozinhos; só o texto
+de resumo e o papel de cada rota são escritos à mão, e o teste pega rota esquecida ou sobrando.
+
+**Alternativas descartadas:**
+- *Swagger UI por CDN:* sem dependência nova, mas exige internet e liberar o domínio na CSP.
+- *Lib Zod→OpenAPI (`zod-to-openapi`, `zod-openapi`):* mais uma dependência para o que o Zod 4 já faz.
+- *Gerar a lista lendo a pilha do Express:* o papel exigido (`exigirPapel`) não é legível ali, e o prefixo de montagem
+  também não.
+
+**Em aberto:**
+1. Respostas de sucesso sem schema: só valem o `api.md`. Se o grupo quiser, dá para tipar os objetos de resposta (D24).
+2. O Swagger fica visível a qualquer um em desenvolvimento; em produção não existe (nada a configurar).
+
 ## Próximo
 
 1. ~~Spec consolidada do backend.~~ Feita: `docs/spec-backend-mvp.md`.

@@ -6,6 +6,8 @@ import type { Contexto } from './compartilhado/contexto.ts';
 import { limitarRequisicoesPorIp } from './compartilhado/limite-de-requisicoes.ts';
 import { serializarRequisicao } from './compartilhado/logger.ts';
 import { criarMiddlewareDeErro, rotaInexistente } from './compartilhado/middleware-de-erro.ts';
+import { criarRotasDeDocumentacao } from './compartilhado/openapi.ts';
+import { MODULOS_DOCUMENTADOS } from './modulos-documentados.ts';
 import { criarRotasAuth } from './modulos/auth/auth.rotas.ts';
 import { criarRotasConsultas } from './modulos/consultas/consultas.rotas.ts';
 import { criarRotasDentistas, criarRotasFuncionarios } from './modulos/funcionarios/funcionarios.rotas.ts';
@@ -25,6 +27,11 @@ export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number } =
   app.use(pinoHttp({ logger: contexto.logger, serializers: { req: serializarRequisicao } }));
   app.use(express.json());
   app.use(cookieParser());
+
+  // Swagger só fora de produção (D23, D34).
+  if (contexto.config.nodeEnv !== 'production') {
+    app.use(criarRotasDeDocumentacao(MODULOS_DOCUMENTADOS.map(({ documentado }) => documentado)));
+  }
 
   app.use('/api/auth', limitarRequisicoesPorIp(opcoes.limiteDeAuth ?? LIMITE_PADRAO_DE_AUTH_POR_IP), criarRotasAuth(contexto));
   app.use('/api/funcionarios', criarRotasFuncionarios(contexto));
