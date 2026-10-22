@@ -9,8 +9,8 @@ parceria com a Colzani Odontologia (PAC VI — Engenharia de Software).
   D30). Início, Agenda e Perfil do Paciente ainda mostram dados fictícios e serão ligados à API
   nas fatias F2 (pacientes) e F3 (agenda e consultas).
 - **Backend** (`backend/`): em construção, tarefa por tarefa, seguindo
-  `docs/plano-implementacao.md`. Prontas: as 11 rotas de autenticação e as de procedimentos.
-  Próximo: funcionários, dentistas e seeds (Tarefa 11).
+  `docs/plano-implementacao.md`. Prontas: as 11 rotas de autenticação, procedimentos, funcionários e dentistas, com seeds.
+  Próximo: pacientes (Tarefas 12 e 13).
 
 ## Stack
 

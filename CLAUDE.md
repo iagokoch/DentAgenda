@@ -25,8 +25,8 @@ Confira antes de assumir qualquer coisa:
   `POST /api/auth/logout`, `GET /api/auth/eu`, recuperação de senha (`.../recuperacao/codigo` e
   `/confirmar`, cliente e funcionário) e autocadastro/ativação do paciente
   (`POST /api/auth/cliente/cadastro/codigo` e `/confirmar`, D15). Todas as 11 rotas de `auth`
-  estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18).
-  Próximo: funcionários, dentistas e seeds (Tarefa 11).
+  estão prontas. `GET/POST /api/procedimentos` e `PATCH /api/procedimentos/{id}` (D11, D18); `GET/POST /api/funcionarios`, `PATCH /api/funcionarios/{id}` e `GET /api/dentistas` (D10, D21); seeds `db:seed` (admin inicial) e `db:seed:dev` (dados fictícios).
+  Próximo: pacientes (Tarefas 12 e 13).
   Em caso de
   conflito entre código e documento, vale `docs/documentacao.md`.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma

@@ -310,7 +310,8 @@ Envia só os campos a mudar.
 Não recebe senha. A conta nasce com uma senha aleatória que ninguém conhece; o funcionário
 define a dele em "Recuperar senha" (e-mail, simulado no MVP — D16).
 
-- **201** funcionário criado.
+- **201** funcionário criado: `{ id, nome, cpf, email, categoria, cro, dataInicio, isAdmin, ativo }`
+  (nunca `senhaHash`; `GET /api/funcionarios` devolve um array desses objetos).
 - **409** `EMAIL_JA_CADASTRADO` / `CPF_JA_CADASTRADO` / `CRO_JA_CADASTRADO`.
 - **422** `CRO_OBRIGATORIO` — categoria `DENTISTA` sem `cro`.
 

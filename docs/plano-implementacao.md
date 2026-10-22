@@ -1083,7 +1083,7 @@ modificar `src/app.ts`.
 **Interfaces (produz):** `semearAdminInicial(prisma, variaveis: NodeJS.ProcessEnv, hoje: Date): Promise<'criado' | 'ja-existe'>`;
 `semearDadosDeDesenvolvimento(prisma, nodeEnv): Promise<void>` (lança se `nodeEnv === 'production'`).
 
-- [ ] **Passo 1: testes que falham** — `funcionarios.test.ts`:
+- [x] **Passo 1: testes que falham** — `funcionarios.test.ts`:
   - `it('GET /api/funcionarios por admin → lista sem senhaHash')`; `it('por não admin → 403')`
   - `it('POST cria com senha aleatória: login com qualquer senha falha')` (D21.1)
   - `it('POST DENTISTA sem cro → 422 CRO_OBRIGATORIO')`
@@ -1095,22 +1095,22 @@ modificar `src/app.ts`.
   - `it('PATCH desativando o último admin ativo → 422 ULTIMO_ADMIN')`
   - `it('PATCH categoria para DENTISTA sem cro → 422 CRO_OBRIGATORIO')`
   - `it('GET /api/dentistas por cliente → só dentistas ativos, [{ id, nome }]')`
-- [ ] **Passo 2: testes que falham** — `seed.test.ts`:
+- [x] **Passo 2: testes que falham** — `seed.test.ts`:
   - `it('cria o admin com dataInicio = hoje e senha desconhecida')`
   - `it('não faz nada se já existe admin')`
   - `it('recusa variável ADMIN_INICIAL_* faltando, citando o nome')` (D25.12)
   - `it('DENTISTA sem ADMIN_INICIAL_CRO → recusa')`
   - `it('seed de desenvolvimento recusa NODE_ENV=production')` (spec, seção 10 item 6)
-- [ ] **Passo 3:** `npm test` → FAIL; implementar. A checagem do último admin roda numa
+- [x] **Passo 3:** `npm test` → FAIL; implementar. A checagem do último admin roda numa
   transação que trava as linhas de admin ativas (`SELECT … FOR UPDATE`), para dois admins não se
   removerem ao mesmo tempo.
-- [ ] **Passo 4:** `seed-dev.ts` cria, com dados fictícios: 4 procedimentos (Avaliação 30 min
+- [x] **Passo 4:** `seed-dev.ts` cria, com dados fictícios: 4 procedimentos (Avaliação 30 min
   R$ 120; Limpeza 60 min R$ 180; Restauração 60 min R$ 250; Clareamento 90 min R$ 600), uma
   dentista e uma recepcionista com e-mail `@exemplo.dev`, e grade da dentista seg–sex
   08:00–12:00 e 14:00–18:00. Pula o que já existe.
-- [ ] **Passo 5:** verificação padrão + `npm run db:seed` e `npm run db:seed:dev` no banco de dev.
+- [x] **Passo 5:** verificação padrão + `npm run db:seed` e `npm run db:seed:dev` no banco de dev.
 
-**Pronto quando:** 18 testes passam; seeds rodam duas vezes seguidas sem erro.
+**Pronto quando:** 23 testes passam (18 previstos + 5 de regressão); seeds rodam duas vezes seguidas sem erro.
 
 **Commit:** `feat: funcionários, lista de dentistas, seed do admin e seed fictício de dev (D10, D21, D23)`
 
