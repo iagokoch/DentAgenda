@@ -22,11 +22,12 @@ Confira antes de assumir qualquer coisa:
   **Administração (D37):** `/admin/equipe` e `/admin/procedimentos` (só admin; `RotaProtegida permitir={ehAdmin}`) e
   `/disponibilidade` (grade: A edita, R e D leem; bloqueios: R de todos, em lote; D os próprios).
 - **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (Tarefas 0 a 23 feitas,
-  plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (608 testes): `auth` (11),
+  plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (627 testes): `auth` (11),
   pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
   horários livres e dias disponíveis, e as 9 rotas de `/api/consultas`. Seeds: `db:seed` (admin inicial) e `db:seed:dev`
   (dados fictícios). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite
-  por IP em `/api/auth`. Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção; cada
+  por IP em `/api/auth` (sem contar o refresh; IP real atrás de proxy com `PROXY_CONFIAVEL`, D40). Retenção:
+  `npm run limpar:dados` apaga o que passou de `RETENCAO_DIAS` (90 provisórios, D40). Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção; cada
   `*.rotas.ts` exporta `rotasDocumentadas<Dominio>` e `src/modulos-documentados.ts` as liga aos routers.
   `npm run conferir:codigos` falha se algum código de erro do `api.md` não aparecer em teste (D23); o fluxo da clínica
   inteiro, só com login real, está em `src/e2e/ponta-a-ponta.test.ts` (roteiro manual em `docs/ponta-a-ponta.md`).
@@ -35,9 +36,9 @@ Confira antes de assumir qualquer coisa:
   instante inicial a cada teste; as suítes passam com `npm run test:embaralhado`.
   Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
 - **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador (`docs/ponta-a-ponta.md`);
-  (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) ~~telas de administração~~ feitas (D37); (5) para produção:
-  enviador real de SMS e e-mail (issue #1), `trust proxy` (D32), índices e retenção (#4). Issues #1 a #7 no GitHub cobrem
-  produção e qualidade.
+  (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) ~~telas de administração~~ feitas (D37); (5) para produção: só
+  o enviador real de SMS e e-mail (issue #1) e o prazo de retenção com a Colzani; `trust proxy`, índices e retenção (#4)
+  feitos (D40). Issues #2 a #7 resolvidas nos Blocos 4 e 5 (D38–D40).
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
   Express 5 + cookie-parser, swagger-ui-express (D34), pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
@@ -77,6 +78,7 @@ npm install              # também gera o client do Prisma (postinstall)
 npm run db:migrate       # aplica as migrations no banco de desenvolvimento
 npm run lint; npm run typecheck; npm test   # testes aplicam as migrations no banco de teste
 npm run conferir:codigos # todo código de erro do docs/api.md tem teste (D23)
+npm run limpar:dados     # retenção (D40): agendar uma vez por dia no servidor
 npm run dev              # API em http://localhost:<PORTA do .env>/api
 ```
 

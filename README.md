@@ -9,7 +9,7 @@ O fluxo principal da clínica funciona de ponta a ponta, do login à consulta re
 **O que falta está na seção "O que falta para finalizar" mais abaixo.**
 
 - **Backend** (`backend/`): todas as 43 rotas de `docs/api.md` estão prontas e testadas contra
-  Postgres real (608 testes: o ponta a ponta da clínica, a matriz rota × papel e as corridas de login, refresh e códigos): autenticação (11 rotas), pacientes, funcionários e dentistas,
+  Postgres real (627 testes: o ponta a ponta da clínica, a matriz rota × papel e as corridas de login, refresh e códigos): autenticação (11 rotas), pacientes, funcionários e dentistas,
   procedimentos, grade semanal, bloqueios, horários livres e consultas (9 rotas). Defesas de borda
   (D31, D32) e Swagger gerado dos schemas Zod, só fora de produção (D34).
 - **Front-end** (`src/`): ligado à API (D30, D33). Login, cadastro, recuperação de senha, busca e cadastro de
@@ -136,8 +136,8 @@ Ordem sugerida. Os números entre parênteses são as issues do GitHub (`iagokoc
 
 - **Enviador real de SMS e e-mail** (#1). Sem ele a API recusa subir com `NODE_ENV=production` (D16, D32). Depende de
   escolher o provedor com a Colzani.
-- **`trust proxy`** no deploy, para o limite por IP funcionar atrás de proxy (D32).
-- **Índices e retenção de dados** (#4): migration com os índices que faltam e rotina de limpeza (prazo a decidir).
+- ~~`trust proxy`, índices e retenção (#4)~~: feitos (D40); veja "Produção" abaixo. Falta a clínica confirmar o prazo de
+  retenção (90 dias provisórios).
 - **Perguntas à clínica**: `docs/pendencias-colzani.md`.
 
 **Qualidade**
@@ -147,6 +147,25 @@ Ordem sugerida. Os números entre parênteses são as issues do GitHub (`iagokoc
 
 **Fora do escopo por decisão**: abas Documentos e Financeiro do Perfil do Paciente (continuam "em breve") e o encaixe
 fora do passo para a recepção (`janelasLivres`, sem tela; D33).
+
+## Produção (D40)
+
+O que configurar no servidor, além do que o `backend/.env.example` já lista. A API continua recusando subir com
+`NODE_ENV=production` enquanto o enviador real de SMS e e-mail (#1) não existir.
+
+- **Proxy na frente da API** (Nginx, balanceador da hospedagem): defina `PROXY_CONFIAVEL` com o número de proxies na
+  frente (`1` no caso comum) ou a lista de IPs/sub-redes deles (`10.0.0.0/8,loopback`). Sem isso, todo pedido chega com o
+  IP do proxy e o limite de 200 pedidos por 15 min em `/api/auth` (D32) vale para todos os usuários somados. Nunca use
+  `true`: o servidor recusa subir, porque qualquer cliente poderia forjar o próprio IP. O refresh da sessão não conta
+  para esse limite (cada carregamento de página faz um).
+- **Banco:** `npm run db:migrate` em desenvolvimento; no servidor, `npx prisma migrate deploy` aplica as migrations
+  (inclusive os índices da D40).
+- **Retenção de dados (LGPD):** `npm run limpar:dados` (pasta `backend`) apaga tentativas de login, códigos de
+  verificação e sessões vencidas ou revogadas com mais de `RETENCAO_DIAS` dias (padrão 90, **pendente com a clínica**).
+  Agende uma vez por dia:
+  - Linux (cron): `15 3 * * * cd /caminho/backend && npm run limpar:dados >> /var/log/dentagenda-limpeza.log 2>&1`
+  - Windows (Agendador de Tarefas), no PowerShell:
+    `schtasks /Create /SC DAILY /ST 03:15 /TN DentAgendaLimpeza /TR "cmd /c cd /d C:caminhoackend && npm run limpar:dados"`
 
 ## Regras do grupo
 

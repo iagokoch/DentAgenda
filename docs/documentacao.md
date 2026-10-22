@@ -37,7 +37,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D29  | Rotação do refresh mantém o prazo da sessão     | Fechada                      |
 | D30  | Front integrado à API em fatias                 | Fechada (área do paciente na D35, testes de tela na D36) |
 | D31  | Ajustes de segurança da auditoria               | Fechada                      |
-| D32  | Defesas de borda: helmet, limite por IP, CORS   | Fechada (trust proxy no deploy) |
+| D32  | Defesas de borda: helmet, limite por IP, CORS   | Fechada (proxy e refresh na D40) |
 | D33  | Agenda e consultas no front (F3)                | Fechada                      |
 | D34  | Swagger gerado dos schemas Zod                  | Fechada                      |
 | D35  | Área do paciente no front                       | Fechada (pendência Colzani)  |
@@ -45,6 +45,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D37  | Telas de administração e disponibilidade        | Fechada                      |
 | D38  | Pedidos simultâneos em login, refresh e códigos | Fechada                      |
 | D39  | Qualidade: acessibilidade, botões, papéis, relógio | Fechada                    |
+| D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1522,6 +1523,61 @@ porque os dois respondem à mesma pergunta ("quando este dentista atende?").
 **Em aberto:**
 1. Telas com Figma: as cores escurecidas e a fonte mínima mudam um pouco o visual do protótipo. Se o grupo quiser, ajustar
    o Figma para as cores novas.
+
+## D40 — Preparação para produção: proxy, limite por IP, índices e retenção (issue #4)
+
+> **Status: fechada**, com o prazo de retenção pendente da Colzani (seção 6 das pendências). Fecha o "Em aberto 1" da
+> D32, muda o item 2 da D32 (refresh fora do limite) e a D5 num ponto (falha com mais de N dias deixa de contar).
+
+**O quê:**
+1. **`PROXY_CONFIAVEL`** (opcional) diz ao Express quem está na frente da API, para o limite por IP ver o IP de quem
+   pediu e não o do proxy:
+   - ausente ou vazio: não confia em proxy nenhum (o padrão de hoje; `X-Forwarded-For` é ignorado);
+   - número inteiro ≥ 1: quantos proxies há na frente (Express `trust proxy` = N; ex.: `1` atrás de um Nginx);
+   - lista separada por vírgula de IPs, sub-redes ou nomes do Express (`loopback`, `uniquelocal`): só esses.
+   `true` é recusado na subida: confiar em qualquer um deixaria o cliente forjar o IP no `X-Forwarded-For` e fugir do
+   limite.
+2. **O limite por IP em `/api/auth` deixa de contar `POST /api/auth/refresh`.**
+3. **Índices** (migration `indices_e_restrict`): `RefreshToken(loginId)`, `RefreshToken(funcionarioId)`,
+   `Bloqueio(dentistaId, inicio)`, `GradeHorario(dentistaId)`, `AlertaCliente(clienteId)`, `Consulta(procedimentoId)` e
+   `HistoricoObservacao(consultaId)`.
+4. **As seis FKs `SET NULL`** (`AlertaCliente.autorFuncionarioId` e `.removidoPorFuncionarioId`,
+   `Consulta.canceladoPorFuncionarioId`, `HistoricoObservacao.autorFuncionarioId`, `RefreshToken.loginId` e
+   `.funcionarioId`) viram `RESTRICT`.
+5. **Retenção:** `npm run limpar:dados` apaga o que passou de `RETENCAO_DIAS` dias (padrão **90, pendente de confirmação
+   com a clínica**): tentativas de login, códigos de verificação, e sessões (refresh) vencidas ou revogadas. Sessão
+   ainda válida nunca é apagada. Roda uma vez por dia pelo agendador do servidor (cron, Agendador de Tarefas); o README
+   mostra como.
+6. Consequência da retenção para o bloqueio (muda a D5): uma falha de login com mais de N dias some e deixa de contar.
+   O paciente bloqueado há mais de N dias sem redefinir a senha volta a ter 3 tentativas.
+
+**Por quê:**
+1. Atrás do proxy do deploy todo pedido chegaria com o mesmo IP, e o limite de 200 pedidos valeria para a clínica
+   inteira somada.
+2. O limite existe por causa do bcrypt e dos SMS (D32), e o refresh não gasta nenhum dos dois; o token tem 256 bits e não
+   se adivinha. E cada carregamento de página faz um refresh: na conferência do Bloco 4 (D39), percorrer as telas
+   esgotou os 200 pedidos — uma recepção com vários computadores atrás do mesmo IP chegaria lá num dia normal.
+3. São as colunas filtradas pelas rotas mais usadas (sessão conferida em todo pedido autenticado — D31 —, horários
+   livres, grade, alertas do perfil, histórico de observação) e as FKs que o Postgres não indexa sozinho.
+4. A D18 já diz que nada é apagado se outra tabela aponta. Com `SET NULL`, apagar um funcionário esbarrava nos CHECKs que
+   exigem a coluna preenchida (ex.: cancelamento da clínica tem funcionário) e o erro aparecia como violação de CHECK, sem
+   dizer a causa.
+5. As três tabelas guardam CPF, e-mail e IP de quem tentou entrar, e crescem a cada tentativa, inclusive de ataque
+   (LGPD: guardar só pelo tempo necessário). O código de verificação só conta por 24 h (D25.3); a sessão vencida não
+   serve para nada.
+6. Guardar a falha para sempre só para manter o bloqueio contradiz a retenção; 3 tentativas a cada N dias não ajudam
+   quem tenta adivinhar a senha.
+
+**Alternativas descartadas:**
+- *`trust proxy = true`:* aceita qualquer `X-Forwarded-For`; o cliente escolheria o próprio IP.
+- *Limite separado e maior só para o refresh:* mais um número para calibrar, protegendo algo que não precisa.
+- *Rotina dentro do servidor (`setInterval`):* rodaria em cada instância e só enquanto o processo estivesse no ar.
+- *`pg_cron` no banco:* extensão a mais no Postgres para uma tarefa que um agendador do sistema já faz.
+- *Manter as falhas de quem está bloqueado:* as de CPFs inexistentes (ataque) nunca seriam apagadas.
+
+**Em aberto:**
+1. Prazo de retenção (`RETENCAO_DIAS`): confirmar com a Colzani (`docs/pendencias-colzani.md`, seção 6).
+2. Com mais de uma instância da API, o contador do limite precisa de store compartilhado (D32, "Em aberto 2").
 
 ## Próximo
 
