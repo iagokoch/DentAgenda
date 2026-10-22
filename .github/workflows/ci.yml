@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  front:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # Banco descartável do job: sem senha (trust), nunca exposto fora do runner.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_HOST_AUTH_METHOD: trust
+          POSTGRES_DB: dentagenda
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      PORTA: "3000"
+      ENVIADOR_MENSAGEM: log
+      DATABASE_URL: postgresql://postgres@localhost:5433/dentagenda
+      DATABASE_URL_TESTE: postgresql://postgres@localhost:5433/dentagenda_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Gerar segredos descartáveis
+        run: |
+          echo "JWT_SEGREDO=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+          echo "CODIGO_HMAC_SEGREDO=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
+      - name: Criar o banco de teste
+        run: psql -h localhost -p 5433 -U postgres -c 'CREATE DATABASE dentagenda_test'
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
