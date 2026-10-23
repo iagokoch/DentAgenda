@@ -1,0 +1,19 @@
+/* Layout em celular (400px), conferido no navegador no Bloco 4. Carregado depois das telas. */
+
+/* Os cartões laterais do perfil e das ações da consulta ocupam a largura toda em coluna. */
+@media(max-width:700px){.patient-side{align-items:stretch}}
+
+/* Seletores fora do cartão de agendamento com o mesmo visual dos de dentro. */
+.disponibilidade-dentista select,.drawer__form select{height:48px;border:0;border-radius:18px;background:#eef2ff;padding:0 16px;color:#30394c}
+
+/* Sair: no celular a barra lateral vira a barra de baixo, sem espaço para ele; vai para o topo. */
+.topbar__sair{display:none}
+@media(max-width:450px){
+  .sidebar__sair{display:none}
+  .topbar__sair{display:inline-flex;margin-left:auto}
+  /* A busca já some em 700px; a área vazia não pode dividir o espaço com o Sair. */
+  .topbar__actions{display:none}
+  /* Os itens dividem a largura; com mais do que cabem (admin), a barra rola a partir do primeiro em vez de cortar. */
+  .sidebar__nav{overflow-x:auto;justify-content:flex-start;gap:2px}
+  .nav-link{flex:1 0 auto;padding:6px 8px}
+}

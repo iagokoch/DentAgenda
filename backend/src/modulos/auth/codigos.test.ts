@@ -10,7 +10,7 @@ afterAll(() => contexto.prisma.$disconnect());
 const TELEFONE = '47999990000';
 
 function emitir(identificador: string, finalidade: FinalidadeCodigo = 'RECUPERACAO') {
-  return emitirCodigo(contexto.prisma, contexto, { identificador, tipo: 'CLIENTE', finalidade, destino: TELEFONE });
+  return emitirCodigo(contexto, { identificador, tipo: 'CLIENTE', finalidade, destino: TELEFONE });
 }
 
 function consumir(identificador: string, codigo: string) {
@@ -115,7 +115,7 @@ describe('consumirCodigo (D3, D19)', () => {
 
   it('código gravado sem envio (destino NULL) nunca é aceito', async () => {
     const cpf = gerarCpfValido();
-    const codigo = await emitirCodigo(contexto.prisma, contexto, {
+    const codigo = await emitirCodigo(contexto, {
       identificador: cpf,
       tipo: 'CLIENTE',
       finalidade: 'RECUPERACAO',
