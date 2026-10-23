@@ -33,7 +33,7 @@ export function dataBR(data) {
   return `${String(dia).padStart(2, '0')}/${String(mes).padStart(2, '0')}/${ano}`
 }
 
-export function idade(nascimento, hoje = new Date()) {
+export function idade(nascimento, hoje) {
   const [ano, mes, dia] = partesDaData(nascimento)
   const aniversarioJaPassou = hoje.getMonth() + 1 > mes || (hoje.getMonth() + 1 === mes && hoje.getDate() >= dia)
   return hoje.getFullYear() - ano - (aniversarioJaPassou ? 0 : 1)

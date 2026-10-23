@@ -9,6 +9,7 @@ import { dataEHoraLegiveis, horaDoInstante } from '../agenda/calendario.js'
 import { STATUS_DA_CONSULTA } from '../agenda/status.js'
 import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
+import { useRelogio } from '../relogio.js'
 
 // Cancelar, remarcar, realizar e observação de uma consulta (docs/api.md, "Consultas").
 export default function DetalhesDaConsulta() {
@@ -20,7 +21,8 @@ export default function DetalhesDaConsulta() {
   const [mensagem, setMensagem] = useState({ tipo: null, texto: '' })
   const [realizando, setRealizando] = useState(false)
   // Instante da abertura da tela: só habilita o botão; quem decide se já começou é a API (CONSULTA_NAO_INICIADA).
-  const [abertaEm] = useState(() => Date.now())
+  const relogio = useRelogio()
+  const [abertaEm] = useState(() => relogio.agora().getTime())
   const fecharDialogo = useCallback(() => setDialogoAberto(false), [])
 
   const consulta = aposAcao?.id === consultaId ? aposAcao : leitura.dados

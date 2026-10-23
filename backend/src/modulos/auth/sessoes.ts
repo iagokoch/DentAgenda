@@ -14,6 +14,8 @@ const HORA = 60 * 60 * 1000;
 // D19: sessão esquecida aberta no computador da recepção não pode durar dias.
 const DURACAO_DO_REFRESH_DO_CLIENTE = 30 * 24 * HORA;
 const DURACAO_DO_REFRESH_DO_FUNCIONARIO = 12 * HORA;
+// D38: duas abas renovam o mesmo cookie quase juntas; a atrasada recebe 401 sem derrubar a sessão da outra.
+export const JANELA_DE_CORRIDA_DO_REFRESH_MS = 10_000;
 
 // D29: na rotação, a sessão nova herda o prazo da original (expiraEm), em vez de ganhar um prazo novo.
 export async function criarSessao(
@@ -37,37 +39,34 @@ export async function revogarTodasAsSessoes(tx: Transacao, conta: ContaDaSessao,
   });
 }
 
-export async function renovarSessao(
-  contexto: Contexto,
-  tokenDoCookie: string,
-): Promise<{ accessToken: string; refreshToken: string; expiraEm: Date }> {
-  const agora = contexto.relogio.agora();
-  const sessao = await contexto.prisma.refreshToken.findUnique({
-    where: { tokenHash: hashDoRefreshToken(tokenDoCookie) },
-    include: { login: true, funcionario: true },
-  });
-  if (!sessao) throw naoAutenticado();
-  const conta: ContaDaSessao = sessao.loginId ? { loginId: sessao.loginId } : { funcionarioId: sessao.funcionarioId ?? '' };
-  if (sessao.revogadoEm) {
-    // D19: token já revogado reapresentado é sinal de roubo; derruba todas as sessões da conta.
-    await revogarTodasAsSessoes(contexto.prisma, conta, contexto);
-    throw naoAutenticado();
-  }
-  if (sessao.expiraEm <= agora || sessao.funcionario?.ativo === false) throw naoAutenticado();
+type Renovacao = { accessToken: string; refreshToken: string; expiraEm: Date };
 
-  return contexto.prisma.$transaction(async (tx) => {
-    // Só revoga se ninguém revogou antes: duas renovações simultâneas do mesmo token não geram duas sessões.
-    const revogada = await tx.refreshToken.updateMany({
-      where: { id: sessao.id, revogadoEm: null },
-      data: { revogadoEm: agora },
-    });
-    if (revogada.count === 0) throw naoAutenticado();
+// D38: a sessão é lida com FOR UPDATE na transação da rotação: duas renovações do mesmo cookie esperam uma pela outra, e
+// a segunda já vê o token revogado. O 401 sai depois do commit, para a revogação geral (D19) não ser desfeita junto.
+export async function renovarSessao(contexto: Contexto, tokenDoCookie: string): Promise<Renovacao> {
+  const agora = contexto.relogio.agora();
+  const renovacao = await contexto.prisma.$transaction(async (tx): Promise<Renovacao | null> => {
+    const [travada] = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM "RefreshToken" WHERE "tokenHash" = ${hashDoRefreshToken(tokenDoCookie)} FOR UPDATE`;
+    if (!travada) return null;
+    const sessao = await tx.refreshToken.findUniqueOrThrow({ where: { id: travada.id }, include: { login: true, funcionario: true } });
+    const conta: ContaDaSessao = sessao.loginId ? { loginId: sessao.loginId } : { funcionarioId: sessao.funcionarioId ?? '' };
+    if (sessao.revogadoEm) {
+      // Dentro da janela é a outra aba que pediu junto (D38); depois dela, sinal de roubo: derruba todas as sessões (D19).
+      if (agora.getTime() - sessao.revogadoEm.getTime() >= JANELA_DE_CORRIDA_DO_REFRESH_MS) await revogarTodasAsSessoes(tx, conta, contexto);
+      return null;
+    }
+    if (sessao.expiraEm <= agora || sessao.funcionario?.ativo === false) return null;
+
+    await tx.refreshToken.update({ where: { id: sessao.id }, data: { revogadoEm: agora } });
     const nova = await criarSessao(tx, conta, contexto, sessao.expiraEm);
     const usuario: UsuarioAutenticado = sessao.funcionario
       ? autenticadoDoFuncionario(sessao.funcionario, nova.sessaoId)
       : { tipo: 'CLIENTE', clienteId: sessao.login?.clienteId ?? '', sessaoId: nova.sessaoId };
     return { accessToken: gerarAccessToken(usuario, contexto), refreshToken: nova.refreshToken, expiraEm: nova.expiraEm };
   });
+  if (!renovacao) throw naoAutenticado();
+  return renovacao;
 }
 
 // D25.6: o cookie não chega ao logout; a sessão vem do sessaoId do access token.

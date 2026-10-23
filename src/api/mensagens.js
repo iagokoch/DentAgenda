@@ -17,6 +17,15 @@ const MENSAGEM_DO_CAMPO = {
   cidade: 'Informe a cidade.',
   uf: 'UF com 2 letras.',
   texto: 'Escreva o alerta.',
+  // Administração e disponibilidade (D37)
+  cro: 'Informe o CRO.',
+  dataInicio: 'Data de início inválida.',
+  categoria: 'Escolha a categoria.',
+  duracaoMinutos: 'Duração em minutos, maior que zero.',
+  precoCentavos: 'Preço inválido.',
+  inicio: 'Confira o início e o fim.',
+  fim: 'Confira o início e o fim.',
+  dentistaIds: 'Escolha pelo menos um dentista.',
 }
 
 // Campo aninhado vem como "endereco.cep": vale o último pedaço.

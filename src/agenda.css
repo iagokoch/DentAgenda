@@ -13,10 +13,10 @@
 .consulta-marcada p{margin:0 0 8px}
 .consulta-marcada__acoes{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
 a.appointment{text-decoration:none;color:inherit}
-.primary-btn:disabled{background:var(--border);color:#667085;box-shadow:none;cursor:not-allowed}
+.primary-btn:disabled{background:var(--border);color:#626c80;box-shadow:none;cursor:not-allowed}
 .selection-bar>div.selection-bar__confirmar{flex:0 0 auto;display:grid;justify-items:end;gap:4px}
 .stat-card__erro{color:#b42318!important}
-.form-sucesso{padding:10px 14px;border-radius:9px;background:#e8f8ef;color:#109059}
+.form-sucesso{padding:10px 14px;border-radius:9px;background:#e8f8ef;color:#0e7c4d}
 .acoes-da-consulta{display:flex;flex-direction:column;gap:12px}
 .acoes-da-consulta .soft-btn,.acoes-da-consulta .primary-btn{justify-content:center}
 .soft-btn--perigo{color:#b42318}
@@ -32,3 +32,11 @@ a.appointment{text-decoration:none;color:inherit}
 .dialogo h2{margin:0;font-size:20px}
 .dialogo textarea{width:100%;min-height:96px;border:0;background:#eef2ff;border-radius:14px;padding:14px}
 .dialogo__acoes{display:flex;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+
+/* Área do paciente (D35) */
+.minha-conta{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;align-items:start}
+.consultas-do-paciente{list-style:none;padding:0;margin:13px 0 0}
+.consultas-do-paciente .appointment{cursor:default;flex-wrap:wrap}
+.consultas-do-paciente .appointment:hover{background:#fff}
+@media(max-width:950px){.minha-conta{grid-template-columns:1fr}}
+@media(max-width:700px){.consultas-do-paciente .appointment .status{display:inline-block}}

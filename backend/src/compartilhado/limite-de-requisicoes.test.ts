@@ -24,6 +24,40 @@ describe('limite de requisições por IP em /api/auth', () => {
   });
 });
 
+describe('limite por IP atrás de proxy e refresh (D40)', () => {
+  const login = (app: ReturnType<typeof criarApp>, ip?: string) => {
+    const pedido = request(app).post('/api/auth/cliente/login');
+    return (ip ? pedido.set('X-Forwarded-For', ip) : pedido).send({});
+  };
+  const comProxy = (proxyConfiavel: false | number | string[]) => criarApp({ ...contexto, config: { ...contexto.config, proxyConfiavel } }, { limiteDeAuth: 2 });
+
+  it('refresh não conta para o limite: carregar páginas não esgota o login', async () => {
+    const app = criarApp(contexto, { limiteDeAuth: 2 });
+
+    for (let pagina = 0; pagina < 5; pagina++) expect((await request(app).post('/api/auth/refresh').set('X-DentAgenda-Refresh', '1')).status).toBe(401);
+
+    expect((await login(app)).status).toBe(400);
+  });
+
+  it('com PROXY_CONFIAVEL=1, cada IP do X-Forwarded-For tem o próprio limite', async () => {
+    const app = comProxy(1);
+
+    const doMesmoIp = [await login(app, '203.0.113.1'), await login(app, '203.0.113.1'), await login(app, '203.0.113.1')];
+    const deOutroIp = await login(app, '203.0.113.2');
+
+    expect(doMesmoIp.map((resposta) => resposta.status)).toEqual([400, 400, 429]);
+    expect(deOutroIp.status).toBe(400);
+  });
+
+  it('sem proxy configurado, X-Forwarded-For forjado não escapa do limite', async () => {
+    const app = comProxy(false);
+
+    const respostas = [await login(app, '203.0.113.1'), await login(app, '203.0.113.2'), await login(app, '203.0.113.3')];
+
+    expect(respostas.map((resposta) => resposta.status)).toEqual([400, 400, 429]);
+  });
+});
+
 describe('cabeçalhos de segurança', () => {
   it('helmet ativo e sem x-powered-by', async () => {
     const resposta = await request(criarApp(contexto)).get('/api/nada');

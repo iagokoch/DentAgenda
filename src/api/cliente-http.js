@@ -1,11 +1,13 @@
-// Formato de erro de docs/api.md: { erro: { codigo, mensagem, campos } }.
+// Formato de erro de docs/api.md: { erro: { codigo, mensagem, campos } }. Campos a mais de um erro específico
+// (ex.: `consultas` do 409 CONSULTAS_NO_PERIODO) ficam em `detalhes`.
 export class ErroDaApi extends Error {
-  constructor(status, codigo, mensagem, campos = []) {
+  constructor(status, codigo, mensagem, campos = [], detalhes = {}) {
     super(mensagem)
     this.status = status
     this.codigo = codigo
     this.mensagem = mensagem
     this.campos = campos
+    this.detalhes = detalhes
   }
 }
 
@@ -19,7 +21,8 @@ async function erroDaResposta(resposta) {
   if (!erro?.codigo) {
     return new ErroDaApi(resposta.status, 'ERRO_INTERNO', 'Não foi possível falar com o servidor. Tente de novo.')
   }
-  return new ErroDaApi(resposta.status, erro.codigo, erro.mensagem, erro.campos ?? [])
+  const { codigo, mensagem, campos, ...detalhes } = erro
+  return new ErroDaApi(resposta.status, codigo, mensagem, campos ?? [], detalhes)
 }
 
 // D19: o access token fica só em memória (nunca em localStorage, onde um script injetado o leria);

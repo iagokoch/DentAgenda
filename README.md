@@ -9,12 +9,14 @@ O fluxo principal da clínica funciona de ponta a ponta, do login à consulta re
 **O que falta está na seção "O que falta para finalizar" mais abaixo.**
 
 - **Backend** (`backend/`): todas as 43 rotas de `docs/api.md` estão prontas e testadas contra
-  Postgres real (375 testes): autenticação (11 rotas), pacientes, funcionários e dentistas,
+  Postgres real (627 testes: o ponta a ponta da clínica, a matriz rota × papel e as corridas de login, refresh e códigos): autenticação (11 rotas), pacientes, funcionários e dentistas,
   procedimentos, grade semanal, bloqueios, horários livres e consultas (9 rotas). Defesas de borda
   (D31, D32) e Swagger gerado dos schemas Zod, só fora de produção (D34).
 - **Front-end** (`src/`): ligado à API (D30, D33). Login, cadastro, recuperação de senha, busca e cadastro de
   pacientes, Perfil do Paciente (com Histórico de consultas), Início, Novo Agendamento, remarcação e Detalhes da
-  Consulta (cancelar, remarcar, realizar, observação com histórico). 57 testes.
+  Consulta (cancelar, remarcar, realizar, observação com histórico). Área do paciente: ver, cancelar e marcar as próprias
+  consultas (D35). Administração: equipe, procedimentos, grade semanal e bloqueios (D37). 175 testes, com testes de
+  tela (D36) e axe em 14 telas (D39).
 - **Não conferido no navegador:** a fatia F3 (agenda e consultas) passou em testes, lint e build, mas ninguém percorreu o
   fluxo real com a clínica de teste montada. Faça isso primeiro (veja o passo 1 abaixo).
 
@@ -64,14 +66,16 @@ outra, ajuste `vite.config.js`. Sem esse proxy, o cookie de refresh não chega �
 
 As contas fictícias vêm do `db:seed:dev` (ex.: `carla.souza@exemplo.dev`, recepção). A senha não fica no repositório:
 use "Esqueci minha senha" na tela de login e pegue o código de 6 dígitos no log da API.
-A dentista **precisa de grade semanal** para ter horários livres, e a grade só se define pela API
-(`PUT /api/dentistas/{id}/grade`, só admin; veja o Swagger). Não existe tela para isso ainda.
+O `db:seed:dev` já dá à Dra. Ana Costa uma grade de seg–sex (08:00–12:00 e 14:00–18:00). Outra dentista **precisa de
+grade semanal** para ter horários livres: o admin a define em **Disponibilidade** (D37). Roteiro completo para conferir
+no navegador: `docs/ponta-a-ponta.md`.
 
 ### Verificação
 
 ```bash
 npm run lint; npm test; npm run build                                  # raiz (front)
-cd backend; npm run lint; npm run typecheck; npm test; npm run build   # backend
+npm run test:embaralhado                                               # raiz e backend: ordem aleatória (#7)
+cd backend; npm run lint; npm run typecheck; npm test; npm run conferir:codigos; npm run build   # backend
 ```
 
 Os testes do backend aplicam as migrations no banco `dentagenda_test`.
@@ -109,7 +113,11 @@ docs/           Decisões, spec, plano, contrato da API e pendências com a clí
 | `/pacientes/:pacienteId` | Funcionário da clínica  | Ligada à API                              |
 | `/agenda`                | Funcionário da clínica  | Ligada à API (`?pacienteId=` e `?remarcar=`) |
 | `/consultas/:consultaId` | Funcionário da clínica  | Ligada à API                              |
-| `/minha-conta`           | Paciente                | **Página provisória** (D30, em aberto)    |
+| `/minha-conta`           | Paciente                | Ligada à API: próximas e histórico, cancelar (D35) |
+| `/minha-conta/agendar`   | Paciente                | Ligada à API: marcar consulta (D35)       |
+| `/disponibilidade`       | Funcionário da clínica  | Ligada à API: grade (só admin edita) e bloqueios (D37) |
+| `/admin/equipe`          | Admin                   | Ligada à API: funcionários (D37)          |
+| `/admin/procedimentos`   | Admin                   | Ligada à API: procedimentos (D37)         |
 
 ## O que falta para finalizar
 
@@ -117,37 +125,51 @@ Ordem sugerida. Os números entre parênteses são as issues do GitHub (`iagokoc
 
 **Para fechar o MVP**
 
-1. **Conferir a F3 no navegador** (15 min). Defina a grade da dentista pela API, marque uma consulta, tente o mesmo horário
-   de novo (409), remarque, cancele, registre uma observação e marque como realizada.
-2. **Fechamento da Tarefa 23** (1 a 2 h): script `backend/scripts/conferir-codigos-de-erro.ts` (código no
-   `docs/plano-implementacao.md`) e o passo a passo ponta a ponta. Todo código de erro do `api.md` tem de ter teste (D23).
-3. **Decidir a área do paciente** (`/minha-conta`, D30). Hoje é provisória. Ou se fazem as telas do paciente (ver as
-   próprias consultas, cancelar com justificativa quando faltar menos de 24 h, marcar), ou se registra na D30 que ficou
-   fora do MVP. A API já está pronta para o papel de paciente (C).
-4. **Telas de administração** (3 a 4 h): funcionários, procedimentos, grade semanal e bloqueios existem só na API.
-   Sem elas, qualquer demonstração depende de chamar a API na mão.
+1. **Conferir a F3 no navegador** (15 min), seguindo `docs/ponta-a-ponta.md`. A API já passou pelo mesmo fluxo no
+   teste `backend/src/e2e/ponta-a-ponta.test.ts`; falta ver as telas.
+2. ~~Fechamento da Tarefa 23~~: feito. `npm run conferir:codigos` confere que todo código de erro do `api.md` tem teste (D23).
+3. ~~Área do paciente~~: feita (D35). Falta conferir no navegador com um paciente cadastrado pelo autocadastro.
+4. ~~Telas de administração~~: feitas (D37). Equipe e Procedimentos (só admin) e Disponibilidade (grade e bloqueios).
 5. **README e apresentação**: manter este arquivo e o `CLAUDE.md` em dia a cada entrega.
 
 **Para colocar em produção** (não trava a entrega acadêmica)
 
 - **Enviador real de SMS e e-mail** (#1). Sem ele a API recusa subir com `NODE_ENV=production` (D16, D32). Depende de
   escolher o provedor com a Colzani.
-- **`trust proxy`** no deploy, para o limite por IP funcionar atrás de proxy (D32).
-- **Índices e retenção de dados** (#4): migration com os índices que faltam e rotina de limpeza (prazo a decidir).
+- ~~`trust proxy`, índices e retenção (#4)~~: feitos (D40); veja "Produção" abaixo. Falta a clínica confirmar o prazo de
+  retenção (90 dias provisórios).
 - **Perguntas à clínica**: `docs/pendencias-colzani.md`.
 
 **Qualidade**
 
-- Acessibilidade (#2), botões sem ação no `AppShell` e no Início (#3), matriz de papéis por rota (#5), concorrência de
-  login, refresh e cadastro (#6), relógio e mais testes do front (#7).
-- Layout em celular (400px) nunca foi validado de verdade.
+- ~~#2, #3, #5, #6, #7 e layout em 400px~~: feitos (D38, D39). Matriz em `docs/matriz-de-papeis.md`, conferência de
+  acessibilidade e celular em `docs/acessibilidade.md`.
 
 **Fora do escopo por decisão**: abas Documentos e Financeiro do Perfil do Paciente (continuam "em breve") e o encaixe
 fora do passo para a recepção (`janelasLivres`, sem tela; D33).
 
+## Produção (D40)
+
+O que configurar no servidor, além do que o `backend/.env.example` já lista. A API continua recusando subir com
+`NODE_ENV=production` enquanto o enviador real de SMS e e-mail (#1) não existir.
+
+- **Proxy na frente da API** (Nginx, balanceador da hospedagem): defina `PROXY_CONFIAVEL` com o número de proxies na
+  frente (`1` no caso comum) ou a lista de IPs/sub-redes deles (`10.0.0.0/8,loopback`). Sem isso, todo pedido chega com o
+  IP do proxy e o limite de 200 pedidos por 15 min em `/api/auth` (D32) vale para todos os usuários somados. Nunca use
+  `true`: o servidor recusa subir, porque qualquer cliente poderia forjar o próprio IP. O refresh da sessão não conta
+  para esse limite (cada carregamento de página faz um).
+- **Banco:** `npm run db:migrate` em desenvolvimento; no servidor, `npx prisma migrate deploy` aplica as migrations
+  (inclusive os índices da D40).
+- **Retenção de dados (LGPD):** `npm run limpar:dados` (pasta `backend`) apaga tentativas de login, códigos de
+  verificação e sessões vencidas ou revogadas com mais de `RETENCAO_DIAS` dias (padrão 90, **pendente com a clínica**).
+  Agende uma vez por dia:
+  - Linux (cron): `15 3 * * * cd /caminho/backend && npm run limpar:dados >> /var/log/dentagenda-limpeza.log 2>&1`
+  - Windows (Agendador de Tarefas), no PowerShell:
+    `schtasks /Create /SC DAILY /ST 03:15 /TN DentAgendaLimpeza /TR "cmd /c cd /d C:caminhoackend && npm run limpar:dados"`
+
 ## Regras do grupo
 
-- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D35**)
+- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D40**)
   antes de virar código.
 - **Backend em TDD**, com nomes em português (D23). Biblioteca nova: conferir versão e API no context7 antes de usar.
 - **Se o front precisar de algo que a API não dá**, vira decisão e mudança no `docs/api.md`, não gambiarra no front.
@@ -155,9 +177,12 @@ fora do passo para a recepção (`janelasLivres`, sem tela; D33).
 
 ## Documentação
 
-- `docs/documentacao.md`: decisões de arquitetura e modelagem (D1 a D34). Em conflito com o
+- `docs/documentacao.md`: decisões de arquitetura e modelagem (D1 a D39). Em conflito com o
   código, vale este documento.
 - `docs/api.md`: contrato da API (rotas, entrada, saída, erros).
+- `docs/matriz-de-papeis.md`: quem chama cada rota da API e cada tela do front, com o status esperado.
+- `docs/ponta-a-ponta.md`: roteiro do fluxo da clínica para conferir no navegador.
+- `docs/acessibilidade.md`: conferência de acessibilidade e de layout em 400px.
 - `docs/spec-backend-mvp.md`: visão geral do backend do MVP.
 - `docs/plano-implementacao.md`: plano tarefa por tarefa, com o progresso nos checkboxes (só a Tarefa 23 tem passos abertos).
 - `docs/pendencias-colzani.md`: perguntas que só a clínica responde.

@@ -72,7 +72,7 @@ function ListaDePacientes({ busca }) {
             <Icon name="search" />
             <input id="busca-pacientes" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Nome ou CPF" />
           </div>
-          <button className="primary-btn primary-btn--solid">Buscar</button>
+          <button type="submit" className="primary-btn primary-btn--solid">Buscar</button>
         </div>
         <p className="form-info">A busca ignora acentos e maiúsculas: “jose” encontra “José”. Para buscar pelo CPF, digite os 11 números.</p>
       </form>

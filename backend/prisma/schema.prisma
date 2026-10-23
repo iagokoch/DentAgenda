@@ -81,11 +81,14 @@ model AlertaCliente {
   texto                    String
   autor                    Autor
   autorFuncionarioId       String?      @db.Uuid
-  autorFuncionario         Funcionario? @relation("AlertaAutor", fields: [autorFuncionarioId], references: [id])
+  autorFuncionario         Funcionario? @relation("AlertaAutor", fields: [autorFuncionarioId], references: [id], onDelete: Restrict)
   criadoEm                 DateTime     @db.Timestamptz
   removidoEm               DateTime?    @db.Timestamptz
   removidoPorFuncionarioId String?      @db.Uuid
-  removidoPorFuncionario   Funcionario? @relation("AlertaRemovidoPor", fields: [removidoPorFuncionarioId], references: [id])
+  removidoPorFuncionario   Funcionario? @relation("AlertaRemovidoPor", fields: [removidoPorFuncionarioId], references: [id], onDelete: Restrict)
+
+  // D40: alertas do perfil do paciente.
+  @@index([clienteId])
 }
 
 model Login {
@@ -133,6 +136,9 @@ model GradeHorario {
   diaSemana  Int         @db.SmallInt
   inicio     DateTime    @db.Time(0)
   fim        DateTime    @db.Time(0)
+
+  // D40: grade do dentista nos horários livres.
+  @@index([dentistaId])
 }
 
 model Bloqueio {
@@ -141,6 +147,9 @@ model Bloqueio {
   dentista   Funcionario @relation(fields: [dentistaId], references: [id])
   inicio     DateTime    @db.Timestamptz
   fim        DateTime    @db.Timestamptz
+
+  // D40: bloqueios do dentista num período (horários livres, tela de disponibilidade).
+  @@index([dentistaId, inicio])
 }
 
 model Consulta {
@@ -159,9 +168,12 @@ model Consulta {
   canceladoEm               DateTime?             @db.Timestamptz
   canceladoPor              Autor?
   canceladoPorFuncionarioId String?               @db.Uuid
-  canceladoPorFuncionario   Funcionario?          @relation("ConsultaCanceladaPor", fields: [canceladoPorFuncionarioId], references: [id])
+  canceladoPorFuncionario   Funcionario?          @relation("ConsultaCanceladaPor", fields: [canceladoPorFuncionarioId], references: [id], onDelete: Restrict)
   justificativa             String?
   historicoObservacao       HistoricoObservacao[]
+
+  // D40: FK sem índice (o Postgres não cria sozinho).
+  @@index([procedimentoId])
 }
 
 model HistoricoObservacao {
@@ -171,8 +183,11 @@ model HistoricoObservacao {
   texto              String?
   autor              Autor
   autorFuncionarioId String?      @db.Uuid
-  autorFuncionario   Funcionario? @relation(fields: [autorFuncionarioId], references: [id])
+  autorFuncionario   Funcionario? @relation(fields: [autorFuncionarioId], references: [id], onDelete: Restrict)
   editadoEm          DateTime     @db.Timestamptz
+
+  // D40: histórico de observação de uma consulta.
+  @@index([consultaId])
 }
 
 model TentativaLogin {
@@ -204,11 +219,15 @@ model CodigoVerificacao {
 model RefreshToken {
   id            String       @id @default(uuid()) @db.Uuid
   loginId       String?      @db.Uuid
-  login         Login?       @relation(fields: [loginId], references: [id])
+  login         Login?       @relation(fields: [loginId], references: [id], onDelete: Restrict)
   funcionarioId String?      @db.Uuid
-  funcionario   Funcionario? @relation(fields: [funcionarioId], references: [id])
+  funcionario   Funcionario? @relation(fields: [funcionarioId], references: [id], onDelete: Restrict)
   tokenHash     String       @unique
   criadoEm      DateTime     @db.Timestamptz
   expiraEm      DateTime     @db.Timestamptz
   revogadoEm    DateTime?    @db.Timestamptz
+
+  // D40: sessões da conta (revogar todas, D19) e retenção.
+  @@index([loginId])
+  @@index([funcionarioId])
 }

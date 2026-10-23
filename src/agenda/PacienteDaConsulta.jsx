@@ -42,7 +42,7 @@ function BuscaDePaciente({ podeCadastrar, aoEscolher }) {
           <Icon name="search" />
           <input aria-label="Buscar paciente por nome ou CPF" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por nome ou CPF..." />
         </label>
-        <button className="soft-btn">Buscar</button>
+        <button type="submit" className="soft-btn">Buscar</button>
         {podeCadastrar && <Link className="soft-btn" to="/pacientes/novo"><Icon name="users" /> Novo Paciente</Link>}
       </form>
       <div aria-live="polite">
