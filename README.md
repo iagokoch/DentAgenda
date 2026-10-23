@@ -9,12 +9,14 @@ O fluxo principal da clínica funciona de ponta a ponta, do login à consulta re
 **O que falta está na seção "O que falta para finalizar" mais abaixo.**
 
 - **Backend** (`backend/`): todas as 43 rotas de `docs/api.md` estão prontas e testadas contra
-  Postgres real (375 testes): autenticação (11 rotas), pacientes, funcionários e dentistas,
+  Postgres real (381 testes, um deles o ponta a ponta da clínica): autenticação (11 rotas), pacientes, funcionários e dentistas,
   procedimentos, grade semanal, bloqueios, horários livres e consultas (9 rotas). Defesas de borda
   (D31, D32) e Swagger gerado dos schemas Zod, só fora de produção (D34).
 - **Front-end** (`src/`): ligado à API (D30, D33). Login, cadastro, recuperação de senha, busca e cadastro de
   pacientes, Perfil do Paciente (com Histórico de consultas), Início, Novo Agendamento, remarcação e Detalhes da
-  Consulta (cancelar, remarcar, realizar, observação com histórico). 57 testes.
+  Consulta (cancelar, remarcar, realizar, observação com histórico). Área do paciente: ver, cancelar e marcar as próprias
+  consultas (D35). Administração: equipe, procedimentos, grade semanal e bloqueios (D37). 102 testes, com testes de
+  tela (D36).
 - **Não conferido no navegador:** a fatia F3 (agenda e consultas) passou em testes, lint e build, mas ninguém percorreu o
   fluxo real com a clínica de teste montada. Faça isso primeiro (veja o passo 1 abaixo).
 
@@ -64,14 +66,15 @@ outra, ajuste `vite.config.js`. Sem esse proxy, o cookie de refresh não chega �
 
 As contas fictícias vêm do `db:seed:dev` (ex.: `carla.souza@exemplo.dev`, recepção). A senha não fica no repositório:
 use "Esqueci minha senha" na tela de login e pegue o código de 6 dígitos no log da API.
-A dentista **precisa de grade semanal** para ter horários livres, e a grade só se define pela API
-(`PUT /api/dentistas/{id}/grade`, só admin; veja o Swagger). Não existe tela para isso ainda.
+O `db:seed:dev` já dá à Dra. Ana Costa uma grade de seg–sex (08:00–12:00 e 14:00–18:00). Outra dentista **precisa de
+grade semanal** para ter horários livres: o admin a define em **Disponibilidade** (D37). Roteiro completo para conferir
+no navegador: `docs/ponta-a-ponta.md`.
 
 ### Verificação
 
 ```bash
 npm run lint; npm test; npm run build                                  # raiz (front)
-cd backend; npm run lint; npm run typecheck; npm test; npm run build   # backend
+cd backend; npm run lint; npm run typecheck; npm test; npm run conferir:codigos; npm run build   # backend
 ```
 
 Os testes do backend aplicam as migrations no banco `dentagenda_test`.
@@ -109,7 +112,11 @@ docs/           Decisões, spec, plano, contrato da API e pendências com a clí
 | `/pacientes/:pacienteId` | Funcionário da clínica  | Ligada à API                              |
 | `/agenda`                | Funcionário da clínica  | Ligada à API (`?pacienteId=` e `?remarcar=`) |
 | `/consultas/:consultaId` | Funcionário da clínica  | Ligada à API                              |
-| `/minha-conta`           | Paciente                | **Página provisória** (D30, em aberto)    |
+| `/minha-conta`           | Paciente                | Ligada à API: próximas e histórico, cancelar (D35) |
+| `/minha-conta/agendar`   | Paciente                | Ligada à API: marcar consulta (D35)       |
+| `/disponibilidade`       | Funcionário da clínica  | Ligada à API: grade (só admin edita) e bloqueios (D37) |
+| `/admin/equipe`          | Admin                   | Ligada à API: funcionários (D37)          |
+| `/admin/procedimentos`   | Admin                   | Ligada à API: procedimentos (D37)         |
 
 ## O que falta para finalizar
 
@@ -117,15 +124,11 @@ Ordem sugerida. Os números entre parênteses são as issues do GitHub (`iagokoc
 
 **Para fechar o MVP**
 
-1. **Conferir a F3 no navegador** (15 min). Defina a grade da dentista pela API, marque uma consulta, tente o mesmo horário
-   de novo (409), remarque, cancele, registre uma observação e marque como realizada.
-2. **Fechamento da Tarefa 23** (1 a 2 h): script `backend/scripts/conferir-codigos-de-erro.ts` (código no
-   `docs/plano-implementacao.md`) e o passo a passo ponta a ponta. Todo código de erro do `api.md` tem de ter teste (D23).
-3. **Decidir a área do paciente** (`/minha-conta`, D30). Hoje é provisória. Ou se fazem as telas do paciente (ver as
-   próprias consultas, cancelar com justificativa quando faltar menos de 24 h, marcar), ou se registra na D30 que ficou
-   fora do MVP. A API já está pronta para o papel de paciente (C).
-4. **Telas de administração** (3 a 4 h): funcionários, procedimentos, grade semanal e bloqueios existem só na API.
-   Sem elas, qualquer demonstração depende de chamar a API na mão.
+1. **Conferir a F3 no navegador** (15 min), seguindo `docs/ponta-a-ponta.md`. A API já passou pelo mesmo fluxo no
+   teste `backend/src/e2e/ponta-a-ponta.test.ts`; falta ver as telas.
+2. ~~Fechamento da Tarefa 23~~: feito. `npm run conferir:codigos` confere que todo código de erro do `api.md` tem teste (D23).
+3. ~~Área do paciente~~: feita (D35). Falta conferir no navegador com um paciente cadastrado pelo autocadastro.
+4. ~~Telas de administração~~: feitas (D37). Equipe e Procedimentos (só admin) e Disponibilidade (grade e bloqueios).
 5. **README e apresentação**: manter este arquivo e o `CLAUDE.md` em dia a cada entrega.
 
 **Para colocar em produção** (não trava a entrega acadêmica)

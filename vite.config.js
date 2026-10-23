@@ -11,6 +11,7 @@ export default defineConfig({
   },
   test: {
     // Sem isto o Vitest da raiz também pegaria os testes de backend/.
-    include: ['src/**/*.test.js'],
+    // Telas (.test.jsx) pedem o jsdom no próprio arquivo (D36).
+    include: ['src/**/*.test.{js,jsx}'],
   },
 })
