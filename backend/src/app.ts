@@ -1,5 +1,5 @@
 import cookieParser from 'cookie-parser';
-import express, { type Express } from 'express';
+import express, { type Express, type Request } from 'express';
 import helmet from 'helmet';
 import { pinoHttp } from 'pino-http';
 import type { Contexto } from './compartilhado/contexto.ts';
@@ -23,6 +23,8 @@ const LIMITE_PADRAO_DE_AUTH_POR_IP = 200;
 export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number } = {}): Express {
   const app = express();
   app.disable('x-powered-by');
+  // D40: com proxy na frente, o IP de quem pediu vem do X-Forwarded-For; sem PROXY_CONFIAVEL, o cabeçalho é ignorado.
+  if (contexto.config.proxyConfiavel !== false) app.set('trust proxy', contexto.config.proxyConfiavel);
   app.use(helmet());
   app.use(pinoHttp({ logger: contexto.logger, serializers: { req: serializarRequisicao } }));
   app.use(express.json());
@@ -33,7 +35,8 @@ export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number } =
     app.use(criarRotasDeDocumentacao(MODULOS_DOCUMENTADOS.map(({ documentado }) => documentado)));
   }
 
-  app.use('/api/auth', limitarRequisicoesPorIp(opcoes.limiteDeAuth ?? LIMITE_PADRAO_DE_AUTH_POR_IP), criarRotasAuth(contexto));
+  const ehRefresh = (req: Request) => req.path === '/refresh';
+  app.use('/api/auth', limitarRequisicoesPorIp(opcoes.limiteDeAuth ?? LIMITE_PADRAO_DE_AUTH_POR_IP, ehRefresh), criarRotasAuth(contexto));
   app.use('/api/funcionarios', criarRotasFuncionarios(contexto));
   app.use('/api/dentistas', criarRotasDentistas(contexto));
   app.use('/api/dentistas', criarRotasDisponibilidade(contexto));

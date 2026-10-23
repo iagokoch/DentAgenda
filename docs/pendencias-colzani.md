@@ -58,7 +58,10 @@ clínica; anotar a resposta embaixo da pergunta e depois atualizar a decisão co
   - Resposta:
 - [ ] Qual provedor de SMS e de e-mail a clínica aceita contratar, e quem paga? Sem isso a API não sobe em produção. (D16)
   - Resposta:
-- [ ] Por quanto tempo a clínica quer guardar tentativas de login, códigos de verificação e sessões antigas? (LGPD)
+- [ ] Por quanto tempo a clínica quer guardar tentativas de login, códigos de verificação e sessões antigas? (LGPD, D40)
+  - **Valor provisório no código: 90 dias** (`RETENCAO_DIAS`, rotina `npm run limpar:dados`). Trocar o padrão em
+    `backend/src/config/env.ts` e na D40 quando a clínica responder. Efeito colateral a explicar: uma falha de login mais
+    velha que o prazo deixa de contar para o bloqueio da conta.
   - Resposta:
 - [ ] O que é um paciente "ativo": quem teve consulta nos últimos meses? Quantos? Hoje o Início só mostra o total de
   cadastrados. (D33)

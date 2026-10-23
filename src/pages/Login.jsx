@@ -68,7 +68,7 @@ export default function Login() {
         </div>
         <div className="auth-card__helper"><Link to="/recuperar-senha">Esqueci minha senha</Link></div>
         {erro && <p className="form-error" role="alert">{erro}</p>}
-        <button className="primary-btn primary-btn--full" disabled={enviando}>{enviando ? 'Entrando…' : 'Entrar'}</button>
+        <button type="submit" className="primary-btn primary-btn--full" disabled={enviando}>{enviando ? 'Entrando…' : 'Entrar'}</button>
         <p className="auth-switch">Primeiro acesso? <Link to="/cadastro">Cadastre-se</Link></p>
       </form>
     </AuthLayout>

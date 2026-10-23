@@ -1,0 +1,45 @@
+/* Administração e disponibilidade (D37) */
+.admin-row{grid-template-columns:minmax(0,2.2fr) minmax(0,1.5fr) minmax(0,.8fr) auto}
+.admin-row__detalhe{display:block;font-size:12px;color:#55607a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.admin-row__acoes{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.admin-row__acoes .soft-btn{font-size:13px}
+.etiqueta{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:10px;background:#e3f4ff;color:#006b99;font-size:12px;font-weight:700}
+.campo-marcavel{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:12px;background:#f3f6ff;cursor:pointer}
+.campo-marcavel input{width:18px;height:18px;margin-top:2px;flex:none}
+.campo-marcavel strong,.campo-marcavel small{display:block}
+.campo-marcavel small{color:#55607a;font-size:12px;margin-top:3px}
+.campo-marcavel--linha{padding:8px 12px;align-items:center}
+
+.disponibilidade{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px;align-items:start}
+.disponibilidade-secao h2{margin-bottom:6px}
+.disponibilidade-dentista{min-width:240px}
+.grade-leitura{margin:16px 0 0;display:grid;gap:8px}
+.grade-leitura div{display:grid;grid-template-columns:90px 1fr;gap:12px;padding:8px 0;border-top:1px solid var(--border)}
+.grade-leitura dt{font-weight:700}
+.grade-leitura dd{margin:0;color:#3b4660}
+.grade-editor{margin-top:14px;display:flex;flex-direction:column;gap:10px}
+.grade-dia{display:grid;grid-template-columns:80px 1fr auto;gap:10px;align-items:start;border:0;border-top:1px solid var(--border);padding:12px 0 2px;margin:0}
+.grade-dia legend{float:left;font-weight:700;padding:6px 0 0}
+.grade-dia__faixas{display:flex;flex-direction:column;gap:8px}
+.grade-dia__vazio{color:#55607a;font-size:13px;padding-top:6px}
+.grade-faixa{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.grade-faixa input{height:38px;border:0;border-radius:10px;background:#eef2ff;padding:0 10px;font:inherit}
+.grade-editor__acoes{display:flex;justify-content:flex-end}
+.lista-de-consultas{margin:8px 0 0;padding-left:18px}
+.lista-de-consultas a{color:inherit;text-decoration:underline}
+.lista-de-bloqueios{list-style:none;margin:14px 0 0;padding:0}
+.lista-de-bloqueios li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--border);font-size:14px}
+.novo-bloqueio{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:12px}
+.novo-bloqueio h3{margin:0;font-size:15px}
+.novo-bloqueio .primary-btn{align-self:flex-end}
+.bloqueio-dentistas{border:0;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:8px}
+.bloqueio-dentistas legend{font-size:13px;color:#55607a;margin-bottom:8px}
+
+@media(max-width:950px){.disponibilidade{grid-template-columns:1fr}}
+@media(max-width:700px){
+  .admin-row{grid-template-columns:minmax(0,1fr) auto}
+  .admin-row__acoes{grid-column:1/-1;justify-content:flex-start}
+  .grade-dia{grid-template-columns:1fr}
+  .grade-dia legend{float:none}
+  .disponibilidade-dentista{min-width:0;width:100%}
+}

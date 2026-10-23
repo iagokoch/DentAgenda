@@ -4,9 +4,8 @@
 > `superpowers:executing-plans`, tarefa por tarefa. Passos com checkbox (`- [ ]`).
 > Toda tarefa segue TDD (`superpowers:test-driven-development`): o teste falha antes do código.
 
-**Estado em 2026-10-22:** Tarefas 0 a 22 e F1 a F3 feitas. **Só a Tarefa 23 tem passos abertos** (2 a 6: script de
-cobertura dos códigos de erro, ponta a ponta, atualização final dos docs e `build`). A conferência da F3 no navegador
-também está pendente. O que vem depois (área do paciente, telas de administração, produção) está no README.
+**Estado em 2026-10-22:** Tarefas 0 a 23 e F1 a F3 feitas; o plano do MVP do backend está fechado. O que vem depois
+(área do paciente, telas de administração, qualidade, produção) está no README.
 
 **Objetivo:** implementar em `backend/` todas as rotas de `docs/api.md`, com as regras de
 D1–D23 garantidas por teste contra Postgres real. Tarefas F1–F3 ligam o front à API em fatias (D30).
@@ -1597,7 +1596,7 @@ backend), `docs/documentacao.md` ("Próximo"); criar `backend/scripts/conferir-c
   })
   ```
   (`3000` = valor de `PORTA` em `backend/.env`; se o usuário usar outro, ajustar aqui.)
-- [ ] **Passo 2: script de cobertura dos códigos de erro** (critério de pronto da D23):
+- [x] **Passo 2: script de cobertura dos códigos de erro** (critério de pronto da D23):
   ```ts
   // backend/scripts/conferir-codigos-de-erro.ts
   import { readFileSync, readdirSync } from 'node:fs';
@@ -1635,15 +1634,21 @@ backend), `docs/documentacao.md` ("Próximo"); criar `backend/scripts/conferir-c
   console.log('Todo código de erro do api.md tem teste.');
   ```
   Script `"conferir:codigos": "tsx scripts/conferir-codigos-de-erro.ts"` no `package.json`.
-- [ ] **Passo 3:** rodar `npm run conferir:codigos`; se faltar código, voltar à tarefa dona e
+  **Feito (2026-10-22):** o script do plano, com `?.[1]` nos grupos por causa do `noUncheckedIndexedAccess`.
+- [x] **Passo 3:** rodar `npm run conferir:codigos`; se faltar código, voltar à tarefa dona e
   acrescentar o teste (TDD: o teste falha primeiro, se o comportamento ainda não existir).
-- [ ] **Passo 4: ponta a ponta manual:** `docker compose up -d`, `npm run db:migrate`,
+  **Resultado:** os 33 códigos do `api.md` já tinham teste; nenhum teste novo foi preciso. Conferido também contra
+  todo identificador em maiúsculas do `api.md` (sobram só `POST`, `PATCH`, `DELETE` e valores de enum).
+- [x] **Passo 4: ponta a ponta manual:** `docker compose up -d`, `npm run db:migrate`,
   `npm run db:seed`, `npm run db:seed:dev`, `npm run dev` no backend e `npm run dev` na raiz;
   pela aba Network do navegador em `http://localhost:5173`, `POST /api/auth/funcionario/recuperacao/codigo`
   chega ao backend pelo proxy (código aparece no log).
-- [ ] **Passo 5:** atualizar `CLAUDE.md` ("Backend: não existe" → existe; comandos do backend) e
+  **Feito:** o pedido pela porta 5173 chegou à API (202, código no log). O fluxo da clínica virou o teste
+  `backend/src/e2e/ponta-a-ponta.test.ts` (grade → marcar → 409 → remarcar → cancelar → observação → realizada, só com
+  login real) e o roteiro manual `docs/ponta-a-ponta.md`.
+- [x] **Passo 5:** atualizar `CLAUDE.md` ("Backend: não existe" → existe; comandos do backend) e
   "Próximo" da documentação.
-- [ ] **Passo 6:** verificação padrão + `npm run build` (o build não pode incluir `testes/`).
+- [x] **Passo 6:** verificação padrão + `npm run build` (o build não pode incluir `testes/`).
 
 **Pronto quando:** `conferir:codigos` passa; lint, typecheck, testes e build passam; proxy funciona.
 

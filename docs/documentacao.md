@@ -35,11 +35,18 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D27  | Login: a 3ª falha e o tempo de resposta         | Fechada                      |
 | D28  | E-mail sempre em minúsculas                     | Fechada                      |
 | D29  | Rotação do refresh mantém o prazo da sessão     | Fechada                      |
-| D30  | Front integrado à API em fatias                 | Fechada (área do paciente em aberto) |
+| D30  | Front integrado à API em fatias                 | Fechada (área do paciente na D35, testes de tela na D36) |
 | D31  | Ajustes de segurança da auditoria               | Fechada                      |
-| D32  | Defesas de borda: helmet, limite por IP, CORS   | Fechada (trust proxy no deploy) |
+| D32  | Defesas de borda: helmet, limite por IP, CORS   | Fechada (proxy e refresh na D40) |
 | D33  | Agenda e consultas no front (F3)                | Fechada                      |
 | D34  | Swagger gerado dos schemas Zod                  | Fechada                      |
+| D35  | Área do paciente no front                       | Fechada (pendência Colzani)  |
+| D36  | Testes de tela no front                         | Fechada                      |
+| D37  | Telas de administração e disponibilidade        | Fechada                      |
+| D38  | Pedidos simultâneos em login, refresh e códigos | Fechada                      |
+| D39  | Qualidade: acessibilidade, botões, papéis, relógio | Fechada                    |
+| D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
+| D41  | Roteiro de demonstração e paciente de exemplo     | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1172,7 +1179,7 @@ regra é a mesma para não haver dois formatos no banco.
 3. O contrato é `docs/api.md`. Se o front precisar de algo que a API não dá, vira decisão nova e
    mudança no `api.md`; não se contorna no front.
 4. Visual: as 8 telas do Figma listadas no `CLAUDE.md`.
-5. **Verificação do front:** Vitest só no cliente HTTP (token em memória, renovação no 401, formato
+5. **Verificação do front** (mudada pela D36, que acrescenta testes de tela): Vitest só no cliente HTTP (token em memória, renovação no 401, formato
    de erro); as telas são conferidas com `npm run lint`, `npm run build` e uso no navegador contra a
    API rodando.
 
@@ -1190,8 +1197,8 @@ regra é a mesma para não haver dois formatos no banco.
 - *Vitest + Testing Library nas telas:* 1–2 h a mais por fatia em telas que serão refeitas.
 
 **Em aberto:**
-1. O Figma não tem tela para o paciente logado (C). Na F1 ele cai numa página simples (nome e
-   sair); a F3 decide o resto.
+1. ~~O Figma não tem tela para o paciente logado (C).~~ Resolvido na D35. Na F1 ele caía numa página simples (nome e
+   sair).
 
 ## D31 — Ajustes de segurança da auditoria de 2026-10-22
 
@@ -1293,7 +1300,7 @@ alternativa de editar horário na mesma consulta já estava descartada (D14).
 
 **Em aberto:**
 1. Encaixe fora do passo para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
-2. Área do paciente (`/minha-conta`) segue provisória (D30): cancelar e marcar pelo paciente ainda não têm tela.
+2. ~~Área do paciente (`/minha-conta`) provisória~~: resolvida na D35.
 3. Valor Estimado editável pela clínica: decisão de produto, perguntar à Colzani.
 
 ## D34 — Swagger gerado dos schemas Zod, só fora de produção
@@ -1324,16 +1331,286 @@ de resumo e o papel de cada rota são escritos à mão, e o teste pega rota esqu
 1. Respostas de sucesso sem schema: só valem o `api.md`. Se o grupo quiser, dá para tipar os objetos de resposta (D24).
 2. O Swagger fica visível a qualquer um em desenvolvimento; em produção não existe (nada a configurar).
 
+## D35 — Área do paciente no front
+
+> **Status: fechada.** Aprovada pelo usuário em 2026-10-22 (opção "telas do paciente"); fecha o "Em aberto" da D30 e o
+> item 2 da D33. A pergunta à Colzani "o paciente vai marcar pelo sistema?" continua aberta (seção 6 das pendências).
+
+**O quê:**
+1. Duas rotas, só para o paciente logado (C): `/minha-conta` (Minhas consultas) e `/minha-conta/agendar` (Marcar
+   consulta). Nenhuma rota nova na API: tudo o que a tela usa já atende o papel C (`docs/api.md`).
+2. **Layout:** o mesmo `AppShell` das telas da clínica, com a navegação do paciente (Minhas consultas, Marcar consulta,
+   Sair) e sem a busca de pacientes e o botão "Novo Agendamento". O Figma não tem tela do paciente; vale o visual das
+   telas existentes.
+3. **Minhas consultas** (C recebe só as próprias): "Próximas" vêm de `GET /api/consultas?status=CONFIRMADA&de=<hoje>`
+   e mostram as que ainda não começaram, da mais perto para a mais longe. "Histórico" vem de
+   `GET /api/consultas?porPagina=100`, sem as próximas, da mais nova para a mais antiga; se `total` passar de 100, a tela
+   avisa quantas mostra. Duas leituras porque a lista é em ordem de `inicio` e a paginação cortaria as mais novas.
+4. **Cancelar:** o mesmo popup da F3 (D33). Se faltar menos de 24 h pelo relógio do navegador, a justificativa já abre
+   obrigatória; a regra continua sendo da API (`JUSTIFICATIVA_OBRIGATORIA` torna o campo obrigatório,
+   `CONSULTA_JA_INICIADA` vira mensagem). Consulta que já começou não tem botão de cancelar. O texto do popup muda: quem
+   cancela é o paciente, e o SMS só sai quando a clínica cancela (D14).
+5. **Marcar:** procedimento (para C a API só devolve os ativos), dentista ou "qualquer dentista", calendário
+   (`dias-disponiveis`) e horários (`horarios-livres`, só no passo — D12), e `POST /api/consultas` sem `pacienteId`
+   (vem do token). Erro 409 de horário recarrega as vagas, como na F3.
+6. **Fora desta decisão:** remarcar pelo paciente (ele cancela e marca outra; a API permite remarcação por C, mas sem
+   tela), editar os próprios dados e alertas, e observação do paciente na consulta.
+
+**Por quê:** a API já cobria o papel C desde o backend do MVP, e a apresentação mostra os três papéis (D10). Reaproveitar o
+calendário, os horários e o popup da F3 mantém as mesmas regras e mensagens nas duas pontas.
+
+**Alternativas descartadas:**
+- *Reaproveitar a tela de Novo Agendamento com um modo "paciente":* ela tem busca e cadastro de paciente, remarcação e
+  dentista travado para D; os condicionais iam passar do que a tela do paciente precisa. A tela nova usa os mesmos
+  componentes (`CalendarioDeDias`, `Horarios`).
+- *Layout próprio (o `AuthLayout` do login):* duas navegações para manter; o `AppShell` já resolve topo, menu e celular.
+- *Deixar a área fora do MVP* (opção "b"): recusada pelo usuário.
+
+**Em aberto:**
+1. Se a Colzani responder que só a recepção agenda, basta tirar a rota `/minha-conta/agendar` e o link do menu.
+
+## D36 — Testes de tela no front (Testing Library + jsdom)
+
+> **Status: fechada.** Muda o item 5 da D30 ("Vitest só no cliente HTTP") e a alternativa descartada de lá.
+
+**O quê:**
+1. Telas testadas com `@testing-library/react` 16.3.3, `@testing-library/dom` 10.4.2, `@testing-library/user-event`
+   14.6.7 e `jsdom` 30.1.2 (só `devDependencies`, versões exatas).
+2. Cada teste de tela declara `// @vitest-environment jsdom` no topo; os testes de funções puras continuam no ambiente
+   `node`, sem pagar a subida do jsdom.
+3. A API é simulada no `fetch` (`src/testes/tela.jsx`), por método e caminho: o teste passa pelo cliente HTTP real
+   (formato de erro, `ErroDaApi`, mensagens). A sessão entra por um `SessaoContexto` com o usuário do teste, e as rotas
+   por `MemoryRouter`.
+4. Testam os fluxos principais (o que o usuário faz e o que a tela mostra), não detalhe de markup.
+
+**Por quê:** a D30 descartou teste de tela porque as telas seriam refeitas; depois da F3 elas estão ligadas à API e
+estáveis, e as telas novas (área do paciente, administração) têm regra que só aparece na tela: campo que vira
+obrigatório, botão que some, mensagem do código de erro certo.
+
+**Alternativas descartadas:**
+- *Playwright contra a API rodando:* precisa do navegador e do Postgres no `npm test` do front; o fluxo inteiro da API já
+  está no ponta a ponta do backend (`backend/src/e2e/`).
+- *MSW para simular a API:* mais uma dependência para o que um `fetch` falso por caminho já faz.
+- *happy-dom:* mais rápido, mas com mais diferenças de comportamento do navegador que o jsdom.
+
+**Em aberto:** nada.
+
+## D37 — Telas de administração e disponibilidade
+
+> **Status: fechada.** Fecha o item 4 de "O que falta" do README: funcionários, procedimentos, grade e bloqueios saem
+> da API para a tela. Nenhuma rota nova na API.
+
+**O quê:**
+1. **Rotas do front e quem entra** (a matriz é a do `api.md`; a tela só esconde, quem garante é a API — D10):
+
+   | Rota                    | Quem         | O que faz                                                                   |
+   |-------------------------|--------------|-----------------------------------------------------------------------------|
+   | `/admin/equipe`         | A            | Lista, cadastra, edita, desativa e reativa funcionários                      |
+   | `/admin/procedimentos`  | A            | Lista, cadastra, edita, desativa e reativa procedimentos                     |
+   | `/disponibilidade`      | R, D, A      | Grade semanal (A edita; R e D só leem) e bloqueios (R de todos; D os próprios) |
+
+   `RotaProtegida` ganha `permitir(usuario)`: funcionário sem o papel volta para `/inicio`. O menu só mostra o que o
+   usuário pode abrir.
+2. **Desativar** é `PATCH { ativo: false }`; não existe `DELETE` (D18). Funcionário desativado perde as sessões (D21.5);
+   procedimento desativado some para o paciente e da tela de agendamento. Os dois podem ser reativados.
+3. **Funcionário novo** não recebe senha (D21.1): a tela avisa que a pessoa define a dela em "Esqueci minha senha" com o
+   e-mail cadastrado. A edição manda só os campos que mudaram.
+4. **Preço** é digitado em reais (`180,00`) e enviado em centavos inteiros; duração em minutos inteiros.
+5. **Grade:** uma linha por dia da semana, com as faixas `HH:mm` de cada dia; "Salvar grade" faz o `PUT` da semana
+   inteira. A resposta `consultasForaDaGrade` aparece como lista de consultas para a recepção resolver (D12.5), com link
+   para cada uma.
+6. **Bloqueios:** lista os que terminam de hoje em diante (`?de=<hoje>`). O formulário pede início e fim
+   (`datetime-local`) e, para a recepção, os dentistas (feriado em lote: um bloqueio por dentista, tudo ou nada). O
+   instante vai com o fuso da clínica fixo em `-03:00`: o Brasil não tem horário de verão desde 2019, e a API recusa
+   instante sem fuso. O 409 `CONSULTAS_NO_PERIODO` lista as consultas que impedem o bloqueio.
+7. **Dentista** vê a própria grade e os próprios bloqueios, sem escolher outro dentista; dentista admin escolhe qualquer
+   um para a grade (A), e os bloqueios de colegas a tela não oferece (a API responderia 404).
+
+**Por quê:** sem essas telas a demonstração dependia de chamar a API na mão (Swagger). Grade e bloqueios ficam juntos
+porque os dois respondem à mesma pergunta ("quando este dentista atende?").
+
+**Alternativas descartadas:**
+- *Grade e bloqueios em telas separadas:* dois seletores de dentista para a mesma pergunta.
+- *Esconder só os botões e deixar a rota aberta:* a rota abriria e mostraria erro 403 em cada leitura.
+- *Fuso pela API do navegador (`Intl`):* o navegador pode estar em outro fuso; o que vale é o da clínica (D12).
+
+**Em aberto:**
+1. Se o Brasil voltar a ter horário de verão, o `-03:00` fixo do bloqueio precisa virar cálculo pelo fuso
+   `America/Sao_Paulo` (a API já calcula assim).
+
+## D38 — Pedidos simultâneos em login, refresh e códigos (issue #6)
+
+> **Status: fechada.** Detalha D5, D19, D25.3 e D27 para pedidos que chegam juntos; muda a D19 só na reapresentação de
+> refresh dentro de 10 s. Cada caso tem teste com `Promise.all` em `auth.concorrencia.test.ts`.
+
+**O quê:**
+1. **Login:** o bcrypt roda fora de transação; depois, a decisão (ler as falhas, bloquear ou não, registrar a tentativa,
+   criar a sessão) roda numa transação curta com trava consultiva do Postgres (`pg_advisory_xact_lock`) por
+   `(tipo, identificador)`. Três senhas erradas juntas → duas 401 e uma 423 (D27); oito juntas → duas 401 e seis 423.
+   Conta já bloqueada também paga o bcrypt antes do 423.
+2. **Refresh:** a sessão é lida com `FOR UPDATE` na mesma transação da rotação. Um token revogado há menos de **10 s**
+   (`JANELA_DE_CORRIDA_DO_REFRESH_MS`) e reapresentado recebe 401 **sem** derrubar as outras sessões: é a segunda aba que
+   pediu junto. Depois de 10 s vale a D19 (reapresentação derruba todas as sessões da conta).
+3. **Pedido de código:** `emitirCodigo` roda na própria transação com trava consultiva por `(tipo, identificador)`;
+   cinco pedidos juntos → três 202 e dois 429 (D25.3).
+4. **Tentativa de código:** a tentativa é reservada antes da comparação, num `UPDATE ... SET tentativas = tentativas + 1
+   WHERE tentativas < 3` atômico; sem tentativa disponível, `CODIGO_INVALIDO`. Seis códigos errados juntos gastam três
+   tentativas, e o código certo depois não vale mais.
+5. **Confirmação de cadastro em dobro:** já era segura (o uso do código é condicional e o CPF é único); agora tem teste.
+
+**Por quê:**
+1. Cada tentativa lia "0 falhas" antes do bcrypt (~250 ms) e só gravava depois: oito tentativas paralelas passavam como
+   oito primeiras, e o bloqueio de 3 tentativas (D5) não valia contra quem dispara em paralelo.
+2. Duas abas abertas renovam o mesmo cookie quando o access token vence. Com a regra antiga, a aba que chegasse logo
+   depois da rotação derrubava a sessão de todas: o usuário era deslogado sem ter feito nada.
+3. Pedidos em paralelo liam a contagem antes de qualquer gravação: o limite de SMS não segurava rajada.
+4. Pelo mesmo motivo, um código de 6 dígitos aceitava muito mais que 3 chutes, e o incremento em paralelo chegava a dar
+   500.
+
+**Alternativas descartadas:**
+- *Transação longa com o bcrypt dentro:* cada tentativa seguraria uma conexão do pool por ~250 ms enquanto as outras da
+  mesma conta esperam; uma rajada contra uma conta esgotaria o pool de todos.
+- *Registrar a tentativa como FALHA antes do bcrypt e trocar para SUCESSO depois:* um login certo em andamento contaria
+  como falha para as tentativas paralelas, e a 3ª derrubaria a sessão que acabou de nascer.
+- *Coluna "substituído por" no refresh para reconhecer a rotação:* resolve o mesmo caso com mais uma coluna; a janela
+  de tempo não muda o schema.
+- *Janela maior (1 min):* deixaria um token roubado ser reapresentado sem alarme por mais tempo.
+
+**Em aberto:** nada.
+
+## D39 — Qualidade: acessibilidade, controles sem ação, matriz de papéis e relógio (issues #2, #3, #5, #7)
+
+> **Status: fechada.** Fecha os critérios das issues #2, #3, #5 e #7 e a conferência de layout em 400px.
+
+**O quê:**
+1. **Acessibilidade (#2).**
+   - `axe-core` 4.14.0 (devDependency, sem dependências próprias) roda em 14 telas com dados no `npm test`
+     (`src/acessibilidade.test.jsx`). O jsdom não calcula cor nem layout, então a regra de contraste fica desligada ali;
+     o contraste foi medido com o mesmo axe no Edge, em todas as telas e papéis (`docs/acessibilidade.md`).
+   - Cores de texto escurecidas até 4,5:1 contra o fundo mais exigente em que aparecem (14 cores; `--muted` e
+     `--primary-dark` incluídas). Ícones coloridos dos cartões ficam como estão (gráfico pede 3:1).
+   - Fonte mínima de 12px; `:focus-visible` de 2px em `#00577a` (7:1 com o branco); campo dentro de invólucro mostra o
+     foco no invólucro (`:focus-within`).
+   - Foco preso nos painéis modais (`useFocoPreso`: gaveta, edição do paciente, popup de cancelamento).
+   - Abas do perfil com `tablist`/`tab`/`tabpanel`, `aria-controls` e setas, Home e End.
+   - Landmarks: o menu lateral é `<aside aria-label="Menu lateral">`, o topo é `<header>` fora de `<section>` (banner);
+     telas sem título visível têm `<h1>` só para leitor de tela. Dias do calendário anunciam a data inteira.
+2. **Controles sem ação (#3):** saíram Relatórios, Configurações, Notificações e Perfil (não há tela nem decisão para
+   eles); os atalhos do Início viraram links para telas que o papel abre. `src/botoes.test.js` falha se algum `<button>`
+   não tiver `onClick` nem `type="submit"`.
+3. **Matriz de papéis (#5):** `backend/src/matriz-de-papeis.test.ts` deriva a matriz das colunas "Quem" do `api.md`,
+   confere que ela é igual a `docs/matriz-de-papeis.md` e que tem exatamente as 43 rotas registradas, e chama cada rota com
+   cada papel (anônimo, R, R-admin, D, C): 215 casos. No front, `/pacientes/novo` passa a ser só da recepção
+   (`permitir={ehRecepcao}`), como o `POST /api/pacientes`.
+4. **Relógio (#7):**
+   - Front: toda leitura de "agora" passa por `useRelogio()` (`src/relogio.js`); os testes de tela injetam um relógio
+     fixo, sem timers falsos. Funções puras recebem o instante (sem `new Date()` por padrão).
+   - Backend: `criarContextoDeTeste` repõe o relógio no instante inicial antes de cada teste; o ponta a ponta é sequência
+     declarada (`shuffle: false`). As duas suítes passam com `npm run test:embaralhado`.
+   - Testes novos de `RotaProtegida`, `RotaPublica`, `SessaoProvider`, Início, Detalhes da consulta e Perfil.
+5. **Layout em 400px**, conferido no Edge: o Sair vai para o topo (a barra de baixo não tinha espaço e o escondia), a barra
+   de baixo rola quando o admin tem mais itens do que cabem, cartões laterais ocupam a largura toda e os seletores fora do
+   cartão de agendamento ganharam o mesmo visual (`src/celular.css`).
+
+**Por quê:** cada item é um critério escrito nas issues; o teste de cada um falha se a regressão voltar.
+
+**Alternativas descartadas:**
+- *`vitest-axe`/`jest-axe`:* embrulham o mesmo `axe-core` em mais uma dependência.
+- *Lighthouse/pa11y no CI:* precisam de navegador e da API rodando no `npm test`.
+- *Matriz escrita à mão no teste:* seria uma terceira fonte para divergir; derivar do `api.md` faz o contrato mandar.
+- *Timers falsos do Vitest no lugar do relógio injetado:* funcionam, mas trocam o `Date` global de todo o teste,
+  inclusive o da biblioteca de testes.
+
+**Em aberto:**
+1. Telas com Figma: as cores escurecidas e a fonte mínima mudam um pouco o visual do protótipo. Se o grupo quiser, ajustar
+   o Figma para as cores novas.
+
+## D40 — Preparação para produção: proxy, limite por IP, índices e retenção (issue #4)
+
+> **Status: fechada**, com o prazo de retenção pendente da Colzani (seção 6 das pendências). Fecha o "Em aberto 1" da
+> D32, muda o item 2 da D32 (refresh fora do limite) e a D5 num ponto (falha com mais de N dias deixa de contar).
+
+**O quê:**
+1. **`PROXY_CONFIAVEL`** (opcional) diz ao Express quem está na frente da API, para o limite por IP ver o IP de quem
+   pediu e não o do proxy:
+   - ausente ou vazio: não confia em proxy nenhum (o padrão de hoje; `X-Forwarded-For` é ignorado);
+   - número inteiro ≥ 1: quantos proxies há na frente (Express `trust proxy` = N; ex.: `1` atrás de um Nginx);
+   - lista separada por vírgula de IPs, sub-redes ou nomes do Express (`loopback`, `uniquelocal`): só esses.
+   `true` é recusado na subida: confiar em qualquer um deixaria o cliente forjar o IP no `X-Forwarded-For` e fugir do
+   limite.
+2. **O limite por IP em `/api/auth` deixa de contar `POST /api/auth/refresh`.**
+3. **Índices** (migration `indices_e_restrict`): `RefreshToken(loginId)`, `RefreshToken(funcionarioId)`,
+   `Bloqueio(dentistaId, inicio)`, `GradeHorario(dentistaId)`, `AlertaCliente(clienteId)`, `Consulta(procedimentoId)` e
+   `HistoricoObservacao(consultaId)`.
+4. **As seis FKs `SET NULL`** (`AlertaCliente.autorFuncionarioId` e `.removidoPorFuncionarioId`,
+   `Consulta.canceladoPorFuncionarioId`, `HistoricoObservacao.autorFuncionarioId`, `RefreshToken.loginId` e
+   `.funcionarioId`) viram `RESTRICT`.
+5. **Retenção:** `npm run limpar:dados` apaga o que passou de `RETENCAO_DIAS` dias (padrão **90, pendente de confirmação
+   com a clínica**): tentativas de login, códigos de verificação, e sessões (refresh) vencidas ou revogadas. Sessão
+   ainda válida nunca é apagada. Roda uma vez por dia pelo agendador do servidor (cron, Agendador de Tarefas); o README
+   mostra como.
+6. Consequência da retenção para o bloqueio (muda a D5): uma falha de login com mais de N dias some e deixa de contar.
+   O paciente bloqueado há mais de N dias sem redefinir a senha volta a ter 3 tentativas.
+
+**Por quê:**
+1. Atrás do proxy do deploy todo pedido chegaria com o mesmo IP, e o limite de 200 pedidos valeria para a clínica
+   inteira somada.
+2. O limite existe por causa do bcrypt e dos SMS (D32), e o refresh não gasta nenhum dos dois; o token tem 256 bits e não
+   se adivinha. E cada carregamento de página faz um refresh: na conferência do Bloco 4 (D39), percorrer as telas
+   esgotou os 200 pedidos — uma recepção com vários computadores atrás do mesmo IP chegaria lá num dia normal.
+3. São as colunas filtradas pelas rotas mais usadas (sessão conferida em todo pedido autenticado — D31 —, horários
+   livres, grade, alertas do perfil, histórico de observação) e as FKs que o Postgres não indexa sozinho.
+4. A D18 já diz que nada é apagado se outra tabela aponta. Com `SET NULL`, apagar um funcionário esbarrava nos CHECKs que
+   exigem a coluna preenchida (ex.: cancelamento da clínica tem funcionário) e o erro aparecia como violação de CHECK, sem
+   dizer a causa.
+5. As três tabelas guardam CPF, e-mail e IP de quem tentou entrar, e crescem a cada tentativa, inclusive de ataque
+   (LGPD: guardar só pelo tempo necessário). O código de verificação só conta por 24 h (D25.3); a sessão vencida não
+   serve para nada.
+6. Guardar a falha para sempre só para manter o bloqueio contradiz a retenção; 3 tentativas a cada N dias não ajudam
+   quem tenta adivinhar a senha.
+
+**Alternativas descartadas:**
+- *`trust proxy = true`:* aceita qualquer `X-Forwarded-For`; o cliente escolheria o próprio IP.
+- *Limite separado e maior só para o refresh:* mais um número para calibrar, protegendo algo que não precisa.
+- *Rotina dentro do servidor (`setInterval`):* rodaria em cada instância e só enquanto o processo estivesse no ar.
+- *`pg_cron` no banco:* extensão a mais no Postgres para uma tarefa que um agendador do sistema já faz.
+- *Manter as falhas de quem está bloqueado:* as de CPFs inexistentes (ataque) nunca seriam apagadas.
+
+**Em aberto:**
+1. Prazo de retenção (`RETENCAO_DIAS`): confirmar com a Colzani (`docs/pendencias-colzani.md`, seção 6).
+2. Com mais de uma instância da API, o contador do limite precisa de store compartilhado (D32, "Em aberto 2").
+
+## D41 — Roteiro de demonstração e paciente de exemplo no `db:seed:dev`
+
+> **Status: fechada.** Só dados fictícios de desenvolvimento; o `db:seed:dev` continua recusando `NODE_ENV=production`.
+
+**O quê:**
+1. O `db:seed:dev` cria também o paciente **Marcos Oliveira (exemplo)** (CPF `123.456.789-09`, sem login) com duas
+   consultas de Limpeza com a Dra. Ana Costa: uma no último dia útil antes de hoje, às 09:00 (já passou: aparece como
+   pendente de registro), e uma no próximo dia útil, às 10:00. Só cria as consultas se o paciente ainda não tiver
+   nenhuma; o "hoje" vem de um parâmetro (relógio injetável, #7).
+2. `docs/roteiro-de-demonstracao.md`: a apresentação percorre os quatro papéis só pelas telas, inclusive o 409 de
+   horário (duas abas no mesmo horário) e a ativação da conta do paciente.
+
+**Por quê:** "marcar como realizada" só vale depois do início da consulta, e as telas não marcam no passado (D22 deixa
+recepção e dentista registrarem atendimento passado só pela API). Sem a consulta de ontem, a demonstração dependeria de
+chamar a API na mão ou de esperar a hora da consulta.
+
+**Alternativas descartadas:**
+- *Tela de "registrar atendimento já acontecido":* funcionalidade nova só para a apresentação.
+- *Mudar o relógio do servidor na demonstração:* afeta sessão, códigos e tudo o que depende da hora.
+
+**Em aberto:** nada.
+
 ## Próximo
 
-Estado em 2026-10-22: backend completo para o MVP (43 rotas, 375 testes) e front ligado à API até a F3. O resto está no
-README, seção "O que falta para finalizar". Em resumo:
+Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos
+quatro papéis, e 175 testes. Detalhes no README, seção "O que falta". Em resumo:
 
-1. ~~Spec, plano, backend, Swagger e as fatias F1 a F3 do front.~~ Feitos (`docs/plano-implementacao.md`).
-2. **Conferir a F3 no navegador** com a dentista com grade semanal definida.
-3. **Fechamento da Tarefa 23:** script de cobertura dos códigos de erro e ponta a ponta.
-4. **Área do paciente** (`/minha-conta`): decidir se entra no MVP (D30, D33 em aberto).
-5. **Telas de administração** (funcionários, procedimentos, grade, bloqueios): hoje só pela API.
-6. **Produção:** enviador real de SMS e e-mail, `trust proxy` (D32), índices e retenção de dados.
-7. Pendências que **não** travam o código (dependem da clínica): `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3 e
-   `dataInicio` da D18, além das perguntas novas da seção 6).
+1. ~~Spec, plano, backend, Swagger, fatias F1 a F3 e Tarefa 23.~~ Feitos (`docs/plano-implementacao.md`).
+2. ~~Área do paciente (D35), administração (D37), qualidade (D38, D39), produção (D40) e demonstração (D41).~~ Feitos.
+3. **Enviador real de SMS e e-mail** (issue #1): depende do provedor escolhido com a Colzani.
+4. **Conferência humana** no navegador, no celular e com leitor de tela (`docs/roteiro-de-demonstracao.md`,
+   `docs/acessibilidade.md`); o percurso automatizado no Edge já passou.
+5. Pendências que dependem da clínica: `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3, `dataInicio` da D18, prazo
+   de retenção da D40, paciente marcando pelo sistema da D35 e as demais perguntas da seção 6).

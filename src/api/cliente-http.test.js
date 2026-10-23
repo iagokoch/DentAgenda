@@ -60,6 +60,16 @@ describe('cliente HTTP', () => {
     expect(erro).toMatchObject({ status: 400, codigo: 'ENTRADA_INVALIDA', mensagem: 'Dados inválidos.', campos })
   })
 
+  it('campos extras do erro (ex.: consultas do CONSULTAS_NO_PERIODO) vão em detalhes', async () => {
+    const consultas = [{ id: 'c1', dentistaId: 'd1', inicio: '2026-12-24T09:00:00-03:00', paciente: { id: 'p1', nome: 'Marcos' } }]
+    const { fetch } = fetchFalso(json(409, { erro: { codigo: 'CONSULTAS_NO_PERIODO', mensagem: 'Há consultas.', consultas } }))
+    const cliente = criarClienteHttp({ fetch })
+
+    const erro = await cliente.pedir('/api/bloqueios', { metodo: 'POST', corpo: {} }).catch((falha) => falha)
+
+    expect(erro).toMatchObject({ status: 409, codigo: 'CONSULTAS_NO_PERIODO', campos: [], detalhes: { consultas } })
+  })
+
   it('erro sem corpo JSON (proxy sem backend) vira ERRO_INTERNO', async () => {
     const { fetch } = fetchFalso(new Response('Bad Gateway', { status: 502 }))
     const cliente = criarClienteHttp({ fetch })

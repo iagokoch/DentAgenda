@@ -2,6 +2,7 @@ import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import type { Transacao } from '../../compartilhado/banco.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { ErroDeNegocio } from '../../compartilhado/erros.ts';
+import { travarChave } from '../../compartilhado/travas.ts';
 import type { FinalidadeCodigo, TipoConta } from '../../generated/prisma/client.ts';
 
 export const LIMITE_POR_HORA = 3;
@@ -29,8 +30,16 @@ type PedidoDeCodigo = {
   destino: string | null;
 };
 
-// Devolve o código em texto, só para quem vai enviá-lo.
-export async function emitirCodigo(tx: Transacao, contexto: Contexto, pedido: PedidoDeCodigo): Promise<string> {
+// Devolve o código em texto, só para quem vai enviá-lo. D38: pedidos simultâneos do mesmo identificador passam um de
+// cada vez (trava consultiva), senão todos leriam a contagem antes de qualquer gravação e o limite não seguraria rajada.
+export function emitirCodigo(contexto: Contexto, pedido: PedidoDeCodigo): Promise<string> {
+  return contexto.prisma.$transaction(async (tx) => {
+    await travarChave(tx, `codigo:${pedido.tipo}:${pedido.identificador}`);
+    return emitirNaTransacao(tx, contexto, pedido);
+  });
+}
+
+async function emitirNaTransacao(tx: Transacao, contexto: Contexto, pedido: PedidoDeCodigo): Promise<string> {
   const agora = contexto.relogio.agora();
   const { identificador, tipo, finalidade, destino } = pedido;
   // D25.3: janelas móveis, somando todas as finalidades do par (identificador, tipo).
@@ -90,14 +99,14 @@ export async function consumirCodigo(
   });
   if (!linha) throw codigoInvalido();
 
+  // D38: a tentativa é reservada antes da comparação, num UPDATE condicional: chutes simultâneos não passam das 3.
+  const reservada = await contexto.prisma.codigoVerificacao.updateMany({
+    where: { id: linha.id, usadoEm: null, tentativas: { lt: MAXIMO_TENTATIVAS_CODIGO } },
+    data: { tentativas: { increment: 1 } },
+  });
+  if (reservada.count === 0) throw codigoInvalido();
   const destinoConfere = pedido.destino === undefined || pedido.destino === linha.destino;
-  if (!destinoConfere || !hashesIguais(hashDoCodigo(pedido.codigo, contexto), linha.codigoHash)) {
-    await contexto.prisma.codigoVerificacao.update({
-      where: { id: linha.id },
-      data: { tentativas: { increment: 1 } },
-    });
-    throw codigoInvalido();
-  }
+  if (!destinoConfere || !hashesIguais(hashDoCodigo(pedido.codigo, contexto), linha.codigoHash)) throw codigoInvalido();
 
   // Condicional: dois pedidos simultâneos com o mesmo código não passam os dois.
   const usado = await contexto.prisma.codigoVerificacao.updateMany({
