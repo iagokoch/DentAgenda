@@ -13,5 +13,8 @@ export default defineConfig({
     // Sem isto o Vitest da raiz também pegaria os testes de backend/.
     // Telas (.test.jsx) pedem o jsdom no próprio arquivo (D36).
     include: ['src/**/*.test.{js,jsx}'],
+    // As telas usam o fuso do navegador; sem isto a suíte dependeria do fuso da máquina
+    // (a CI roda em UTC). Fixa o da clínica.
+    env: { TZ: 'America/Sao_Paulo' },
   },
 })
