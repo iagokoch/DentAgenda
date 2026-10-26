@@ -85,7 +85,7 @@ export default function Alertas({ pacienteId }) {
       <form className="alertas__novo" onSubmit={adicionar}>
         <label htmlFor="novo-alerta" className="caps-label">Novo alerta</label>
         <div className="input-wrap"><input id="novo-alerta" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Ex.: Alergia a látex" maxLength={500} /></div>
-        <button className="primary-btn primary-btn--solid" disabled={enviando || !texto.trim() || estado === 'erro'}>Adicionar alerta</button>
+        <button type="submit" className="primary-btn primary-btn--solid" disabled={enviando || !texto.trim() || estado === 'erro'}>Adicionar alerta</button>
       </form>
     </section>
   )

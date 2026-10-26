@@ -3,7 +3,7 @@
 .primary-btn--solid:hover{background:#025a7c;filter:none}
 .primary-btn--solid:disabled{background:#dce4f8;color:#8793a6}
 .soft-btn:disabled{opacity:.55;cursor:not-allowed}
-.caps-label{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#55607a;margin-bottom:10px}
+.caps-label{display:block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#55607a;margin-bottom:10px}
 .optional{font-weight:500;font-size:13px;color:#55607a}
 .breadcrumb{font-size:13px;color:#55607a;margin-bottom:14px}
 .breadcrumb a{color:var(--primary-dark);font-weight:600}
@@ -25,7 +25,7 @@
 .patient-table{padding:0;overflow:hidden}
 .patient-row{display:grid;grid-template-columns:minmax(0,2.2fr) minmax(0,1.3fr) minmax(0,1.3fr) 130px;gap:16px;align-items:center;padding:14px 24px;border-top:1px solid var(--border);font-size:14px;color:#3b4660}
 .patient-row:not(.patient-row--head):hover{background:#f8f9ff}
-.patient-row--head{border-top:0;padding-top:18px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#55607a}
+.patient-row--head{border-top:0;padding-top:18px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#55607a}
 .patient-row__nome{display:flex;align-items:center;gap:12px;min-width:0}
 .patient-row__nome strong{color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .patient-row__abrir{justify-self:end;font-size:13px}

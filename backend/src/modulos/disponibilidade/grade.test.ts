@@ -35,10 +35,12 @@ const MANHA_E_TARDE: Faixa[] = [
 
 describe('PUT /api/dentistas/{id}/grade', () => {
   it('PUT por admin substitui a semana e GET devolve a nova', async () => {
-    await gravar(await tokenDe(contexto, admin), dentista.id, [{ diaSemana: 3, inicio: '09:00', fim: '10:00' }]);
+    // Dentista só deste teste: outro teste do arquivo marca consultas para `dentista`, e a ordem pode mudar (#7).
+    const semConsultas = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
+    await gravar(await tokenDe(contexto, admin), semConsultas.id, [{ diaSemana: 3, inicio: '09:00', fim: '10:00' }]);
 
-    const resposta = await gravar(await tokenDe(contexto, admin), dentista.id, MANHA_E_TARDE);
-    const leitura = await ler(await tokenDe(contexto, admin), dentista.id);
+    const resposta = await gravar(await tokenDe(contexto, admin), semConsultas.id, MANHA_E_TARDE);
+    const leitura = await ler(await tokenDe(contexto, admin), semConsultas.id);
 
     expect(resposta.status).toBe(200);
     expect(resposta.body.grade).toEqual(MANHA_E_TARDE);

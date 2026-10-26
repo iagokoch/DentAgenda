@@ -85,6 +85,8 @@ describe('POST /api/auth/refresh', () => {
     const segundaRefresh = refreshDoCookie(outroLogin.headers);
     await renovar(primeira.refreshToken);
 
+    // Depois da janela de corrida de 10 s (D38): não é outra aba, é reapresentação.
+    contexto.relogio.avancarMinutos(1);
     await renovar(primeira.refreshToken);
     const segunda = await renovar(segundaRefresh);
 

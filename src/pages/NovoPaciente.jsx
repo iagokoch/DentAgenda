@@ -104,7 +104,7 @@ export default function NovoPaciente() {
           {erro && <p className="form-error" role="alert">{erro}</p>}
           <div className="form-actions">
             <Link className="soft-btn" to="/pacientes">Cancelar</Link>
-            <button className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Cadastrando…' : 'Cadastrar paciente'}</button>
+            <button type="submit" className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Cadastrando…' : 'Cadastrar paciente'}</button>
           </div>
         </form>
 

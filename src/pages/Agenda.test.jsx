@@ -1,12 +1,9 @@
 // @vitest-environment jsdom
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import Agenda from './Agenda.jsx'
-
-beforeEach(() => vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-05T12:00:00Z') }))
-afterEach(() => vi.useRealTimers())
 
 const limpeza = { id: 'proc-1', nome: 'Limpeza', duracaoMinutos: 60, precoCentavos: 18000, ativo: true }
 const consultaMarcada = {
@@ -34,7 +31,7 @@ async function escolherLimpezaDia6As9() {
   renderizarTela(<Agenda />, { usuario: USUARIOS.recepcao, caminho: '/agenda?pacienteId=paciente-1', rota: '/agenda' })
   expect(await screen.findByText('Marcos Oliveira')).toBeTruthy()
   await userEvent.selectOptions(await screen.findByLabelText('Procedimento'), 'proc-1')
-  await userEvent.click(await screen.findByRole('button', { name: '6' }))
+  await userEvent.click(await screen.findByRole('button', { name: '6 de outubro de 2026' }))
   await userEvent.click(await screen.findByRole('button', { name: '09:00' }))
 }
 

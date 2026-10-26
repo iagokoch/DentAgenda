@@ -1,6 +1,7 @@
 import type { Transacao } from '../../compartilhado/banco.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { ErroDeNegocio } from '../../compartilhado/erros.ts';
+import { travarChave } from '../../compartilhado/travas.ts';
 import { conferirSenha, gerarHashDeSenha, gerarSenhaAleatoria } from '../../compartilhado/senhas.ts';
 import { gerarAccessToken } from '../../compartilhado/tokens.ts';
 import type { ResultadoTentativa, TipoConta } from '../../generated/prisma/client.ts';
@@ -31,87 +32,97 @@ const contaDoClienteBloqueada = () =>
 const contaDoFuncionarioBloqueada = () =>
   new ErroDeNegocio(423, 'CONTA_BLOQUEADA', 'Conta bloqueada por 15 minutos após 3 tentativas.');
 
+// D38: o bcrypt roda fora de transação; a decisão (falhas, bloqueio, tentativa e sessão) roda numa transação curta,
+// travada por conta, para tentativas simultâneas contarem umas com as outras. O erro sai depois do commit: a tentativa
+// registrada não pode ser desfeita junto com a resposta 401/423.
+type Decisao = { erro: ErroDeNegocio } | { sucesso: ResultadoDoLogin };
+
+function aplicar(decisao: Decisao): ResultadoDoLogin {
+  if ('erro' in decisao) throw decisao.erro;
+  return decisao.sucesso;
+}
+
+const chaveDoLogin = (tipo: TipoConta, identificador: string) => `login:${tipo}:${identificador}`;
+
 export async function loginCliente(
   contexto: Contexto,
   entrada: EntradaDoLogin & { cpf: string },
 ): Promise<ResultadoDoLogin> {
-  const registrar = (resultado: ResultadoTentativa) =>
-    registrarTentativa(contexto.prisma, contexto, entrada.cpf, 'CLIENTE', entrada.ip, resultado);
-  const tentativas = await tentativasDesdeUltimaLiberacao(contexto, entrada.cpf, 'CLIENTE');
-  if (clienteEstaBloqueado(tentativas)) {
-    await registrar('FALHA');
-    throw contaDoClienteBloqueada();
-  }
-
   const cliente = await contexto.prisma.cliente.findUnique({ where: { cpf: entrada.cpf }, include: { login: true } });
   const senhaCerta = await conferirSenhaSemRevelarConta(entrada.senha, cliente?.login?.senhaHash);
-  if (!cliente?.login || !senhaCerta) {
-    const falha = await registrar('FALHA');
-    if (!clienteEstaBloqueado([...tentativas, falha])) throw credenciaisInvalidasDoCliente();
-    // D19: conta bloqueada derruba todas as sessões.
-    if (cliente?.login) await revogarTodasAsSessoes(contexto.prisma, { loginId: cliente.login.id }, contexto);
-    throw contaDoClienteBloqueada();
-  }
 
-  const login = cliente.login;
-  return contexto.prisma.$transaction(async (tx) => {
-    await registrarTentativa(tx, contexto, entrada.cpf, 'CLIENTE', entrada.ip, 'SUCESSO');
+  const decisao = await contexto.prisma.$transaction(async (tx): Promise<Decisao> => {
+    await travarChave(tx, chaveDoLogin('CLIENTE', entrada.cpf));
+    const registrar = (resultado: ResultadoTentativa) =>
+      registrarTentativa(tx, contexto, entrada.cpf, 'CLIENTE', entrada.ip, resultado);
+    const tentativas = await tentativasDesdeUltimaLiberacao(tx, entrada.cpf, 'CLIENTE');
+    if (clienteEstaBloqueado(tentativas)) {
+      await registrar('FALHA');
+      return { erro: contaDoClienteBloqueada() };
+    }
+    const login = cliente?.login;
+    if (!cliente || !login || !senhaCerta) {
+      const falha = await registrar('FALHA');
+      if (!clienteEstaBloqueado([...tentativas, falha])) return { erro: credenciaisInvalidasDoCliente() };
+      // D19: conta bloqueada derruba todas as sessões.
+      if (login) await revogarTodasAsSessoes(tx, { loginId: login.id }, contexto);
+      return { erro: contaDoClienteBloqueada() };
+    }
+
+    await registrar('SUCESSO');
     const sessao = await criarSessao(tx, { loginId: login.id }, contexto);
     const accessToken = gerarAccessToken({ tipo: 'CLIENTE', clienteId: cliente.id, sessaoId: sessao.sessaoId }, contexto);
     return {
-      accessToken,
-      refreshToken: sessao.refreshToken,
-      expiraEm: sessao.expiraEm,
-      usuario: usuarioDoCliente(cliente),
+      sucesso: { accessToken, refreshToken: sessao.refreshToken, expiraEm: sessao.expiraEm, usuario: usuarioDoCliente(cliente) },
     };
   });
+  return aplicar(decisao);
 }
 
 export async function loginFuncionario(
   contexto: Contexto,
   entrada: EntradaDoLogin & { email: string },
 ): Promise<ResultadoDoLogin> {
-  const registrar = (resultado: ResultadoTentativa) =>
-    registrarTentativa(contexto.prisma, contexto, entrada.email, 'FUNCIONARIO', entrada.ip, resultado);
-  const agora = contexto.relogio.agora();
-  const tentativas = await tentativasDesdeUltimaLiberacao(contexto, entrada.email, 'FUNCIONARIO');
-  if (funcionarioBloqueadoAte(tentativas, agora)) {
-    await registrar('FALHA');
-    throw contaDoFuncionarioBloqueada();
-  }
-
   const funcionario = await contexto.prisma.funcionario.findUnique({ where: { email: entrada.email } });
   const senhaCerta = await conferirSenhaSemRevelarConta(entrada.senha, funcionario?.senhaHash);
-  if (!funcionario?.ativo || !senhaCerta) {
-    const falha = await registrar('FALHA');
-    if (funcionarioBloqueadoAte([...tentativas, falha], agora)) throw contaDoFuncionarioBloqueada();
-    throw credenciaisInvalidasDoFuncionario();
-  }
 
-  return contexto.prisma.$transaction(async (tx) => {
-    await registrarTentativa(tx, contexto, entrada.email, 'FUNCIONARIO', entrada.ip, 'SUCESSO');
+  const decisao = await contexto.prisma.$transaction(async (tx): Promise<Decisao> => {
+    await travarChave(tx, chaveDoLogin('FUNCIONARIO', entrada.email));
+    const registrar = (resultado: ResultadoTentativa) =>
+      registrarTentativa(tx, contexto, entrada.email, 'FUNCIONARIO', entrada.ip, resultado);
+    const agora = contexto.relogio.agora();
+    const tentativas = await tentativasDesdeUltimaLiberacao(tx, entrada.email, 'FUNCIONARIO');
+    if (funcionarioBloqueadoAte(tentativas, agora)) {
+      await registrar('FALHA');
+      return { erro: contaDoFuncionarioBloqueada() };
+    }
+    if (!funcionario?.ativo || !senhaCerta) {
+      const falha = await registrar('FALHA');
+      if (funcionarioBloqueadoAte([...tentativas, falha], agora)) return { erro: contaDoFuncionarioBloqueada() };
+      return { erro: credenciaisInvalidasDoFuncionario() };
+    }
+
+    await registrar('SUCESSO');
     const sessao = await criarSessao(tx, { funcionarioId: funcionario.id }, contexto);
     const accessToken = gerarAccessToken(autenticadoDoFuncionario(funcionario, sessao.sessaoId), contexto);
     return {
-      accessToken,
-      refreshToken: sessao.refreshToken,
-      expiraEm: sessao.expiraEm,
-      usuario: usuarioDoFuncionario(funcionario),
+      sucesso: { accessToken, refreshToken: sessao.refreshToken, expiraEm: sessao.expiraEm, usuario: usuarioDoFuncionario(funcionario) },
     };
   });
+  return aplicar(decisao);
 }
 
 // Busca só a partir do último acerto/redefinição: o histórico de um identificador atacado cresce sem limite.
 async function tentativasDesdeUltimaLiberacao(
-  contexto: Contexto,
+  tx: Transacao,
   identificador: string,
   tipo: TipoConta,
 ): Promise<Tentativa[]> {
-  const ultimaLiberacao = await contexto.prisma.tentativaLogin.findFirst({
+  const ultimaLiberacao = await tx.tentativaLogin.findFirst({
     where: { identificador, tipo, resultado: { not: 'FALHA' } },
     orderBy: { ocorridoEm: 'desc' },
   });
-  return contexto.prisma.tentativaLogin.findMany({
+  return tx.tentativaLogin.findMany({
     where: { identificador, tipo, ocorridoEm: { gte: ultimaLiberacao?.ocorridoEm ?? new Date(0) } },
     orderBy: { ocorridoEm: 'asc' },
     select: { ocorridoEm: true, resultado: true },

@@ -3,15 +3,16 @@ import { mensagemDoErro, somenteDigitos } from '../api/mensagens.js'
 import { dataDeHoje } from '../agenda/calendario.js'
 import Gaveta from '../components/Gaveta.jsx'
 import { formatarCpf } from '../pacientes/formatar.js'
+import { useRelogio } from '../relogio.js'
 import { mudancas } from './formatos.js'
 
-const dadosDoFormulario = (funcionario) => ({
+const dadosDoFormulario = (funcionario, agora) => ({
   nome: funcionario?.nome ?? '',
   cpf: funcionario ? formatarCpf(funcionario.cpf) : '',
   email: funcionario?.email ?? '',
   categoria: funcionario?.categoria ?? 'RECEPCIONISTA',
   cro: funcionario?.cro ?? '',
-  dataInicio: funcionario?.dataInicio ?? dataDeHoje(new Date()),
+  dataInicio: funcionario?.dataInicio ?? dataDeHoje(agora),
   isAdmin: funcionario?.isAdmin ?? false,
 })
 
@@ -26,7 +27,8 @@ function corpoDoFormulario(dados) {
 // `aoSalvar(corpo)` recebe o corpo do POST, ou só o que mudou no caso da edição.
 export default function GavetaDeFuncionario({ funcionario, aoSalvar, aoFechar }) {
   const editando = Boolean(funcionario)
-  const [dados, setDados] = useState(() => dadosDoFormulario(funcionario))
+  const relogio = useRelogio()
+  const [dados, setDados] = useState(() => dadosDoFormulario(funcionario, relogio.agora()))
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const alterar = (campo) => (evento) => setDados({ ...dados, [campo]: evento.target.type === 'checkbox' ? evento.target.checked : evento.target.value })
@@ -35,7 +37,7 @@ export default function GavetaDeFuncionario({ funcionario, aoSalvar, aoFechar })
     evento.preventDefault()
     setErro('')
     const corpo = corpoDoFormulario(dados)
-    const envio = editando ? mudancas(corpoDoFormulario(dadosDoFormulario(funcionario)), corpo) : corpo
+    const envio = editando ? mudancas(corpoDoFormulario(dadosDoFormulario(funcionario, relogio.agora())), corpo) : corpo
     if (editando && Object.keys(envio).length === 0) return aoFechar()
     setEnviando(true)
     try {
@@ -80,7 +82,7 @@ export default function GavetaDeFuncionario({ funcionario, aoSalvar, aoFechar })
         {erro && <p className="form-error" role="alert">{erro}</p>}
         <div className="drawer__footer">
           <button type="button" className="soft-btn" onClick={aoFechar}>Cancelar</button>
-          <button className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar'}</button>
+          <button type="submit" className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar'}</button>
         </div>
       </form>
     </Gaveta>

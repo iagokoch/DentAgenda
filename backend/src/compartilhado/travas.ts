@@ -9,3 +9,9 @@ export async function travarDentistas(tx: Transacao, dentistaIds: string[]): Pro
   await tx.$queryRaw`
     SELECT id FROM "Funcionario" WHERE id = ANY(${dentistaIds}::uuid[]) ORDER BY id FOR UPDATE`;
 }
+
+// D38: serializa pedidos sobre a mesma chave (ex.: login do mesmo CPF) até o fim da transação, sem linha para travar:
+// a trava consultiva do Postgres vale por chave e some no commit ou rollback.
+export async function travarChave(tx: Transacao, chave: string): Promise<void> {
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${chave}, 0))`;
+}

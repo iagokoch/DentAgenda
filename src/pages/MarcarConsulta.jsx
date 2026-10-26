@@ -5,7 +5,7 @@ import { mensagemDoErro, mensagemDoHorario } from '../api/mensagens.js'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
 import CalendarioDeDias from '../agenda/CalendarioDeDias.jsx'
 import Horarios from '../agenda/Horarios.jsx'
-import { dataEHoraLegiveis, horaDoInstante, mesDaData, precoEmReais } from '../agenda/calendario.js'
+import { dataEHoraLegiveis, horaDoInstante, precoEmReais } from '../agenda/calendario.js'
 import { useEscolhaDeHorario } from '../agenda/useEscolhaDeHorario.js'
 import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
@@ -57,6 +57,7 @@ function Marcacao({ aoMarcarOutra }) {
 
   return (
     <AppShell title="Marcar consulta" wide>
+      <h1 className="sr-only">Marcar consulta</h1>
       <div className="schedule-grid">
         <div className="schedule-main">
           <section className="schedule-card">
@@ -91,7 +92,7 @@ function Marcacao({ aoMarcarOutra }) {
           </section>
         </div>
         <aside className="schedule-side">
-          <CalendarioDeDias mes={escolha.mes} mesMinimo={mesDaData(new Date())} dias={escolha.dias} diaEscolhido={escolha.dia} aoMudarMes={aoMudar(escolha.mudarMes)} aoEscolher={aoMudar(escolha.escolherDia)} />
+          <CalendarioDeDias mes={escolha.mes} mesMinimo={escolha.mesMinimo} dias={escolha.dias} diaEscolhido={escolha.dia} aoMudarMes={aoMudar(escolha.mudarMes)} aoEscolher={aoMudar(escolha.escolherDia)} />
           <Horarios horarios={escolha.horarios} horarioEscolhido={horario} aviso={avisoDoHorario} aoEscolher={aoMudar(escolha.escolherHorario)} />
         </aside>
       </div>

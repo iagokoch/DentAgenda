@@ -15,7 +15,7 @@ import Equipe from './pages/admin/Equipe';
 import Procedimentos from './pages/admin/Procedimentos';
 import SessaoProvider from './sessao/SessaoProvider';
 import { RotaProtegida, RotaPublica } from './sessao/rotas';
-import { ehAdmin } from './sessao/sessao-contexto.js';
+import { ehAdmin, ehRecepcao } from './sessao/sessao-contexto.js';
 
 const publica = (pagina) => <RotaPublica>{pagina}</RotaPublica>;
 const daClinica = (pagina) => <RotaProtegida tipo="FUNCIONARIO">{pagina}</RotaProtegida>;
@@ -34,7 +34,7 @@ function App() {
           <Route path="/recuperar-senha" element={publica(<RecuperarSenha />)} />
           <Route path="/inicio" element={daClinica(<Inicio />)} />
           <Route path="/pacientes" element={daClinica(<Pacientes />)} />
-          <Route path="/pacientes/novo" element={daClinica(<NovoPaciente />)} />
+          <Route path="/pacientes/novo" element={<RotaProtegida tipo="FUNCIONARIO" permitir={ehRecepcao}><NovoPaciente /></RotaProtegida>} />
           <Route path="/pacientes/:pacienteId" element={daClinica(<PerfilPaciente />)} />
           <Route path="/agenda" element={daClinica(<Agenda />)} />
           <Route path="/consultas/:consultaId" element={daClinica(<DetalhesDaConsulta />)} />

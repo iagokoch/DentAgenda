@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import Icon from './Icon'
+import { useFocoPreso } from './useFocoPreso.js'
 
-// Painel lateral modal (o mesmo visual do "Editar dados" do paciente): foco no primeiro campo do formulário, Esc e
-// clique fora fecham, e o foco volta para quem abriu.
+// Painel lateral modal (o mesmo visual do "Editar dados" do paciente): foco no primeiro campo do formulário e preso no
+// painel (#2), Esc e clique fora fecham, e o foco volta para quem abriu.
 export default function Gaveta({ titulo, subtitulo, aoFechar, children }) {
   const painel = useRef(null)
   const aoFecharAtual = useRef(aoFechar)
+  useFocoPreso(painel)
 
   useEffect(() => {
     aoFecharAtual.current = aoFechar

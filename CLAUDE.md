@@ -8,37 +8,44 @@ Colzani Odontologia (PAC VI — Engenharia de Software). Projeto acadêmico em g
 
 Confira antes de assumir qualquer coisa:
 
-- **Front-end: existe e está sendo ligado à API em fatias (D30).** React 19 + Vite +
-  react-router-dom, em `src/`. **Ligado à API (F1):** login (um campo "CPF ou e-mail": com `@` vai
-  para o login de funcionário, senão de paciente), cadastro em duas etapas (código por SMS, D15),
-  recuperação de senha (6 dígitos, paciente e funcionário), sessão restaurada pelo refresh ao
-  recarregar, rotas protegidas (funcionário → telas da clínica; paciente → `/minha-conta`), `AppShell` com o usuário real e Sair. **Ligado à API (F2):** busca e
-  cadastro de pacientes (`/pacientes`, `/pacientes/novo`), Perfil do Paciente com dados, endereço e alertas
-  reais e painel "Editar dados" (só recepção).
-  **Ligado à API (F3, D33):** Início real, Novo Agendamento (`/agenda`, também remarca com `?remarcar=<id>`), Detalhes da
-  consulta (`/consultas/:id`: cancelar, remarcar, realizar, observação com histórico) e Histórico no perfil do paciente.
-  **Área do paciente (D35):** `/minha-conta` (próximas e histórico, cancelar; justificativa já obrigatória a menos de
-  24 h) e `/minha-conta/agendar` (marcar), no mesmo `AppShell` com a navegação do paciente.
-  **Administração (D37):** `/admin/equipe` e `/admin/procedimentos` (só admin; `RotaProtegida permitir={ehAdmin}`) e
-  `/disponibilidade` (grade: A edita, R e D leem; bloqueios: R de todos, em lote; D os próprios).
-- **Backend: pronto para o MVP** em `backend/`, seguindo `docs/plano-implementacao.md` (Tarefas 0 a 23 feitas,
-  plano fechado). As 43 rotas de `docs/api.md` existem e têm teste contra Postgres real (381 testes): `auth` (11),
-  pacientes (com endereço e alertas), funcionários e `GET /api/dentistas`, procedimentos, grade semanal, bloqueios,
-  horários livres e dias disponíveis, e as 9 rotas de `/api/consultas`. Seeds: `db:seed` (admin inicial) e `db:seed:dev`
-  (dados fictícios). Defesas de borda (D31, D32): sessão conferida no banco em toda rota autenticada, `helmet` e limite
-  por IP em `/api/auth`. Swagger (Tarefa 22, D34): `/api/docs` e `/api/docs.json`, só fora de produção; cada
-  `*.rotas.ts` exporta `rotasDocumentadas<Dominio>` e `src/modulos-documentados.ts` as liga aos routers.
-  `npm run conferir:codigos` falha se algum código de erro do `api.md` não aparecer em teste (D23); o fluxo da clínica
-  inteiro, só com login real, está em `src/e2e/ponta-a-ponta.test.ts` (roteiro manual em `docs/ponta-a-ponta.md`).
-  Em caso de conflito entre código e documento, vale `docs/documentacao.md`.
-- **O que falta (ordem sugerida; detalhes no README):** (1) conferir a F3 no navegador (`docs/ponta-a-ponta.md`);
-  (2) ~~Tarefa 23~~ feita; (3) ~~área do paciente~~ feita (D35); (4) ~~telas de administração~~ feitas (D37); (5) para produção:
-  enviador real de SMS e e-mail (issue #1), `trust proxy` (D32), índices e retenção (#4). Issues #1 a #7 no GitHub cobrem
-  produção e qualidade.
+- **MVP completo, front e API ligados em todas as telas (2026-10-22).** Os quatro papéis usam o sistema só pelas telas;
+  o roteiro de demonstração (`docs/roteiro-de-demonstracao.md`) foi percorrido no Edge contra a API real. Falta só o
+  que depende da clínica (abaixo, "O que falta").
+- **Front-end** em `src/` (React 19 + Vite + react-router-dom), visual das 8 telas do Figma:
+  - **Autenticação (F1):** login com um campo "CPF ou e-mail" (com `@` vai para o login de funcionário, senão de
+    paciente), cadastro e ativação em duas etapas (código por SMS, D15), recuperação de senha (6 dígitos), sessão
+    restaurada pelo refresh ao recarregar.
+  - **Clínica (F2, F3, D33):** Início, busca e cadastro de pacientes (cadastro só recepção), Perfil com dados, endereço,
+    alertas, "Editar dados" e Histórico; Novo Agendamento (`/agenda`, remarca com `?remarcar=<id>`); Detalhes da
+    consulta (cancelar, remarcar, realizar, observação com histórico).
+  - **Paciente (D35):** `/minha-conta` (próximas e histórico; cancelar, com justificativa já obrigatória a menos de
+    24 h) e `/minha-conta/agendar` (marcar), no mesmo `AppShell` com a navegação do paciente.
+  - **Administração (D37):** `/admin/equipe` e `/admin/procedimentos` (só admin, `RotaProtegida permitir={ehAdmin}`) e
+    `/disponibilidade` (grade: A edita, R e D leem; bloqueios: R de todos, em lote; D os próprios).
+  - **Qualidade (D36, D39):** testes de tela com Testing Library + jsdom e API simulada no `fetch`; axe em 14 telas;
+    relógio injetado (`useRelogio`); foco visível, foco preso nos modais, contraste de 4,5:1, fonte mínima de 12px;
+    layout conferido em 400px (no celular o Sair fica no topo).
+- **Backend** em `backend/`: as 43 rotas de `docs/api.md`, com teste contra Postgres real (628 testes). Seeds:
+  `db:seed` (admin inicial) e `db:seed:dev` (procedimentos, Ana Costa, Carla Souza e o paciente de exemplo com uma
+  consulta pendente de ontem — D41). Defesas: sessão conferida no banco em toda rota autenticada (D31), `helmet`, limite
+  por IP em `/api/auth` sem contar o refresh e com `PROXY_CONFIAVEL` atrás de proxy (D32, D40), login/refresh/códigos
+  seguros em pedidos simultâneos (D38). Swagger em `/api/docs`, só fora de produção (D34). Retenção:
+  `npm run limpar:dados` (D40).
+  - **Testes que protegem o contrato:** `npm run conferir:codigos` (todo código de erro do `api.md` em teste, D23);
+    `src/e2e/ponta-a-ponta.test.ts` (o fluxo da clínica só com login real); `src/matriz-de-papeis.test.ts` (43 rotas ×
+    anônimo, R, R-admin, D, C, conferida contra o `api.md` e `docs/matriz-de-papeis.md`); `auth.concorrencia.test.ts`
+    (corridas, D38). O relógio dos testes volta ao instante inicial a cada teste; as suítes passam com
+    `npm run test:embaralhado`.
+  - Em caso de conflito entre código e documento, vale `docs/documentacao.md` (D1 a D41).
+- **O que falta:** (1) enviador real de SMS e e-mail (issue #1; sem ele a API recusa `NODE_ENV=production`, D16), que
+  depende do provedor escolhido com a Colzani; (2) respostas da clínica em `docs/pendencias-colzani.md`, entre elas o
+  prazo de retenção (90 dias provisórios, D40) e se o paciente marca pelo sistema (D35); (3) conferência humana no
+  navegador e no celular de verdade (README, "O que falta"). Fora do escopo por decisão: abas Documentos e Financeiro
+  (continuam "em breve") e encaixe fora do passo (`janelasLivres`, D33).
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
   Express 5 + cookie-parser, swagger-ui-express (D34), pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
-  MySQL foi descartado — ver D6.
+  Front: Testing Library 16 + jsdom 30 (D36) e axe-core 4.14 (D39), só em devDependencies. MySQL foi descartado — ver D6.
 - **Framework HTTP:** Express + Zod, código por domínio (rota → controller → service →
   Prisma), testes Vitest + Supertest contra Postgres real (D17).
 - **Figma** — usar a cópia com acesso de edição (o MCP do Figma exige edição até para ler):
@@ -48,7 +55,7 @@ Confira antes de assumir qualquer coisa:
   `1:2`, Dashboard / Início `1:1549`, Perfil do Paciente `1:897`, Novo Agendamento `1:1704`,
   Detalhes da Consulta `1:1161`, Agenda de Consultas `1:1899`. O `get_metadata` da página
   inteira estoura o limite de tokens — consultar por tela. A cópia não acompanha mudanças no
-  arquivo original.
+  arquivo original. As telas de paciente e de administração não estão no Figma (D35, D37).
 
 ## Comandos
 
@@ -57,7 +64,8 @@ npm install
 npm run dev      # http://localhost:5173
 npm run build
 npm run lint     # oxlint
-npm test         # Vitest do front: funções puras e telas (Testing Library + jsdom, D36)
+npm test         # Vitest do front: funções puras, telas (Testing Library + jsdom, D36) e axe (D39)
+npm run test:embaralhado   # mesma suíte em ordem aleatória (#7); existe também no backend
 ```
 
 Front + API juntos: suba a API (`backend`, `npm run dev`) e o front (`npm run dev` na raiz); o
@@ -72,8 +80,10 @@ cd backend
 docker compose up -d     # Postgres 17 com os bancos dentagenda e dentagenda_test
 npm install              # também gera o client do Prisma (postinstall)
 npm run db:migrate       # aplica as migrations no banco de desenvolvimento
+npm run db:seed; npm run db:seed:dev   # admin inicial; dados fictícios e paciente de exemplo (D41)
 npm run lint; npm run typecheck; npm test   # testes aplicam as migrations no banco de teste
 npm run conferir:codigos # todo código de erro do docs/api.md tem teste (D23)
+npm run limpar:dados     # retenção (D40): agendar uma vez por dia no servidor
 npm run dev              # API em http://localhost:<PORTA do .env>/api
 ```
 
@@ -96,9 +106,11 @@ src/
   admin/        formatos (puro: preço em reais, fuso da clínica, grade por dia, diff do PATCH), GavetaDeFuncionario,
                 GavetaDeProcedimento
   disponibilidade/ GradeSemanal (A edita; R e D leem), Bloqueios (R em lote; D os próprios)
-  testes/       tela.jsx: API simulada no fetch, sessão e rotas para os testes de tela (D36)
+  testes/       tela.jsx: API simulada no fetch, sessão, rotas e relógio fixo para os testes de tela (D36, D39)
+  relogio.js    useRelogio(): toda tela lê "agora" daqui; os testes injetam um relógio fixo (#7)
+  acessibilidade.test.jsx, botoes.test.js  axe nas telas (#2) e nenhum botão sem ação (#3)
   pacientes/    formatar, endereco (puros, com testes), Alertas, EditarPaciente, CampoDeEndereco, HistoricoDoPaciente
-  index.css     Tokens de design
+  index.css     Tokens de design; importa styles, pacientes, agenda, admin, celular (400px) e acessibilidade (foco)
   styles.css    Estilos das páginas
   App.jsx       Rotas
   main.jsx      Entrada
@@ -112,6 +124,10 @@ backend/
                          banco, erros-do-banco, relogio, datas (fuso de São Paulo), cpf, paginacao
   src/modulos/auth/      Login, sessões (refresh em cookie), bloqueio de login, códigos, recuperação e autocadastro
   src/modulos/procedimentos/  Listar (cliente só ativos), criar e editar (admin)
+  src/modulos/…          pacientes, funcionarios, disponibilidade (grade, bloqueios, horários livres), consultas
+  src/compartilhado/travas.ts, retencao.ts  Travas (FOR UPDATE, consultiva — D22.7, D38) e limpeza por prazo (D40)
+  src/e2e/               Ponta a ponta da clínica; src/matriz-de-papeis.test.ts (#5)
+  scripts/               conferir-codigos-de-erro.ts (D23) e limpar-dados-antigos.ts (D40)
   src/modulos-documentados.ts Liga cada router ao que o Swagger mostra dele (D34)
   src/generated/         Client do Prisma, gerado (fora do git)
   testes/                Apoio aos testes: migrations, limpeza do banco, contexto com relógio
@@ -122,6 +138,10 @@ docs/
   documentacao.md        Registro de decisões de arquitetura e modelagem (D1, D2, ...)
   pendencias-colzani.md  Perguntas que só a clínica responde
   api.md                 Contrato da API (rotas, entrada, saída, erros)
+  matriz-de-papeis.md    Rota × papel com o status esperado (testado contra o api.md e o código)
+  ponta-a-ponta.md       Roteiro manual do fluxo da clínica (o mesmo do teste e2e)
+  acessibilidade.md      Como conferir acessibilidade e 400px no navegador, e a última conferência
+  roteiro-de-demonstracao.md  A apresentação nos quatro papéis, só pelas telas (D41)
 ```
 
 ## Escopo do MVP do backend
@@ -156,6 +176,11 @@ a decisão que agora vale no lugar:
 - **Figma × decisões (F1):** as telas de login, cadastro e recuperação do Figma pedem e-mail e
   código de 4 dígitos. Valem as decisões: paciente entra por CPF (D1.1), cadastro pede CPF,
   telefone, código, nome e senha (D15), código tem 6 dígitos (D19). O visual do Figma foi mantido.
+
+- **Figma × D39:** cores de texto escurecidas para 4,5:1 e fonte mínima de 12px; o Figma ainda tem as cores antigas.
+- **Hora no front:** use `useRelogio().agora()`, nunca `new Date()` direto numa tela (#7); funções puras recebem o
+  instante. Os testes de tela injetam o relógio pelo `renderizarTela` (`src/testes/tela.jsx`).
+- **Botão:** todo `<button>` tem `onClick` ou `type="submit"` (`src/botoes.test.js`, #3).
 
 Resolvidas na F3 (D33): preço e horários hardcoded da Agenda, `confirm()` que sempre confirmava, dentista e status
 fixos do Perfil e números fictícios do Início; tudo vem da API, e as telas não têm mais faixa de protótipo.

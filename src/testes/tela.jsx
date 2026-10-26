@@ -1,6 +1,9 @@
+// Arquivo só de teste: o aviso de fast refresh (componentes e constantes no mesmo módulo) não se aplica.
+/* oxlint-disable react/only-export-components */
 import { cleanup, render } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, vi } from 'vitest'
+import { RelogioContexto } from '../relogio.js'
 import { SessaoContexto } from '../sessao/sessao-contexto.js'
 
 // Apoio aos testes de tela (D36). Quem importa este arquivo precisa de `// @vitest-environment jsdom` no topo.
@@ -8,6 +11,9 @@ afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
 })
+
+// Segunda, 2026-10-05, 09:00 em São Paulo: o mesmo instante inicial dos testes do backend.
+export const AGORA_DOS_TESTES = new Date('2026-10-05T12:00:00Z')
 
 export const ok = (corpo, status = 200) => ({ status, corpo })
 export const falha = (status, codigo, mensagem = `Erro ${codigo}.`) => ({ status, corpo: { erro: { codigo, mensagem } } })
@@ -38,23 +44,24 @@ export function simularApi(respostas) {
   return pedidos
 }
 
-// Arquivo só de teste: o aviso de fast refresh não se aplica.
-// oxlint-disable-next-line react/only-export-components
 function OutraTela() {
   const { pathname, search } = useLocation()
   return <p>Navegou para {pathname + search}</p>
 }
 
-// Renderiza a tela já logada com `usuario`, na rota `caminho`. Navegar para outra rota mostra "Navegou para <rota>".
-export function renderizarTela(elemento, { usuario = USUARIOS.recepcao, caminho = '/', rota = caminho.split('?')[0], sair = vi.fn() } = {}) {
+// Renderiza a tela com a sessão em `estado` (logado com `usuario`, 'anonimo' ou 'carregando'), na rota `caminho`, com
+// o relógio parado em `agora` (#7). Navegar para outra rota mostra "Navegou para <rota>".
+export function renderizarTela(elemento, { usuario = USUARIOS.recepcao, estado = 'logado', caminho = '/', rota = caminho.split('?')[0], sair = vi.fn(), agora = AGORA_DOS_TESTES } = {}) {
   return render(
-    <SessaoContexto value={{ estado: 'logado', usuario, entrar: vi.fn(), sair }}>
-      <MemoryRouter initialEntries={[caminho]}>
-        <Routes>
-          <Route path={rota} element={elemento} />
-          <Route path="*" element={<OutraTela />} />
-        </Routes>
-      </MemoryRouter>
-    </SessaoContexto>,
+    <RelogioContexto value={{ agora: () => new Date(agora) }}>
+      <SessaoContexto value={{ estado, usuario: estado === 'logado' ? usuario : null, entrar: vi.fn(), sair }}>
+        <MemoryRouter initialEntries={[caminho]}>
+          <Routes>
+            <Route path={rota} element={elemento} />
+            <Route path="*" element={<OutraTela />} />
+          </Routes>
+        </MemoryRouter>
+      </SessaoContexto>
+    </RelogioContexto>,
   )
 }

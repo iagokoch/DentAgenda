@@ -16,7 +16,7 @@ type ConfirmacaoDeRecuperacao = { codigo: string; novaSenha: string; ip: string 
 export async function pedirRecuperacaoCliente(contexto: Contexto, cpf: string): Promise<void> {
   const cliente = await contexto.prisma.cliente.findUnique({ where: { cpf }, include: { login: true } });
   const destino = cliente?.login ? cliente.telefone : null;
-  const codigo = await emitirCodigo(contexto.prisma, contexto, {
+  const codigo = await emitirCodigo(contexto, {
     identificador: cpf,
     tipo: 'CLIENTE',
     finalidade: 'RECUPERACAO',
@@ -29,7 +29,7 @@ export async function pedirRecuperacaoCliente(contexto: Contexto, cpf: string): 
 export async function pedirRecuperacaoFuncionario(contexto: Contexto, email: string): Promise<void> {
   const funcionario = await contexto.prisma.funcionario.findUnique({ where: { email } });
   const destino = funcionario?.ativo ? funcionario.email : null;
-  const codigo = await emitirCodigo(contexto.prisma, contexto, {
+  const codigo = await emitirCodigo(contexto, {
     identificador: email,
     tipo: 'FUNCIONARIO',
     finalidade: 'RECUPERACAO',

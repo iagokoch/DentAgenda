@@ -1,10 +1,12 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
 import { dataDeHoje, horaDoInstante } from '../agenda/calendario.js'
 import { STATUS_DA_CONSULTA } from '../agenda/status.js'
 import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
-import { useSessao } from '../sessao/sessao-contexto.js'
+import { useRelogio } from '../relogio.js'
+import { ehAdmin, ehRecepcao, useSessao } from '../sessao/sessao-contexto.js'
 
 const saudacaoPelaHora = (agora) => {
   const hora = agora.getHours()
@@ -12,12 +14,25 @@ const saudacaoPelaHora = (agora) => {
 }
 const dataPorExtenso = (agora) => agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()
 
+// #3: só atalhos que levam a uma tela que o papel abre (D37).
+function atalhosDe(usuario) {
+  const atalhos = [
+    { para: '/agenda', icone: 'calendar', texto: 'Agendar consulta' },
+    { para: '/pacientes', icone: 'users', texto: 'Buscar paciente' },
+    { para: '/disponibilidade', icone: 'clock', texto: 'Disponibilidade' },
+  ]
+  if (ehAdmin(usuario)) atalhos.push({ para: '/admin/equipe', icone: 'id', texto: 'Equipe' })
+  else if (ehRecepcao(usuario)) atalhos.push({ para: '/pacientes/novo', icone: 'plus', texto: 'Novo paciente' })
+  return atalhos
+}
+
 const plural = (quantidade, singular, pluralDaPalavra) => `${quantidade} ${quantidade === 1 ? singular : pluralDaPalavra}`
 
 export default function Inicio() {
   const navigate = useNavigate()
   const { usuario } = useSessao()
-  const agora = new Date()
+  const relogio = useRelogio()
+  const [agora] = useState(() => relogio.agora())
   const hoje = dataDeHoje(agora)
   const consultasDeHoje = useDadosDaApi(`/api/consultas?${new URLSearchParams({ de: hoje, ate: hoje, porPagina: '100' })}`)
   const pacientes = useDadosDaApi('/api/pacientes?porPagina=1')
@@ -66,10 +81,7 @@ export default function Inicio() {
           <section className="panel">
             <div className="panel__header"><h2>Acesso rápido</h2></div>
             <div className="quick-grid">
-              <button onClick={() => navigate('/agenda')}><Icon name="calendar" /><span>Agendar consulta</span></button>
-              <button onClick={() => navigate('/pacientes')}><Icon name="users" /><span>Buscar paciente</span></button>
-              <button><Icon name="report" /><span>Gerar relatório</span></button>
-              <button><Icon name="settings" /><span>Configurações</span></button>
+              {atalhosDe(usuario).map((atalho) => <Link key={atalho.para} to={atalho.para}><Icon name={atalho.icone} /><span>{atalho.texto}</span></Link>)}
             </div>
           </section>
           <section className="panel reminder">

@@ -94,7 +94,7 @@ function EditorDeGrade({ dentistaId, gradeInicial }) {
         {envio.estado === 'salvo' && <ResultadoDaGrade consultas={envio.consultasForaDaGrade} />}
       </div>
       <div className="grade-editor__acoes">
-        <button className="primary-btn primary-btn--solid" disabled={envio.estado === 'enviando'}>{envio.estado === 'enviando' ? 'Salvando…' : 'Salvar grade'}</button>
+        <button type="submit" className="primary-btn primary-btn--solid" disabled={envio.estado === 'enviando'}>{envio.estado === 'enviando' ? 'Salvando…' : 'Salvar grade'}</button>
       </div>
     </form>
   )

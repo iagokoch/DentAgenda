@@ -12,12 +12,14 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node --env-file=.env dist/server.js",
     "test": "vitest run",
+    "test:embaralhado": "vitest run --sequence.shuffle",
     "lint": "oxlint",
     "typecheck": "tsc --noEmit",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
     "db:seed:dev": "tsx --env-file=.env prisma/seed-dev.ts",
-    "conferir:codigos": "tsx scripts/conferir-codigos-de-erro.ts"
+    "conferir:codigos": "tsx scripts/conferir-codigos-de-erro.ts",
+    "limpar:dados": "tsx --env-file=.env scripts/limpar-dados-antigos.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

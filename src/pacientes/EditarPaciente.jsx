@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/api.js'
 import { mensagemDoErro, somenteDigitos } from '../api/mensagens.js'
 import Icon from '../components/Icon'
+import { useFocoPreso } from '../components/useFocoPreso.js'
 import CampoDeEndereco from './CampoDeEndereco.jsx'
 import { ENDERECO_VAZIO, enderecoParaEnviar, enderecoParaFormulario } from './endereco.js'
 import { formatarCpf } from './formatar.js'
@@ -35,6 +36,8 @@ export default function EditarPaciente({ paciente, aoFechar, aoAtualizar }) {
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const primeiroCampo = useRef(null)
+  const painel = useRef(null)
+  useFocoPreso(painel)
 
   useEffect(() => {
     const anterior = document.activeElement
@@ -85,7 +88,7 @@ export default function EditarPaciente({ paciente, aoFechar, aoAtualizar }) {
 
   return (
     <div className="drawer-backdrop" onMouseDown={(evento) => evento.target === evento.currentTarget && aoFechar()}>
-      <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="editar-titulo">
+      <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="editar-titulo" ref={painel}>
         <header className="drawer__header">
           <div><h2 id="editar-titulo">Editar dados</h2><p>{paciente.nome}</p></div>
           <button type="button" className="icon-button" aria-label="Fechar" onClick={aoFechar}><Icon name="close" /></button>
@@ -120,7 +123,7 @@ export default function EditarPaciente({ paciente, aoFechar, aoAtualizar }) {
           {erro && <p className="form-error" role="alert">{erro}</p>}
           <div className="drawer__footer">
             <button type="button" className="soft-btn" onClick={aoFechar}>Cancelar</button>
-            <button className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar alterações'}</button>
+            <button type="submit" className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar alterações'}</button>
           </div>
         </form>
       </aside>

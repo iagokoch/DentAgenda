@@ -108,7 +108,7 @@ export default function Cadastro() {
         )}
 
         {erro && <p className="form-error" role="alert">{erro}</p>}
-        <button className="primary-btn primary-btn--full" disabled={enviando}>
+        <button type="submit" className="primary-btn primary-btn--full" disabled={enviando}>
           {naConfirmacao ? 'Cadastrar' : 'Enviar código por SMS'}
         </button>
         {naConfirmacao && <button type="button" className="text-button" onClick={pedirCodigo} disabled={enviando}>Reenviar código</button>}

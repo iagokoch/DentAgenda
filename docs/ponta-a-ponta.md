@@ -52,11 +52,12 @@ No perfil dele, **Agendar Consulta**: escolha Limpeza, a Dra. Ana Costa, uma seg
 
 ## 3. Tentar o mesmo horário (409)
 
-Cadastre um segundo paciente e tente marcar Limpeza com a Ana no **mesmo dia e horário**. A tela não oferece o
-horário ocupado; para ver o 409, use o Swagger: `POST /api/consultas` com o `pacienteId` do segundo paciente e o mesmo
-`dentistaId`, `procedimentoId` e `inicio` da consulta do passo 2.
+A tela não oferece horário ocupado; o 409 aparece quando duas pessoas escolhem o mesmo horário ao mesmo tempo. Abra
+**Novo Agendamento** em **duas abas**, escolha o mesmo paciente, procedimento, dentista, dia e horário nas duas, e
+confirme primeiro numa e depois na outra.
 
-**Esperado:** 409 `HORARIO_INDISPONIVEL`, e nenhuma consulta criada.
+**Esperado:** a segunda aba recebe 409 `HORARIO_INDISPONIVEL` e mostra "Esse horário acabou de ser ocupado. Escolha
+outro horário.", recarregando as vagas; só uma consulta é criada.
 
 ## 4. Remarcar
 
@@ -82,9 +83,9 @@ Ana.
 ## 7. Marcar como realizada
 
 Antes do horário de início, o botão **Marcar como realizada** fica desabilitado (a API responderia 422
-`CONSULTA_NAO_INICIADA`). Para conferir sem esperar o dia, marque pelo Swagger uma consulta **no passado** (recepção
-e dentista podem registrar atendimento já acontecido — D22): o Início passa a avisar que uma consulta "já passou e
-ainda não foi marcada como realizada". Abra essa consulta e clique em **Marcar como realizada**.
+`CONSULTA_NAO_INICIADA`). Para conferir sem esperar o dia, use a consulta que o `db:seed:dev` cria no último dia útil
+para o paciente **Marcos Oliveira (exemplo)** (D41): o Início avisa que uma consulta "já passou e ainda não foi marcada
+como realizada". Abra-a (Pacientes → Marcos → Histórico) e clique em **Marcar como realizada**.
 
 **Esperado:** status Realizada; o Início volta a dizer "Nenhuma consulta pendente de registro."
 
@@ -94,4 +95,5 @@ Anote a data e quem conferiu. Diferenças entre o esperado e o que a tela mostro
 
 | Data | Quem | Resultado |
 |------|------|-----------|
+| 2026-10-22 | Percurso automatizado no Edge (Playwright), front e API reais, banco de desenvolvimento | Todas as etapas deste roteiro e do `docs/roteiro-de-demonstracao.md` passaram (17 passos, 4 papéis). Falta a conferência humana. |
 |      |      |           |

@@ -52,7 +52,7 @@ export default function Equipe() {
         {aviso.tipo === 'erro' && <p className="form-error" role="alert">{aviso.texto}</p>}
       </div>
 
-      <section className="panel patient-table" role="table" aria-label="Funcionários" aria-busy={funcionarios.estado === 'carregando'}>
+      <div className="panel patient-table" role="table" aria-label="Funcionários" aria-busy={funcionarios.estado === 'carregando'}>
         <div className="patient-row patient-row--head admin-row" role="row">
           <span role="columnheader">Funcionário</span><span role="columnheader">Categoria</span><span role="columnheader">Situação</span><span role="columnheader"><span className="sr-only">Ações</span></span>
         </div>
@@ -80,7 +80,7 @@ export default function Equipe() {
             </span>
           </div>
         ))}
-      </section>
+      </div>
 
       {gaveta && <GavetaDeFuncionario funcionario={gaveta.funcionario} aoSalvar={salvar} aoFechar={() => setGaveta(null)} />}
     </AppShell>
