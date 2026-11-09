@@ -5,6 +5,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { afterEach, vi } from 'vitest'
 import { RelogioContexto } from '../relogio.js'
 import { SessaoContexto } from '../sessao/sessao-contexto.js'
+import { coordenacaoDaSessao } from '../api/coordenacao-de-sessao.js'
 
 // Apoio aos testes de tela (D36). Quem importa este arquivo precisa de `// @vitest-environment jsdom` no topo.
 afterEach(() => {
@@ -25,6 +26,16 @@ export const USUARIOS = {
   admin: { id: 'admin-1', tipo: 'FUNCIONARIO', nome: 'Rita Lima', categoria: 'RECEPCIONISTA', isAdmin: true },
 }
 
+export function simularTravaEntreAbas() {
+  let fila = Promise.resolve()
+  vi.spyOn(coordenacaoDaSessao, 'entreAbas', 'get').mockReturnValue(true)
+  vi.spyOn(coordenacaoDaSessao, 'executar').mockImplementation((operacao) => {
+    const pedido = fila.then(operacao)
+    fila = pedido.catch(() => {})
+    return pedido
+  })
+}
+
 // Troca o fetch por respostas por "MÉTODO /caminho". A chave com query vale só para aquela query; sem query, vale para
 // qualquer query do caminho. Uma resposta pode ser função do pedido ({ metodo, url, corpo }), para variar entre
 // chamadas. Pedido sem resposta vira erro na tela, com a chave, para o teste falhar dizendo o que faltou.
@@ -36,7 +47,7 @@ export function simularApi(respostas) {
     const pedido = { metodo, url, caminho, corpo: opcoes.body ? JSON.parse(opcoes.body) : undefined }
     pedidos.push(pedido)
     const resposta = respostas[`${metodo} ${caminho}`] ?? respostas[`${metodo} ${url.pathname}`]
-    const { status, corpo } = typeof resposta === 'function' ? resposta(pedido) : (resposta ?? falha(599, 'SEM_SIMULACAO', `Sem resposta simulada para ${metodo} ${caminho}`))
+    const { status, corpo } = await (typeof resposta === 'function' ? resposta(pedido) : (resposta ?? falha(599, 'SEM_SIMULACAO', `Sem resposta simulada para ${metodo} ${caminho}`)))
     return corpo === null || status === 204
       ? new Response(null, { status })
       : new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })

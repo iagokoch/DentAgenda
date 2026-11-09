@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/api.js'
 import { mensagemDoErro, mensagemDoHorario } from '../api/mensagens.js'
@@ -22,6 +22,8 @@ function Marcacao({ aoMarcarOutra }) {
   const [procedimentoId, setProcedimentoId] = useState('')
   const [dentistaId, setDentistaId] = useState('')
   const [envio, setEnvio] = useState({ estado: 'parado' })
+  const [enviando, setEnviando] = useState(false)
+  const envioPendente = useRef(false)
   const procedimentos = useDadosDaApi('/api/procedimentos')
   const dentistas = useDadosDaApi('/api/dentistas')
   const escolha = useEscolhaDeHorario({ procedimentoId, dentistaId })
@@ -29,7 +31,7 @@ function Marcacao({ aoMarcarOutra }) {
 
   const procedimento = procedimentos.dados?.find((item) => item.id === procedimentoId)
   const dentistaDoHorario = dentistas.dados?.find((item) => item.id === horario?.dentistaId)
-  const podeConfirmar = Boolean(procedimento && horario) && envio.estado !== 'enviando'
+  const podeConfirmar = Boolean(procedimento && horario) && !enviando
 
   // Toda mudança antes do horário invalida o que já foi escolhido e a mensagem de erro anterior.
   const aoMudar = (acao) => (...argumentos) => {
@@ -40,7 +42,10 @@ function Marcacao({ aoMarcarOutra }) {
   const mudarDentista = aoMudar((id) => { setDentistaId(id); escolha.limpar() })
 
   async function confirmar() {
-    setEnvio({ estado: 'enviando' })
+    if (envioPendente.current || !podeConfirmar) return
+    envioPendente.current = true
+    setEnviando(true)
+    setEnvio({ estado: 'parado' })
     try {
       const consulta = await api.pedir('/api/consultas', { metodo: 'POST', corpo: { dentistaId: horario.dentistaId, procedimentoId, inicio: horario.inicio } })
       setEnvio({ estado: 'sucesso', consulta })
@@ -48,6 +53,9 @@ function Marcacao({ aoMarcarOutra }) {
       const mensagemDeHorario = mensagemDoHorario(falha)
       if (mensagemDeHorario) escolha.recarregarVagas()
       setEnvio({ estado: 'erro', mensagem: mensagemDeHorario ?? mensagemDoErro(falha) })
+    } finally {
+      envioPendente.current = false
+      setEnviando(false)
     }
   }
 
@@ -105,7 +113,7 @@ function Marcacao({ aoMarcarOutra }) {
         <Link className="text-button" to="/minha-conta">Voltar</Link>
         <div className="selection-bar__confirmar">
           <button type="button" className="primary-btn" disabled={!podeConfirmar} onClick={confirmar}>
-            {envio.estado === 'enviando' ? 'Marcando…' : 'Confirmar'}
+            {enviando ? 'Marcando…' : 'Confirmar'}
           </button>
         </div>
       </footer>

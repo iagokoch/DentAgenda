@@ -22,6 +22,7 @@ export function formatarConsulta(consulta: ConsultaComRelacoes) {
     fim: formatarEmSaoPaulo(consulta.fim),
     status: consulta.status,
     observacao: consulta.observacao,
+    versaoObservacao: consulta.versaoObservacao,
     criadoEm: formatarEmSaoPaulo(consulta.criadoEm),
     canceladoEm: emSaoPauloOuNulo(consulta.canceladoEm),
     canceladoPor: consulta.canceladoPor,

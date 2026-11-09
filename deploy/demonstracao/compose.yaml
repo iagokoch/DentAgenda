@@ -1,0 +1,92 @@
+name: dentagenda-demonstracao
+
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  banco:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: dentagenda
+      POSTGRES_PASSWORD: ${BANCO_ADMIN_SENHA:?Forneça a credencial administrativa por ambiente}
+    volumes:
+      - banco:/var/lib/postgresql/data
+    networks: [dados]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-d", "dentagenda"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    logging: *logs
+
+  migrations:
+    profiles: [migrations]
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: migrations
+    environment:
+      DATABASE_URL: ${DATABASE_URL_MIGRATIONS:?Forneça a URL de migrations por ambiente}
+    depends_on:
+      banco: { condition: service_healthy }
+    networks: [dados]
+    logging: *logs
+
+  api:
+    build:
+      context: ../..
+      dockerfile: backend/Dockerfile
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORTA: "3000"
+      DATABASE_URL: ${DATABASE_URL:?Forneça a URL do usuário restrito da aplicação}
+      JWT_SEGREDO: ${JWT_SEGREDO:?Forneça por ambiente}
+      CODIGO_HMAC_SEGREDO: ${CODIGO_HMAC_SEGREDO:?Forneça por ambiente}
+      ENVIADOR_MENSAGEM: ${ENVIADOR_MENSAGEM:?A implantação depende de um enviador aprovado para produção}
+      PROXY_CONFIAVEL: "1"
+    depends_on:
+      banco: { condition: service_healthy }
+    networks: [borda, dados]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    stop_grace_period: 15s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/saude/pronta').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging: *logs
+
+  front:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    depends_on:
+      api: { condition: service_healthy }
+    ports: ["127.0.0.1:8080:8080"]
+    networks: [borda]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1:8080/saude"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    logging: *logs
+
+networks:
+  borda:
+  dados:
+    internal: true
+
+volumes:
+  banco:

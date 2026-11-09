@@ -96,6 +96,7 @@ export async function criarConsultaNaTransacao(
       status: 'CONFIRMADA',
       criadoEm: agora,
       observacao: entrada.observacao ?? null,
+      versaoObservacao: entrada.observacao ? 1 : 0,
     },
     include: incluirRelacoesDaConsulta,
   });
@@ -107,6 +108,7 @@ export async function criarConsultaNaTransacao(
         autor: doCliente ? 'PACIENTE' : 'CLINICA',
         autorFuncionarioId: usuario.tipo === 'FUNCIONARIO' ? usuario.funcionarioId : null,
         editadoEm: agora,
+        versao: 1,
       },
     });
   }

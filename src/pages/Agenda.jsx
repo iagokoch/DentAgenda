@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../api/api.js'
 import { mensagemDoErro, mensagemDoHorario } from '../api/mensagens.js'
@@ -45,6 +45,8 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
   const [dentistaId, setDentistaId] = useState(ehDentista ? usuario.id : (original?.dentista.id ?? ''))
   const [observacao, setObservacao] = useState('')
   const [envio, setEnvio] = useState({ estado: 'parado' })
+  const [enviando, setEnviando] = useState(false)
+  const envioPendente = useRef(false)
 
   const procedimentos = useDadosDaApi('/api/procedimentos')
   const dentistas = useDadosDaApi('/api/dentistas')
@@ -54,7 +56,7 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
   const paciente = pacienteEscolhido !== undefined ? pacienteEscolhido : pacienteDoLink.dados ? { id: pacienteDoLink.dados.id, nome: pacienteDoLink.dados.nome } : null
   const procedimento = procedimentos.dados?.find((item) => item.id === procedimentoId)
   const dentistaDoHorario = dentistas.dados?.find((item) => item.id === horario?.dentistaId)
-  const podeConfirmar = Boolean(paciente && procedimento && horario) && envio.estado !== 'enviando'
+  const podeConfirmar = Boolean(paciente && procedimento && horario) && !enviando
 
   function mudarProcedimento(id) {
     setProcedimentoId(id)
@@ -96,7 +98,10 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
   }
 
   async function confirmar() {
-    setEnvio({ estado: 'enviando' })
+    if (envioPendente.current || !podeConfirmar) return
+    envioPendente.current = true
+    setEnviando(true)
+    setEnvio({ estado: 'parado' })
     try {
       const consulta = remarcando ? await remarcar() : await marcar()
       setEnvio({ estado: 'sucesso', consulta })
@@ -107,6 +112,9 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
         escolha.recarregarVagas()
       }
       setEnvio({ estado: 'erro', mensagem: mensagemDeHorario ?? mensagemDoErro(falha) })
+    } finally {
+      envioPendente.current = false
+      setEnviando(false)
     }
   }
 
@@ -156,7 +164,7 @@ function NovoAgendamento({ original, aoMarcarOutra }) {
         <Link className="text-button" to={remarcando ? `/consultas/${original.id}` : '/inicio'}>Cancelar</Link>
         <div className="selection-bar__confirmar">
           <button type="button" className="primary-btn" disabled={!podeConfirmar} onClick={confirmar}>
-            {envio.estado === 'enviando' ? 'Agendando…' : remarcando ? 'Confirmar Remarcação' : 'Confirmar Agendamento'}
+            {enviando ? 'Agendando…' : remarcando ? 'Confirmar Remarcação' : 'Confirmar Agendamento'}
           </button>
         </div>
       </footer>

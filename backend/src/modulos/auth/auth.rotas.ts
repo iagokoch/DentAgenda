@@ -43,7 +43,7 @@ export const rotasDocumentadasAuth: ModuloDocumentado = {
     { metodo: 'post', caminho: '/funcionario/recuperacao/confirmar', acesso: 'publica', resumo: 'Confirma o código e define a nova senha do funcionário', corpo: esquemaConfirmacaoDeRecuperacaoFuncionario },
     { metodo: 'post', caminho: '/cliente/cadastro/codigo', acesso: 'publica', resumo: 'Pede o código por SMS para o autocadastro do paciente', corpo: esquemaPedidoDeCadastro },
     { metodo: 'post', caminho: '/cliente/cadastro/confirmar', acesso: 'publica', resumo: 'Confirma o código e conclui o autocadastro', corpo: esquemaConfirmacaoDeCadastro },
-    { metodo: 'post', caminho: '/refresh', acesso: 'publica', resumo: 'Renova o accessToken pelo cookie de refresh (exige o cabeçalho X-DentAgenda-Refresh)' },
+    { metodo: 'post', caminho: '/refresh', acesso: 'publica', resumo: 'Renova o accessToken pelo cookie de refresh (exige o cabeçalho X-DentAgenda-Refresh)', cabecalhos: [{ nome: 'X-DentAgenda-Refresh', valor: '1' }] },
     { metodo: 'post', caminho: '/logout', acesso: 'logado', resumo: 'Encerra a sessão atual' },
     { metodo: 'get', caminho: '/eu', acesso: 'logado', resumo: 'Dados do usuário logado' },
   ],

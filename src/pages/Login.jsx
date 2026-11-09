@@ -15,7 +15,7 @@ function pedidoDeLogin(identificador, senha) {
 }
 
 export default function Login() {
-  const { entrar } = useSessao()
+  const { entrar, sair, saida, armazenamentoDisponivel = true } = useSessao()
   const [identificador, setIdentificador] = useState('')
   const [senha, setSenha] = useState('')
   const [mostrarSenha, setMostrarSenha] = useState(false)
@@ -24,6 +24,7 @@ export default function Login() {
 
   async function enviar(evento) {
     evento.preventDefault()
+    if (enviando || saida === 'encerrando') return
     setErro('')
     setEnviando(true)
     try {
@@ -38,6 +39,15 @@ export default function Login() {
   return (
     <AuthLayout>
       <form className="auth-card" onSubmit={enviar}>
+        {saida && (
+          <section className="form-info" aria-label="Encerramento de sessão" aria-live="polite">
+            <strong>{saida === 'pendente' ? 'Não foi possível confirmar sua saída' : 'Você saiu deste navegador'}</strong>
+            <p>{saida === 'encerrando' ? 'Encerrando sessão…' : saida === 'confirmada'
+              ? 'Sessão encerrada no servidor.' : 'Seus dados estão ocultos neste navegador. Tente novamente.'}</p>
+            {!armazenamentoDisponivel && <p>O navegador não permitiu registrar a saída. A restauração automática está bloqueada.</p>}
+            {saida !== 'confirmada' && <button type="button" className="soft-btn primary-btn--full" disabled={enviando || saida === 'encerrando'} onClick={sair}>Tentar encerrar novamente</button>}
+          </section>
+        )}
         <div className="field">
           <label htmlFor="login-identificador"><Icon name="mail" size={15} /> CPF ou e-mail</label>
           <div className="input-wrap">
@@ -68,7 +78,7 @@ export default function Login() {
         </div>
         <div className="auth-card__helper"><Link to="/recuperar-senha">Esqueci minha senha</Link></div>
         {erro && <p className="form-error" role="alert">{erro}</p>}
-        <button type="submit" className="primary-btn primary-btn--full" disabled={enviando}>{enviando ? 'Entrando…' : 'Entrar'}</button>
+        <button type="submit" className="primary-btn primary-btn--full" disabled={enviando || saida === 'encerrando'}>{enviando ? 'Entrando…' : 'Entrar'}</button>
         <p className="auth-switch">Primeiro acesso? <Link to="/cadastro">Cadastre-se</Link></p>
       </form>
     </AuthLayout>

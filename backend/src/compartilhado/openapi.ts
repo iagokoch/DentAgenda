@@ -12,6 +12,8 @@ export type RotaDocumentada = {
   resumo: string;
   acesso: Papel[] | 'publica' | 'logado';
   corpo?: z.ZodType;
+  corpoObrigatorio?: boolean;
+  cabecalhos?: { nome: string; valor: string }[];
   consulta?: z.ZodType;
 };
 
@@ -58,14 +60,20 @@ const caminhoNoOpenApi = (prefixo: string, caminho: string) => {
 };
 
 function operacaoDe(modulo: ModuloDocumentado, rota: RotaDocumentada) {
-  const parametros = [...parametrosDeCaminho(rota.caminho), ...(rota.consulta ? parametrosDeConsulta(rota.consulta) : [])];
+  const parametros = [
+    ...parametrosDeCaminho(rota.caminho),
+    ...(rota.consulta ? parametrosDeConsulta(rota.consulta) : []),
+    ...(rota.cabecalhos ?? []).map(({ nome, valor }) => ({
+      name: nome, in: 'header', required: true, schema: { type: 'string', enum: [valor] },
+    })),
+  ];
   return {
     tags: [modulo.tag],
     summary: rota.resumo,
     description: descricaoDoAcesso(rota.acesso),
     security: rota.acesso === 'publica' ? [] : [{ bearerAuth: [] }],
     ...(parametros.length > 0 && { parameters: parametros }),
-    ...(rota.corpo && { requestBody: { required: true, content: { 'application/json': { schema: esquemaJsonDe(rota.corpo) } } } }),
+    ...(rota.corpo && { requestBody: { required: rota.corpoObrigatorio ?? true, content: { 'application/json': { schema: esquemaJsonDe(rota.corpo) } } } }),
     responses: {
       '2XX': { description: 'Sucesso. O status exato de cada rota está em docs/api.md.' },
       default: {

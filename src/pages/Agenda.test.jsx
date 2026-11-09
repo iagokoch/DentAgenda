@@ -22,7 +22,10 @@ function apiDaAgenda(post) {
     'GET /api/procedimentos': ok([limpeza]),
     'GET /api/dentistas': ok([{ id: 'dentista-1', nome: 'Ana Costa' }]),
     'GET /api/dias-disponiveis': ok({ dias: ['2026-10-06'] }),
-    'GET /api/horarios-livres': ok({ horarios: [{ dentistaId: 'dentista-1', inicio: '2026-10-06T09:00:00-03:00' }], janelasLivres: [] }),
+    'GET /api/horarios-livres': ok({ horarios: [
+      { dentistaId: 'dentista-1', inicio: '2026-10-06T09:00:00-03:00' },
+      { dentistaId: 'dentista-1', inicio: '2026-10-06T10:00:00-03:00' },
+    ], janelasLivres: [] }),
     'POST /api/consultas': post,
   })
 }
@@ -36,6 +39,23 @@ async function escolherLimpezaDia6As9() {
 }
 
 describe('Novo Agendamento da recepção (D33)', () => {
+  it('trocar para um horário disjunto mantém envio pendente e impede uma segunda reserva', async () => {
+    const resposta = Promise.withResolvers()
+    const pedidos = apiDaAgenda(() => resposta.promise)
+    await escolherLimpezaDia6As9()
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar Agendamento' }))
+    await userEvent.click(screen.getByRole('button', { name: '10:00' }))
+    const botao = screen.getByRole('button', { name: /Agendando…|Confirmar Agendamento/ })
+    const permaneceuDesabilitado = botao.disabled
+    const textoDuranteEnvio = botao.textContent
+    await userEvent.click(botao)
+    resposta.resolve(ok(consultaMarcada, 201))
+    await screen.findByRole('heading', { name: /Consulta marcada/ })
+    expect(pedidos.filter((pedido) => pedido.metodo === 'POST')).toHaveLength(1)
+    expect(permaneceuDesabilitado).toBe(true)
+    expect(textoDuranteEnvio).toBe('Agendando…')
+  })
+
   it('marca a consulta do paciente do link e mostra a confirmação', async () => {
     const pedidos = apiDaAgenda(ok(consultaMarcada, 201))
     await escolherLimpezaDia6As9()

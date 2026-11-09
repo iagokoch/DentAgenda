@@ -1,7 +1,7 @@
 import type { Transacao } from '../../compartilhado/banco.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { ErroDeNegocio } from '../../compartilhado/erros.ts';
-import { travarChave } from '../../compartilhado/travas.ts';
+import { travarConta, travarIdentificador } from './travas-de-autenticacao.ts';
 import { conferirSenha, gerarHashDeSenha, gerarSenhaAleatoria } from '../../compartilhado/senhas.ts';
 import { gerarAccessToken } from '../../compartilhado/tokens.ts';
 import type { ResultadoTentativa, TipoConta } from '../../generated/prisma/client.ts';
@@ -42,8 +42,6 @@ function aplicar(decisao: Decisao): ResultadoDoLogin {
   return decisao.sucesso;
 }
 
-const chaveDoLogin = (tipo: TipoConta, identificador: string) => `login:${tipo}:${identificador}`;
-
 export async function loginCliente(
   contexto: Contexto,
   entrada: EntradaDoLogin & { cpf: string },
@@ -52,7 +50,9 @@ export async function loginCliente(
   const senhaCerta = await conferirSenhaSemRevelarConta(entrada.senha, cliente?.login?.senhaHash);
 
   const decisao = await contexto.prisma.$transaction(async (tx): Promise<Decisao> => {
-    await travarChave(tx, chaveDoLogin('CLIENTE', entrada.cpf));
+    await travarIdentificador(tx, 'CLIENTE', entrada.cpf);
+    if (cliente?.login) await travarConta(tx, { loginId: cliente.login.id });
+    const atual = await tx.cliente.findUnique({ where: { cpf: entrada.cpf }, include: { login: true } });
     const registrar = (resultado: ResultadoTentativa) =>
       registrarTentativa(tx, contexto, entrada.cpf, 'CLIENTE', entrada.ip, resultado);
     const tentativas = await tentativasDesdeUltimaLiberacao(tx, entrada.cpf, 'CLIENTE');
@@ -60,8 +60,8 @@ export async function loginCliente(
       await registrar('FALHA');
       return { erro: contaDoClienteBloqueada() };
     }
-    const login = cliente?.login;
-    if (!cliente || !login || !senhaCerta) {
+    const login = atual?.login;
+    if (!atual || !login || !senhaCerta || login.senhaHash !== cliente?.login?.senhaHash) {
       const falha = await registrar('FALHA');
       if (!clienteEstaBloqueado([...tentativas, falha])) return { erro: credenciaisInvalidasDoCliente() };
       // D19: conta bloqueada derruba todas as sessões.
@@ -71,9 +71,9 @@ export async function loginCliente(
 
     await registrar('SUCESSO');
     const sessao = await criarSessao(tx, { loginId: login.id }, contexto);
-    const accessToken = gerarAccessToken({ tipo: 'CLIENTE', clienteId: cliente.id, sessaoId: sessao.sessaoId }, contexto);
+    const accessToken = gerarAccessToken({ tipo: 'CLIENTE', clienteId: atual.id, sessaoId: sessao.sessaoId }, contexto);
     return {
-      sucesso: { accessToken, refreshToken: sessao.refreshToken, expiraEm: sessao.expiraEm, usuario: usuarioDoCliente(cliente) },
+      sucesso: { accessToken, refreshToken: sessao.refreshToken, expiraEm: sessao.expiraEm, usuario: usuarioDoCliente(atual) },
     };
   });
   return aplicar(decisao);
@@ -87,7 +87,9 @@ export async function loginFuncionario(
   const senhaCerta = await conferirSenhaSemRevelarConta(entrada.senha, funcionario?.senhaHash);
 
   const decisao = await contexto.prisma.$transaction(async (tx): Promise<Decisao> => {
-    await travarChave(tx, chaveDoLogin('FUNCIONARIO', entrada.email));
+    await travarIdentificador(tx, 'FUNCIONARIO', entrada.email);
+    if (funcionario) await travarConta(tx, { funcionarioId: funcionario.id });
+    const atual = await tx.funcionario.findUnique({ where: { email: entrada.email } });
     const registrar = (resultado: ResultadoTentativa) =>
       registrarTentativa(tx, contexto, entrada.email, 'FUNCIONARIO', entrada.ip, resultado);
     const agora = contexto.relogio.agora();
@@ -96,17 +98,17 @@ export async function loginFuncionario(
       await registrar('FALHA');
       return { erro: contaDoFuncionarioBloqueada() };
     }
-    if (!funcionario?.ativo || !senhaCerta) {
+    if (!atual?.ativo || !senhaCerta || atual.senhaHash !== funcionario?.senhaHash) {
       const falha = await registrar('FALHA');
       if (funcionarioBloqueadoAte([...tentativas, falha], agora)) return { erro: contaDoFuncionarioBloqueada() };
       return { erro: credenciaisInvalidasDoFuncionario() };
     }
 
     await registrar('SUCESSO');
-    const sessao = await criarSessao(tx, { funcionarioId: funcionario.id }, contexto);
-    const accessToken = gerarAccessToken(autenticadoDoFuncionario(funcionario, sessao.sessaoId), contexto);
+    const sessao = await criarSessao(tx, { funcionarioId: atual.id }, contexto);
+    const accessToken = gerarAccessToken(autenticadoDoFuncionario(atual, sessao.sessaoId), contexto);
     return {
-      sucesso: { accessToken, refreshToken: sessao.refreshToken, expiraEm: sessao.expiraEm, usuario: usuarioDoFuncionario(funcionario) },
+      sucesso: { accessToken, refreshToken: sessao.refreshToken, expiraEm: sessao.expiraEm, usuario: usuarioDoFuncionario(atual) },
     };
   });
   return aplicar(decisao);

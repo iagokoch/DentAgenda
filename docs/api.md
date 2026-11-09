@@ -5,6 +5,15 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
 Consultas). Fora de produção, `/api/docs` mostra o Swagger gerado dos schemas Zod e `/api/docs.json` o OpenAPI (D34); este
 documento continua sendo o contrato (status, códigos de erro e regras).
 
+## Endpoints operacionais
+
+Fora das 43 rotas de negócio e de sua matriz de papéis: `GET /api/saude/viva` responde 200
+`{ "viva": true }` sem consultar dependências. `GET /api/saude/pronta` responde 200 `{ "pronta": true }`
+se o banco responder em até um segundo; responde 503 `{ "pronta": false }` em falha, timeout ou encerramento.
+São públicos, sem dados pessoais, detalhes de erro, versão ou configuração. Não substituem um smoke test de negócio.
+As respostas não devem ser armazenadas em cache. Consultas de saúde pendentes são compartilhadas para não acumular
+uma consulta por requisição durante indisponibilidade do banco.
+
 ## Convenções (D20)
 
 - **Base:** `/api`, sem versão.
@@ -573,7 +582,13 @@ Sem corpo. Marca `REALIZADA`.
 `texto: null` apaga. Grava `Consulta.observacao` **e** uma linha em `HistoricoObservacao`
 (autor do token) na mesma transação. **200**.
 
+Toda representação de consulta inclui `versaoObservacao` (inteiro, inicialmente 0), incrementado junto com cada
+edição. Observação informada na criação inicia em 1. O campo permite reconciliar respostas atrasadas sem
+sobrescrever status ou observação mais recentes; não exige pré-condição de versão para editar (D42).
+
 ### `GET /api/consultas/{id}/observacao/historico`
 
-**200** `[{ "texto", "autor": "PACIENTE" | "CLINICA", "funcionario": { "id", "nome" } | null, "editadoEm" }]`,
-mais recente primeiro.
+**200** `[{ "id", "versao", "texto", "autor": "PACIENTE" | "CLINICA", "funcionario": { "id", "nome" } | null, "editadoEm" }]`,
+por `versao` decrescente. `id` é UUID estável; `versao` é inteiro positivo único por consulta. `editadoEm` continua
+sendo horário físico e pode empatar ou recuar. A numeração legada usa desempate determinístico, sem inferir ordem
+real de empates anteriores à migration (D42).

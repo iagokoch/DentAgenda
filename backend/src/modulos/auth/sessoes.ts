@@ -5,6 +5,7 @@ import type { Contexto } from '../../compartilhado/contexto.ts';
 import { naoAutenticado } from '../../compartilhado/erros.ts';
 import { gerarAccessToken, gerarRefreshToken, hashDoRefreshToken } from '../../compartilhado/tokens.ts';
 import { autenticadoDoFuncionario } from './usuario-da-resposta.ts';
+import { travarConta } from './travas-de-autenticacao.ts';
 
 export type ContaDaSessao = { loginId: string } | { funcionarioId: string };
 
@@ -44,13 +45,16 @@ type Renovacao = { accessToken: string; refreshToken: string; expiraEm: Date };
 // D38: a sessão é lida com FOR UPDATE na transação da rotação: duas renovações do mesmo cookie esperam uma pela outra, e
 // a segunda já vê o token revogado. O 401 sai depois do commit, para a revogação geral (D19) não ser desfeita junto.
 export async function renovarSessao(contexto: Contexto, tokenDoCookie: string): Promise<Renovacao> {
-  const agora = contexto.relogio.agora();
   const renovacao = await contexto.prisma.$transaction(async (tx): Promise<Renovacao | null> => {
+    const inicial = await tx.refreshToken.findUnique({ where: { tokenHash: hashDoRefreshToken(tokenDoCookie) } });
+    if (!inicial) return null;
+    const conta: ContaDaSessao = inicial.loginId ? { loginId: inicial.loginId } : { funcionarioId: inicial.funcionarioId ?? '' };
+    await travarConta(tx, conta);
     const [travada] = await tx.$queryRaw<{ id: string }[]>`
       SELECT id FROM "RefreshToken" WHERE "tokenHash" = ${hashDoRefreshToken(tokenDoCookie)} FOR UPDATE`;
     if (!travada) return null;
     const sessao = await tx.refreshToken.findUniqueOrThrow({ where: { id: travada.id }, include: { login: true, funcionario: true } });
-    const conta: ContaDaSessao = sessao.loginId ? { loginId: sessao.loginId } : { funcionarioId: sessao.funcionarioId ?? '' };
+    const agora = contexto.relogio.agora();
     if (sessao.revogadoEm) {
       // Dentro da janela é a outra aba que pediu junto (D38); depois dela, sinal de roubo: derruba todas as sessões (D19).
       if (agora.getTime() - sessao.revogadoEm.getTime() >= JANELA_DE_CORRIDA_DO_REFRESH_MS) await revogarTodasAsSessoes(tx, conta, contexto);
