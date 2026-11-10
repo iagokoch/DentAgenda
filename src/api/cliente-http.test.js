@@ -1,5 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
-import { criarClienteHttp, ErroDaApi } from './cliente-http.js'
+import { criarClienteHttp as construirClienteHttp, ErroDaApi } from './cliente-http.js'
+
+const criarClienteHttp = (opcoes) => {
+  let fila = Promise.resolve()
+  return construirClienteHttp({
+    coordenacao: { entreAbas: true, executar: (operacao) => {
+      const pedido = fila.then(operacao)
+      fila = pedido.catch(() => {})
+      return pedido
+    } }, ...opcoes,
+  })
+}
 
 const json = (status, corpo) =>
   new Response(JSON.stringify(corpo), { status, headers: { 'Content-Type': 'application/json' } })
@@ -19,6 +30,209 @@ function fetchFalso(...respostas) {
 }
 
 describe('cliente HTTP', () => {
+  it('refresh atrasado não reinstala token depois de invalidar a geração', async () => {
+    const resposta = Promise.withResolvers()
+    const cliente = criarClienteHttp(fetchFalso(resposta.promise))
+    cliente.definirToken('antigo')
+    const renovacao = cliente.renovarSessao()
+    cliente.definirToken(null)
+    resposta.resolve(json(200, { accessToken: 'atrasado' }))
+    expect(await renovacao).toBe(false)
+    expect(cliente.temToken()).toBe(false)
+  })
+
+  it('401 de um pedido antigo não renova nem encerra uma sessão nova', async () => {
+    const resposta = Promise.withResolvers()
+    const { fetch, chamadas } = fetchFalso(resposta.promise)
+    const aoEncerrarSessao = vi.fn()
+    const cliente = criarClienteHttp({ fetch, aoEncerrarSessao })
+    cliente.definirToken('antigo')
+    const pedido = cliente.pedir('/api/pacientes').catch((erro) => erro)
+    cliente.definirToken('novo')
+    resposta.resolve(naoAutenticado())
+    expect(await pedido).toMatchObject({ codigo: 'NAO_AUTENTICADO' })
+    expect(chamadas).toHaveLength(1)
+    expect(aoEncerrarSessao).not.toHaveBeenCalled()
+    expect(cliente.temToken()).toBe(true)
+  })
+
+  it('saída espera refresh anterior e usa o resultado somente para revogar', async () => {
+    const resposta = Promise.withResolvers()
+    const { fetch, chamadas } = fetchFalso(resposta.promise, json(200, { accessToken: 'somente-para-revogar' }),
+      new Response(null, { status: 204 }), naoAutenticado(), naoAutenticado())
+    const cliente = criarClienteHttp({ fetch })
+    cliente.definirToken('antigo')
+    const renovacao = cliente.renovarSessao()
+    await vi.waitFor(() => expect(chamadas).toHaveLength(1))
+    const saida = cliente.encerrarSessao()
+    expect(cliente.temToken()).toBe(false)
+    expect(chamadas).toHaveLength(1)
+    resposta.resolve(json(200, { accessToken: 'rotacionado' }))
+    expect(await renovacao).toBe(false)
+    expect(await saida).toBe(true)
+    expect(chamadas).toContainEqual(expect.objectContaining({ caminho: '/api/auth/logout', autorizacao: 'Bearer somente-para-revogar' }))
+    expect(cliente.temToken()).toBe(false)
+  })
+
+  it('falha ao sair mantém refresh automático bloqueado e permite retry explícito sem token público', async () => {
+    const fetch = vi.fn().mockRejectedValueOnce(new TypeError('offline'))
+      .mockResolvedValueOnce(json(200, { accessToken: 'privado' }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    const cliente = criarClienteHttp({ fetch })
+    cliente.definirToken('antigo')
+    await expect(cliente.encerrarSessao()).rejects.toMatchObject({ codigo: 'SEM_CONEXAO' })
+    expect(await cliente.renovarSessao()).toBe(false)
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(await cliente.encerrarSessao()).toBe(true)
+    expect(cliente.temToken()).toBe(false)
+    expect(fetch).toHaveBeenCalledTimes(3)
+  })
+
+  it('401 do logout isoladamente não confirma que o cookie atual foi revogado', async () => {
+    const { fetch, chamadas } = fetchFalso(json(200, { accessToken: 'privado' }), naoAutenticado())
+    const cliente = criarClienteHttp({ fetch })
+    cliente.definirToken('antigo')
+    await expect(cliente.encerrarSessao()).rejects.toMatchObject({ codigo: 'NAO_AUTENTICADO' })
+    expect(chamadas).toHaveLength(2)
+    expect(cliente.temToken()).toBe(false)
+    expect(await cliente.renovarSessao()).toBe(false)
+  })
+
+  it.each(['/api/auth/cliente/login', '/api/auth/cliente/cadastro/confirmar'])
+  ('criação de sessão em %s espera a revogação anterior', async (caminho) => {
+    const resposta = Promise.withResolvers()
+    const { fetch, chamadas } = fetchFalso(resposta.promise, new Response(null, { status: 204 }), json(200, { accessToken: 'novo' }))
+    const cliente = criarClienteHttp({ fetch })
+    const saida = cliente.encerrarSessao()
+    await vi.waitFor(() => expect(chamadas).toHaveLength(1))
+    const login = cliente.pedir(caminho, { metodo: 'POST', corpo: {} })
+    expect(chamadas).toHaveLength(1)
+    resposta.resolve(json(200, { accessToken: 'privado' }))
+    await saida
+    expect(await login).toEqual({ accessToken: 'novo' })
+    expect(chamadas.map((chamada) => chamada.caminho)).toEqual([
+      '/api/auth/refresh', '/api/auth/logout', caminho,
+    ])
+  })
+
+  it('cookie recusado no refresh não é tratado como revogação confirmada', async () => {
+    const cliente = criarClienteHttp(fetchFalso(naoAutenticado()))
+    await expect(cliente.encerrarSessao()).rejects.toMatchObject({ codigo: 'NAO_AUTENTICADO' })
+  })
+
+  it('sem coordenação entre abas mantém resultado conservador mesmo após logout 204', async () => {
+    const cliente = criarClienteHttp({
+      ...fetchFalso(json(200, { accessToken: 'antigo' }), new Response(null, { status: 204 })),
+      coordenacao: { entreAbas: false, executar: (operacao) => operacao() },
+    })
+    cliente.definirToken('antigo')
+    expect(await cliente.encerrarSessao()).toBe(false)
+    expect(cliente.temToken()).toBe(false)
+  })
+
+  it('duas abas coordenam refresh atrasado e saída usando o cookie atual', async () => {
+    let fila = Promise.resolve()
+    const coordenacao = { entreAbas: true, executar: (operacao) => {
+      const pedido = fila.then(operacao)
+      fila = pedido.catch(() => {})
+      return pedido
+    } }
+    const iniciou = Promise.withResolvers()
+    const liberar = Promise.withResolvers()
+    let cookie = 'original'
+    let ativo = 'original'
+    let saindo = false
+    let primeiraRenovacao = true
+    const logout = []
+    const fetch = async (caminho, opcoes) => {
+      if (caminho === '/api/auth/refresh') {
+        if (cookie !== ativo) return naoAutenticado()
+        ativo = primeiraRenovacao ? 'sucessor' : 'para-revogar'
+        if (primeiraRenovacao) {
+          primeiraRenovacao = false
+          iniciou.resolve()
+          await liberar.promise
+        }
+        cookie = ativo // Simula Set-Cookie aplicado quando a resposta chega.
+        return json(200, { accessToken: ativo })
+      }
+      const token = opcoes.headers.Authorization?.replace('Bearer ', '')
+      logout.push(token)
+      if (token !== ativo) return naoAutenticado()
+      ativo = null
+      cookie = null
+      return new Response(null, { status: 204 })
+    }
+    const abaA = criarClienteHttp({ fetch, coordenacao })
+    const abaB = criarClienteHttp({ fetch, coordenacao, restauracaoPermitida: () => !saindo })
+    abaA.definirToken('original')
+    abaB.definirToken('original')
+    const renovacao = abaB.renovarSessao()
+    await iniciou.promise
+    saindo = true
+    const saida = abaA.encerrarSessao()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const tentouAntesDaResposta = logout.length > 0
+    liberar.resolve()
+    expect(await saida).toBe(true)
+    expect(await renovacao).toBe(false)
+    expect(tentouAntesDaResposta).toBe(false)
+    expect(ativo).toBeNull()
+    expect(cookie).toBeNull()
+    expect(abaA.temToken()).toBe(false)
+    expect(abaB.temToken()).toBe(false)
+  })
+
+  it.each(['antes', 'depois'])('login de outra aba %s da saída mantém a ordem e o cookie correspondente', async (ordem) => {
+    let fila = Promise.resolve()
+    const coordenacao = { entreAbas: true, executar: (operacao) => {
+      const pedido = fila.then(operacao)
+      fila = pedido.catch(() => {})
+      return pedido
+    } }
+    const iniciou = Promise.withResolvers()
+    const liberar = Promise.withResolvers()
+    let cookie = 'original'
+    const sessoes = new Set(['original'])
+    let numero = 0
+    const fetch = async (caminho, opcoes) => {
+      if (caminho.endsWith('/login')) {
+        sessoes.add('login-b'); cookie = 'login-b'
+        return json(200, { accessToken: 'login-b' })
+      }
+      if (caminho.endsWith('/refresh')) {
+        if (!sessoes.has(cookie)) return naoAutenticado()
+        sessoes.delete(cookie)
+        const novo = `refresh-${++numero}`
+        sessoes.add(novo)
+        if (numero === 1) { iniciou.resolve(); await liberar.promise }
+        cookie = novo
+        return json(200, { accessToken: novo })
+      }
+      const token = opcoes.headers.Authorization?.replace('Bearer ', '')
+      if (!sessoes.has(token)) return naoAutenticado()
+      sessoes.delete(token); cookie = null
+      return new Response(null, { status: 204 })
+    }
+    const abaA = criarClienteHttp({ fetch, coordenacao })
+    const abaB = criarClienteHttp({ fetch, coordenacao })
+    abaA.definirToken('original')
+    const renovacao = abaA.renovarSessao()
+    await iniciou.promise
+    let login, saida
+    if (ordem === 'antes') {
+      login = abaB.pedir('/api/auth/cliente/login', { metodo: 'POST' })
+      saida = abaA.encerrarSessao()
+    } else {
+      saida = abaA.encerrarSessao()
+      login = abaB.pedir('/api/auth/cliente/login', { metodo: 'POST' })
+    }
+    liberar.resolve()
+    await Promise.all([renovacao, login, saida])
+    expect(cookie).toBe(ordem === 'antes' ? null : 'login-b')
+    expect([...sessoes]).toEqual(ordem === 'antes' ? [] : ['login-b'])
+  })
+
   it('manda o token em Authorization e devolve o JSON da resposta', async () => {
     const { fetch, chamadas } = fetchFalso(json(200, { usuario: { nome: 'Ana' } }))
     const cliente = criarClienteHttp({ fetch })

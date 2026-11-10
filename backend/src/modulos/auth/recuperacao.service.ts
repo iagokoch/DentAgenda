@@ -3,6 +3,7 @@ import type { Contexto } from '../../compartilhado/contexto.ts';
 import { gerarHashDeSenha } from '../../compartilhado/senhas.ts';
 import { codigoInvalido, consumirCodigo, emitirCodigo, VALIDADE_CODIGO_MINUTOS } from './codigos.ts';
 import { revogarTodasAsSessoes, type ContaDaSessao } from './sessoes.ts';
+import { travarConta, travarIdentificador } from './travas-de-autenticacao.ts';
 
 // D19: a resposta não revela se a conta existe.
 export const MENSAGEM_DE_CODIGO_ENVIADO = 'Se os dados estiverem corretos, enviamos um código.';
@@ -52,6 +53,8 @@ export async function confirmarRecuperacaoCliente(
   if (!login) throw codigoInvalido();
   const senhaHash = await gerarHashDeSenha(entrada.novaSenha);
   await contexto.prisma.$transaction(async (tx) => {
+    await travarIdentificador(tx, 'CLIENTE', entrada.cpf);
+    await travarConta(tx, { loginId: login.id });
     await tx.login.update({ where: { id: login.id }, data: { senhaHash } });
     await registrarRedefinicao(contexto, tx, entrada.cpf, 'CLIENTE', entrada.ip, { loginId: login.id });
   });
@@ -71,6 +74,8 @@ export async function confirmarRecuperacaoFuncionario(
   if (!funcionario?.ativo) throw codigoInvalido();
   const senhaHash = await gerarHashDeSenha(entrada.novaSenha);
   await contexto.prisma.$transaction(async (tx) => {
+    await travarIdentificador(tx, 'FUNCIONARIO', entrada.email);
+    await travarConta(tx, { funcionarioId: funcionario.id });
     await tx.funcionario.update({ where: { id: funcionario.id }, data: { senhaHash } });
     await registrarRedefinicao(contexto, tx, entrada.email, 'FUNCIONARIO', entrada.ip, {
       funcionarioId: funcionario.id,

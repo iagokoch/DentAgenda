@@ -77,6 +77,15 @@ async function lerDocumento(): Promise<DocumentoOpenApi> {
 }
 
 describe('documentação OpenAPI (D23, D34)', () => {
+  it('declara o header obrigatório de refresh e o corpo opcional de cancelamento', async () => {
+    const documento = await lerDocumento();
+    expect(documento.paths['/api/auth/refresh']!.post!.parameters).toContainEqual({
+      name: 'X-DentAgenda-Refresh', in: 'header', required: true, schema: { type: 'string', enum: ['1'] },
+    });
+    expect(documento.paths['/api/consultas/{id}/cancelamento']!.post!.requestBody).toMatchObject({ required: false });
+    expect(documento.paths['/api/auth/cliente/login']!.post!.requestBody).toMatchObject({ required: true });
+  });
+
   it('GET /api/docs.json fora de produção → 200 com todas as rotas do api.md', async () => {
     const documento = await lerDocumento();
 

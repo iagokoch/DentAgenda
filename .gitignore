@@ -34,3 +34,9 @@ dist-ssr
 CLAUDE.local.md
 # Cliente gerado pelo Prisma (recriado por "prisma generate")
 backend/src/generated/
+
+# Evidências locais de carga e cópias de banco
+performance/resultados/
+backups/
+*.dump
+*.dump.sha256

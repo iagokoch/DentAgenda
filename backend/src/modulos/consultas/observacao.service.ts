@@ -8,16 +8,19 @@ import { formatarConsulta, incluirRelacoesDaConsulta } from './formato.ts';
 // histórico, na mesma transação. Paciente e clínica editam o mesmo campo; o histórico guarda quem escreveu o quê.
 export async function gravarObservacao(contexto: Contexto, usuario: UsuarioAutenticado, consultaId: string, texto: string | null) {
   await buscarConsultaVisivel(contexto, usuario, consultaId);
-  const editadoEm = contexto.relogio.agora();
   const consulta = await contexto.prisma.$transaction(async (tx) => {
-    const atualizada = await tx.consulta.update({ where: { id: consultaId }, data: { observacao: texto }, include: incluirRelacoesDaConsulta });
+    const atualizada = await tx.consulta.update({
+      where: { id: consultaId }, data: { observacao: texto, versaoObservacao: { increment: 1 } },
+      include: incluirRelacoesDaConsulta,
+    });
     await tx.historicoObservacao.create({
       data: {
         consultaId,
         texto,
         autor: usuario.tipo === 'CLIENTE' ? 'PACIENTE' : 'CLINICA',
         autorFuncionarioId: usuario.tipo === 'FUNCIONARIO' ? usuario.funcionarioId : null,
-        editadoEm,
+        editadoEm: contexto.relogio.agora(),
+        versao: atualizada.versaoObservacao,
       },
     });
     return atualizada;
@@ -30,9 +33,11 @@ export async function lerHistoricoDaObservacao(contexto: Contexto, usuario: Usua
   const linhas = await contexto.prisma.historicoObservacao.findMany({
     where: { consultaId },
     include: { autorFuncionario: { select: { id: true, nome: true } } },
-    orderBy: { editadoEm: 'desc' },
+    orderBy: { versao: 'desc' },
   });
   return linhas.map((linha) => ({
+    id: linha.id,
+    versao: linha.versao,
     texto: linha.texto,
     autor: linha.autor,
     funcionario: linha.autorFuncionario,

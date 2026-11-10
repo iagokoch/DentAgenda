@@ -63,7 +63,7 @@ export default function ObservacaoDaConsulta({ consulta, aoSalvar }) {
       {historico.estado === 'pronto' && historico.dados.length > 0 && (
         <ul className="observacao-historico">
           {historico.dados.map((versao) => (
-            <li key={versao.editadoEm}>
+            <li key={versao.id}>
               <small>{dataEHoraLegiveis(versao.editadoEm)} · {versao.funcionario?.nome ?? AUTOR[versao.autor]}</small>
               <p>{versao.texto ?? 'Observação apagada.'}</p>
             </li>

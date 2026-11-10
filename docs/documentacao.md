@@ -47,6 +47,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D39  | Qualidade: acessibilidade, botões, papéis, relógio | Fechada                    |
 | D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
 | D41  | Roteiro de demonstração e paciente de exemplo     | Fechada                      |
+| D42  | Logout local e versões sequenciais de observação | Aprovada em 2026-11-09       |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1249,7 +1250,7 @@ regra é a mesma para não haver dois formatos no banco.
 1. `helmet` em todas as respostas (cabeçalhos de segurança padrão).
 2. Limite de **200 pedidos por IP a cada 15 min** em `/api/auth/*` (`express-rate-limit`, memória do
    processo). Acima disso: 429 com `codigo: "LIMITE_DE_REQUISICOES"`. Vale para login, recuperação,
-   cadastro e refresh.
+   cadastro; `POST /api/auth/refresh` é isento desde D40.
 3. **Sem CORS.** A API e o front são servidos na mesma origem (em dev, o proxy do Vite). Cabeçalhos
    de CORS só entram se o front passar a ser servido de outra origem; isso vira decisão nova.
 4. Dependências: `prisma`, `@prisma/client` e `@prisma/adapter-pg` de 7.10.0 para **7.10.1**, que
@@ -1458,6 +1459,16 @@ porque os dois respondem à mesma pergunta ("quando este dentista atende?").
    tentativas, e o código certo depois não vale mais.
 5. **Confirmação de cadastro em dobro:** já era segura (o uso do código é condicional e o CPF é único); agora tem teste.
 
+**Complemento da auditoria de 2026-11-05 (B01/B06):** o login relê a conta e compara o hash atual com o hash
+efetivamente verificado pelo bcrypt antes de criar a sessão. Login e redefinição adquirem travas na ordem
+identificador → conta estável (`loginId` ou `funcionarioId`); refresh adquire conta → sessão. A redefinição altera
+a senha e revoga sessões dentro da mesma transação. Assim uma rotação não escapa à revogação por criar outra sessão
+enquanto o reset espera. Somente travar sem reler o hash foi descartado: manteria a autorização por credencial antiga.
+
+Emissão e consumo de códigos compartilham a trava por identificador e tipo. O consumo revalida expiração nas duas
+atualizações e devolve sua decisão depois do commit, preservando as tentativas erradas. Bcrypt permanece fora das
+transações, sem nova coluna ou mudança de política de bloqueio.
+
 **Por quê:**
 1. Cada tentativa lia "0 falhas" antes do bcrypt (~250 ms) e só gravava depois: oito tentativas paralelas passavam como
    oito primeiras, e o bloqueio de 3 tentativas (D5) não valia contra quem dispara em paralelo.
@@ -1601,6 +1612,49 @@ chamar a API na mão ou de esperar a hora da consulta.
 - *Mudar o relógio do servidor na demonstração:* afeta sessão, códigos e tudo o que depende da hora.
 
 **Em aberto:** nada.
+
+## D42 — Logout local e versões sequenciais de observação
+
+> Aprovada pelo usuário: opção A no login e versão sequencial por consulta (B05/B08).
+
+**O quê:** a saída oculta o usuário e limpa o token imediatamente, bloqueando restauração automática. Um marcador
+sem credenciais persiste a saída no navegador. A tela de login distingue saída local de revogação confirmada e
+oferece retentativa explícita. Refresh e respostas anteriores não reinstalam a sessão; login explícito e revogação
+são coordenados para não misturar cookies de gerações diferentes. Não há token, senha ou usuário no storage.
+
+Refresh, login, ativação de cadastro e logout compartilham uma trava de origem com
+[Web Locks](https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API). O marcador é conferido novamente
+dentro da trava e antes de instalar um token. Um refresh 401 não é apresentado como prova de revogação: o aviso
+permanece pendente. Sem suporte à coordenação entre abas, a revogação é tentada, mas a interface mantém a saída local
+como pendente, inclusive após 204, em vez de prometer que outro documento não deixou uma resposta em trânsito.
+Uma nova entrada explícita remove o marcador. O teste de disponibilidade de armazenamento usa um indicador
+temporário sem credenciais e bloqueia a restauração se o navegador não permitir ler ou gravar.
+
+A saída reserva sua posição na trava no momento do clique. Dentro dessa posição, renova o cookie atual e revoga
+o token obtido, exigindo HTTP 204. Tokens capturados antes da espera servem para limpeza adicional. Assim uma
+entrada de outra aba iniciada depois da saída preserva sua sessão, e uma entrada anterior é encerrada com o cookie
+correto. Um refresh local já enfileirado é aguardado apenas para limpeza, sem adquirir outra trava.
+
+Cada consulta tem `versaoObservacao`, inicialmente 0, e cada edição tem `HistoricoObservacao.versao`, positiva e
+única por consulta. Atualizar texto e incrementar contador é um único UPDATE, que serializa escritores. A versão
+retornada é gravada no histórico na mesma transação. Uma observação inicial cria a versão 1. O histórico é ordenado
+por versão decrescente e retorna `id` e `versao`; a consulta retorna também `versaoObservacao`, permitindo ao cliente
+descartar respostas antigas sem regredir status. A política de sobrescrita da D18 permanece: vence o último escritor.
+
+**Legado:** a migration numera por `(editadoEm, id)` e inicia o contador no maior número. Empates antigos não permitem
+recuperar a ordem real; o UUID é apenas desempate determinístico. O texto atual é preservado mesmo se divergir da
+última linha legada. Novas edições passam a ter ordem real de escrita, inclusive com relógio recuando.
+
+**Por quê:** timestamp pode empatar ou recuar; uma trava sem contador não dá identidade/ordem estável. Só limpar o
+estado React no logout não impede que o cookie ou uma resposta atrasada restaure a conta após recarga.
+
+**Alternativas descartadas:** timestamp lógico alteraria o significado do horário registrado; `count()+1` permitiria
+corridas; limpar token sem bloquear refresh permitiria restauração contraditória. O marcador local não equivale a
+revogação remota, que continua dependente de resposta do servidor.
+
+**Implantação:** parar escritores, aplicar a migration e iniciar a aplicação atualizada. O novo campo obrigatório
+do histórico impede escritas do código antigo; não manter versões antigas e novas escrevendo durante a migração.
+Voltar a imagem não desfaz a migration. Testes e aplicação nesta sessão usam exclusivamente banco descartável.
 
 ## Próximo
 

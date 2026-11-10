@@ -37,8 +37,15 @@ npm run db:seed:dev      # dados fictícios: procedimentos, Dra. Ana Costa, Carl
 npm run dev              # API em http://localhost:<PORTA>/api
 ```
 
-Se o Postgres subir com credenciais diferentes das do `.env`, o erro é `P1000` e o volume do Docker precisa ser
-recriado. **Swagger** (só fora de produção): `http://localhost:<PORTA>/api/docs`.
+Se aparecer `P1000`, confira primeiro host, porta e instância de PostgreSQL: a porta pode apontar para outro
+servidor. Depois, confira localmente se usuário, banco e credencial configurados correspondem à instância,
+sem compartilhar senhas em logs ou capturas. Alterar a configuração do Compose não troca a senha de um banco
+já inicializado no volume; corrija a configuração da aplicação ou a credencial da instância pelo procedimento
+administrativo apropriado, preservando os dados.
+
+Recriar um volume apaga seus bancos. Só considere isso em ambiente comprovadamente descartável, após identificar
+o volume e obter autorização explícita; para dados que precisam ser preservados, valide backup e restauração antes
+de qualquer ação destrutiva. **Swagger** (só fora de produção): `http://localhost:<PORTA>/api/docs`.
 
 Os SMS e e-mails são simulados (D16): os códigos de verificação aparecem no terminal da API.
 

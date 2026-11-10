@@ -79,13 +79,26 @@ type ConsumoDeCodigo = {
   destino?: string;
 };
 
-// Usa o banco fora de transação: a tentativa errada precisa ficar gravada mesmo com a resposta 400.
+// A decisão sai após o commit: tentativas erradas persistem mesmo com a resposta 400.
 export async function consumirCodigo(
   contexto: Contexto,
   pedido: ConsumoDeCodigo,
 ): Promise<{ finalidade: FinalidadeCodigo }> {
+  const resultado = await contexto.prisma.$transaction(async (tx) => {
+    await travarChave(tx, `codigo:${pedido.tipo}:${pedido.identificador}`);
+    return consumirNaTransacao(tx, contexto, pedido);
+  });
+  if (!resultado) throw codigoInvalido();
+  return resultado;
+}
+
+async function consumirNaTransacao(
+  tx: Transacao,
+  contexto: Contexto,
+  pedido: ConsumoDeCodigo,
+): Promise<{ finalidade: FinalidadeCodigo } | null> {
   const agora = contexto.relogio.agora();
-  const linha = await contexto.prisma.codigoVerificacao.findFirst({
+  const linha = await tx.codigoVerificacao.findFirst({
     where: {
       identificador: pedido.identificador,
       tipo: pedido.tipo,
@@ -97,23 +110,24 @@ export async function consumirCodigo(
     },
     orderBy: { criadoEm: 'desc' },
   });
-  if (!linha) throw codigoInvalido();
+  if (!linha) return null;
 
   // D38: a tentativa é reservada antes da comparação, num UPDATE condicional: chutes simultâneos não passam das 3.
-  const reservada = await contexto.prisma.codigoVerificacao.updateMany({
-    where: { id: linha.id, usadoEm: null, tentativas: { lt: MAXIMO_TENTATIVAS_CODIGO } },
+  const reservada = await tx.codigoVerificacao.updateMany({
+    where: { id: linha.id, usadoEm: null, tentativas: { lt: MAXIMO_TENTATIVAS_CODIGO }, expiraEm: { gt: contexto.relogio.agora() } },
     data: { tentativas: { increment: 1 } },
   });
-  if (reservada.count === 0) throw codigoInvalido();
+  if (reservada.count === 0) return null;
   const destinoConfere = pedido.destino === undefined || pedido.destino === linha.destino;
-  if (!destinoConfere || !hashesIguais(hashDoCodigo(pedido.codigo, contexto), linha.codigoHash)) throw codigoInvalido();
+  if (!destinoConfere || !hashesIguais(hashDoCodigo(pedido.codigo, contexto), linha.codigoHash)) return null;
 
   // Condicional: dois pedidos simultâneos com o mesmo código não passam os dois.
-  const usado = await contexto.prisma.codigoVerificacao.updateMany({
-    where: { id: linha.id, usadoEm: null },
-    data: { usadoEm: agora },
+  const instanteDoConsumo = contexto.relogio.agora();
+  const usado = await tx.codigoVerificacao.updateMany({
+    where: { id: linha.id, usadoEm: null, expiraEm: { gt: instanteDoConsumo } },
+    data: { usadoEm: instanteDoConsumo },
   });
-  if (usado.count === 0) throw codigoInvalido();
+  if (usado.count === 0) return null;
   return { finalidade: linha.finalidade };
 }
 

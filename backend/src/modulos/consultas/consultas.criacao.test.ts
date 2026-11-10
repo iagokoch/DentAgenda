@@ -56,6 +56,7 @@ describe('POST /api/consultas', () => {
       fim: '2026-10-05T10:00:00-03:00',
       status: 'CONFIRMADA',
       observacao: null,
+      versaoObservacao: 0,
       criadoEm: '2026-10-05T07:00:00-03:00',
       canceladoEm: null,
       canceladoPor: null,
@@ -244,10 +245,13 @@ describe('POST /api/consultas', () => {
     const doPaciente = await marcar(await tokenDe(contexto, paciente), { ...corpo, inicio: dia('10:00') });
 
     expect(daClinica.body.observacao).toBe('Sensibilidade no dente 24.');
+    expect(daClinica.body.versaoObservacao).toBe(1);
     const historicoDaClinica = await contexto.prisma.historicoObservacao.findMany({ where: { consultaId: daClinica.body.id } });
     const historicoDoPaciente = await contexto.prisma.historicoObservacao.findMany({ where: { consultaId: doPaciente.body.id } });
     expect(historicoDaClinica).toMatchObject([{ texto: 'Sensibilidade no dente 24.', autor: 'CLINICA', autorFuncionarioId: recepcionista.id }]);
     expect(historicoDoPaciente).toMatchObject([{ texto: 'Sensibilidade no dente 24.', autor: 'PACIENTE', autorFuncionarioId: null }]);
+    expect(historicoDaClinica).toMatchObject([{ versao: 1 }]);
+    expect(historicoDoPaciente).toMatchObject([{ versao: 1 }]);
   });
 
   it('grade seg 20:00–23:00 aceita 22:00 de segunda em São Paulo (terça em UTC)', async () => {

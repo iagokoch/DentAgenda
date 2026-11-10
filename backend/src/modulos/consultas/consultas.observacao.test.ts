@@ -4,6 +4,7 @@ import { criarContextoDeTeste } from '../../../testes/contexto-de-teste.ts';
 import { criarConsultaNoBanco, criarFuncionario, criarPaciente, criarProcedimento, tokenDe } from '../../../testes/fabricas.ts';
 import { criarApp } from '../../app.ts';
 import { instanteEmSaoPaulo } from '../../compartilhado/datas.ts';
+import { gravarObservacao } from './observacao.service.ts';
 import type { Cliente, Funcionario, Procedimento } from '../../generated/prisma/client.ts';
 
 const contexto = criarContextoDeTeste();
@@ -119,6 +120,64 @@ describe('PUT /api/consultas/{id}/observacao', () => {
 });
 
 describe('GET /api/consultas/{id}/observacao/historico', () => {
+  it('devolve IDs estáveis e versões por ordem de escrita, mesmo com relógio recuando', async () => {
+    const consulta = await consultaDoPaciente();
+    const token = await tokenDe(contexto, recepcionista);
+    const primeira = await gravar(token, consulta.id, { texto: 'Primeira.' });
+    contexto.relogio.avancarMinutos(-1);
+    const segunda = await gravar(token, consulta.id, { texto: 'Segunda.' });
+    const resposta = await historico(token, consulta.id);
+    expect(primeira.body.versaoObservacao).toBe(1);
+    expect(segunda.body.versaoObservacao).toBe(2);
+    expect(resposta.body.map((linha: { versao: number }) => linha.versao)).toEqual([2, 1]);
+    expect(resposta.body.map((linha: { texto: string }) => linha.texto)).toEqual(['Segunda.', 'Primeira.']);
+    const novamente = await historico(token, consulta.id);
+    expect(resposta.body.map((linha: { id: string }) => linha.id)).toEqual(novamente.body.map((linha: { id: string }) => linha.id));
+    expect(new Set(resposta.body.map((linha: { id: string }) => linha.id)).size).toBe(2);
+  });
+
+  it('numera escritores concorrentes na ordem do UPDATE da consulta', async () => {
+    const consulta = await consultaDoPaciente();
+    const primeiraAtualizada = Promise.withResolvers<void>();
+    const segundaIniciada = Promise.withResolvers<void>();
+    const liberar = Promise.withResolvers<void>();
+    const prisma = contexto.prisma.$extends({ query: { consulta: {
+      async update({ args, query }) {
+        if (args.data.observacao === 'Segunda.') segundaIniciada.resolve();
+        const linha = await query(args);
+        if (args.data.observacao === 'Primeira.') {
+          primeiraAtualizada.resolve();
+          await liberar.promise;
+        }
+        return linha;
+      },
+    } } }) as typeof contexto.prisma;
+    const usuario = { tipo: 'CLIENTE' as const, clienteId: paciente.id, sessaoId: 'sessao-de-teste' };
+    const primeira = gravarObservacao({ ...contexto, prisma }, usuario, consulta.id, 'Primeira.');
+    await primeiraAtualizada.promise;
+    const segunda = gravarObservacao({ ...contexto, prisma }, usuario, consulta.id, 'Segunda.');
+    try { await segundaIniciada.promise; } finally { liberar.resolve(); }
+    await Promise.all([primeira, segunda]);
+    const resposta = await historico(await tokenDe(contexto, paciente), consulta.id);
+    expect(resposta.body.map((linha: { versao: number; texto: string }) => [linha.versao, linha.texto]))
+      .toEqual([[2, 'Segunda.'], [1, 'Primeira.']]);
+    expect(await contexto.prisma.consulta.findUnique({ where: { id: consulta.id } }))
+      .toMatchObject({ observacao: 'Segunda.', versaoObservacao: 2 });
+  });
+
+  it('falha no histórico reverte também texto e contador', async () => {
+    const consulta = await consultaDoPaciente();
+    const prisma = contexto.prisma.$extends({ query: { historicoObservacao: {
+      async create() { throw new Error('Falha controlada no histórico'); },
+    } } }) as typeof contexto.prisma;
+    await expect(gravarObservacao({ ...contexto, prisma },
+      { tipo: 'CLIENTE', clienteId: paciente.id, sessaoId: 'sessao-de-teste' }, consulta.id, 'Não deve persistir.'
+    )).rejects.toThrow('Falha controlada');
+    expect(await contexto.prisma.consulta.findUnique({ where: { id: consulta.id } }))
+      .toMatchObject({ observacao: null, versaoObservacao: 0 });
+    expect(await contexto.prisma.historicoObservacao.count({ where: { consultaId: consulta.id } })).toBe(0);
+  });
+
   it('mais recente primeiro, com funcionario { id, nome } ou null', async () => {
     const consulta = await consultaDoPaciente();
     await gravar(await tokenDe(contexto, dentista), consulta.id, { texto: 'Primeira.' });
@@ -129,8 +188,8 @@ describe('GET /api/consultas/{id}/observacao/historico', () => {
 
     expect(resposta.status).toBe(200);
     expect(resposta.body).toEqual([
-      { texto: 'Segunda.', autor: 'PACIENTE', funcionario: null, editadoEm: '2026-10-05T07:01:00-03:00' },
-      { texto: 'Primeira.', autor: 'CLINICA', funcionario: { id: dentista.id, nome: dentista.nome }, editadoEm: '2026-10-05T07:00:00-03:00' },
+      { id: expect.any(String), versao: 2, texto: 'Segunda.', autor: 'PACIENTE', funcionario: null, editadoEm: '2026-10-05T07:01:00-03:00' },
+      { id: expect.any(String), versao: 1, texto: 'Primeira.', autor: 'CLINICA', funcionario: { id: dentista.id, nome: dentista.nome }, editadoEm: '2026-10-05T07:00:00-03:00' },
     ]);
   });
 

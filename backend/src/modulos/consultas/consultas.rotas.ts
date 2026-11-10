@@ -31,7 +31,7 @@ export const rotasDocumentadasConsultas: ModuloDocumentado = {
     { metodo: 'get', caminho: '/', acesso: ['R', 'D', 'C'], resumo: 'Lista consultas por período, dentista, paciente ou status', consulta: esquemaFiltroDeConsultas },
     { metodo: 'get', caminho: '/pendentes', acesso: ['R', 'D'], resumo: 'Consultas confirmadas que já terminaram e não foram marcadas como realizadas', consulta: esquemaPaginacao },
     { metodo: 'get', caminho: '/:id', acesso: ['R', 'D', 'C'], resumo: 'Consulta uma consulta' },
-    { metodo: 'post', caminho: '/:id/cancelamento', acesso: ['R', 'D', 'C'], resumo: 'Cancela uma consulta', corpo: esquemaCancelamento },
+    { metodo: 'post', caminho: '/:id/cancelamento', acesso: ['R', 'D', 'C'], resumo: 'Cancela uma consulta', corpo: esquemaCancelamento, corpoObrigatorio: false },
     { metodo: 'post', caminho: '/:id/remarcacao', acesso: ['R', 'D', 'C'], resumo: 'Cancela e cria a nova consulta numa transação só', corpo: esquemaRemarcacao },
     { metodo: 'post', caminho: '/:id/realizacao', acesso: ['R', 'D'], resumo: 'Marca a consulta como realizada' },
     { metodo: 'put', caminho: '/:id/observacao', acesso: ['R', 'D', 'C'], resumo: 'Grava a observação e registra no histórico', corpo: esquemaObservacao },

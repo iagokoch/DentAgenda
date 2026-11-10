@@ -21,7 +21,10 @@ function apiDoPaciente(post) {
     'GET /api/procedimentos': ok([limpeza]),
     'GET /api/dentistas': ok([{ id: 'dentista-1', nome: 'Ana Costa' }, { id: 'dentista-2', nome: 'Bruno Lima' }]),
     'GET /api/dias-disponiveis': ok({ dias: ['2026-10-06'] }),
-    'GET /api/horarios-livres': ok({ horarios: [{ dentistaId: 'dentista-1', inicio: '2026-10-06T09:00:00-03:00' }] }),
+    'GET /api/horarios-livres': ok({ horarios: [
+      { dentistaId: 'dentista-1', inicio: '2026-10-06T09:00:00-03:00' },
+      { dentistaId: 'dentista-1', inicio: '2026-10-06T10:00:00-03:00' },
+    ] }),
     'POST /api/consultas': post,
   })
 }
@@ -35,6 +38,21 @@ async function escolherLimpezaDia6As9() {
 }
 
 describe('Marcar consulta pelo paciente (D35)', () => {
+  it('trocar o horário não libera um segundo envio enquanto a primeira reserva está pendente', async () => {
+    const resposta = Promise.withResolvers()
+    const pedidos = apiDoPaciente(() => resposta.promise)
+    await escolherLimpezaDia6As9()
+    await userEvent.click(screen.getByRole('button', { name: 'Confirmar' }))
+    await userEvent.click(screen.getByRole('button', { name: '10:00' }))
+    const botao = screen.getByRole('button', { name: /Marcando…|Confirmar/ })
+    const permaneceuDesabilitado = botao.disabled
+    await userEvent.click(botao)
+    resposta.resolve(ok(marcada, 201))
+    await screen.findByRole('heading', { name: /Consulta marcada/ })
+    expect(pedidos.filter((pedido) => pedido.metodo === 'POST')).toHaveLength(1)
+    expect(permaneceuDesabilitado).toBe(true)
+  })
+
   it('marca sem mandar pacienteId (vem do token) e mostra a confirmação', async () => {
     const pedidos = apiDoPaciente(ok(marcada, 201))
     await escolherLimpezaDia6As9()

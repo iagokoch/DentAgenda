@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { api } from '../api/api.js'
 import { mensagemDoErro } from '../api/mensagens.js'
@@ -14,18 +14,42 @@ import { useRelogio } from '../relogio.js'
 // Cancelar, remarcar, realizar e observação de uma consulta (docs/api.md, "Consultas").
 export default function DetalhesDaConsulta() {
   const { consultaId } = useParams()
+  return <ConsultaDetalhada key={consultaId} consultaId={consultaId} />
+}
+
+function ConsultaDetalhada({ consultaId }) {
   const leitura = useDadosDaApi(`/api/consultas/${consultaId}`)
   // A consulta devolvida por uma ação vale mais que a lida ao abrir a tela, sem recarregar tudo.
   const [aposAcao, setAposAcao] = useState(null)
   const [dialogoAberto, setDialogoAberto] = useState(false)
   const [mensagem, setMensagem] = useState({ tipo: null, texto: '' })
   const [realizando, setRealizando] = useState(false)
-  // Instante da abertura da tela: só habilita o botão; quem decide se já começou é a API (CONSULTA_NAO_INICIADA).
   const relogio = useRelogio()
-  const [abertaEm] = useState(() => relogio.agora().getTime())
+  const [agora, setAgora] = useState(() => relogio.agora().getTime())
   const fecharDialogo = useCallback(() => setDialogoAberto(false), [])
 
   const consulta = aposAcao?.id === consultaId ? aposAcao : leitura.dados
+  const inicio = consulta?.inicio
+
+  useEffect(() => {
+    let temporizador
+    function atualizar() {
+      clearTimeout(temporizador)
+      const instante = relogio.agora().getTime()
+      setAgora(instante)
+      const falta = Date.parse(inicio) - instante
+      // setTimeout limita o intervalo a aproximadamente 24 dias; consultas distantes usam etapas.
+      if (falta > 0) temporizador = setTimeout(atualizar, Math.min(falta, 2_147_483_647))
+    }
+    atualizar()
+    window.addEventListener('focus', atualizar)
+    document.addEventListener('visibilitychange', atualizar)
+    return () => {
+      clearTimeout(temporizador)
+      window.removeEventListener('focus', atualizar)
+      document.removeEventListener('visibilitychange', atualizar)
+    }
+  }, [inicio, relogio])
 
   if (!consulta) {
     return (
@@ -41,11 +65,27 @@ export default function DetalhesDaConsulta() {
 
   const status = STATUS_DA_CONSULTA[consulta.status]
   const confirmada = consulta.status === 'CONFIRMADA'
-  const jaComecou = Date.parse(consulta.inicio) <= abertaEm
+  const jaComecou = Date.parse(consulta.inicio) <= agora
+
+  function atualizarObservacao(nova) {
+    setAposAcao((anterior) => {
+      const atual = anterior ?? consulta
+      if ((nova.versaoObservacao ?? 0) < (atual.versaoObservacao ?? 0)) return atual
+      return { ...atual, observacao: nova.observacao, versaoObservacao: nova.versaoObservacao }
+    })
+  }
+
+  function atualizarSituacao(nova) {
+    setAposAcao((anterior) => {
+      const atual = anterior ?? consulta
+      const observacao = (nova.versaoObservacao ?? 0) > (atual.versaoObservacao ?? 0) ? nova : atual
+      return { ...nova, observacao: observacao.observacao, versaoObservacao: observacao.versaoObservacao }
+    })
+  }
 
   async function cancelar(justificativa) {
     const cancelada = await api.pedir(`/api/consultas/${consulta.id}/cancelamento`, { metodo: 'POST', corpo: { justificativa } })
-    setAposAcao(cancelada)
+    atualizarSituacao(cancelada)
     setDialogoAberto(false)
     setMensagem({ tipo: 'sucesso', texto: 'Consulta cancelada. O paciente foi avisado.' })
   }
@@ -54,7 +94,7 @@ export default function DetalhesDaConsulta() {
     setMensagem({ tipo: null, texto: '' })
     setRealizando(true)
     try {
-      setAposAcao(await api.pedir(`/api/consultas/${consulta.id}/realizacao`, { metodo: 'POST' }))
+      atualizarSituacao(await api.pedir(`/api/consultas/${consulta.id}/realizacao`, { metodo: 'POST' }))
       setMensagem({ tipo: 'sucesso', texto: 'Consulta marcada como realizada.' })
     } catch (falha) {
       setMensagem({ tipo: 'erro', texto: mensagemDoErro(falha) })
@@ -87,7 +127,7 @@ export default function DetalhesDaConsulta() {
               )}
             </div>
           </section>
-          <ObservacaoDaConsulta consulta={consulta} aoSalvar={setAposAcao} />
+          <ObservacaoDaConsulta consulta={consulta} aoSalvar={atualizarObservacao} />
         </div>
         <aside className="patient-side">
           <section className="info-card acoes-da-consulta">

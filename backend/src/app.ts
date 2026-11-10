@@ -14,13 +14,14 @@ import { criarRotasDentistas, criarRotasFuncionarios } from './modulos/funcionar
 import { criarRotasBloqueios, criarRotasDisponibilidade, criarRotasHorarios } from './modulos/disponibilidade/disponibilidade.rotas.ts';
 import { criarRotasPacientes } from './modulos/pacientes/pacientes.rotas.ts';
 import { criarRotasProcedimentos } from './modulos/procedimentos/procedimentos.rotas.ts';
+import { criarSaude, type Saude } from './compartilhado/saude.ts';
 
 // Pedidos por IP em 15 min nas rotas de autenticação: folgado para uma clínica atrás do mesmo IP,
 // curto para quem tenta esgotar a CPU com bcrypt (D32).
 const LIMITE_PADRAO_DE_AUTH_POR_IP = 200;
 
 // Monta o app sem abrir porta, para o Supertest (D23).
-export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number } = {}): Express {
+export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number; saude?: Saude } = {}): Express {
   const app = express();
   app.disable('x-powered-by');
   // D40: com proxy na frente, o IP de quem pediu vem do X-Forwarded-For; sem PROXY_CONFIAVEL, o cabeçalho é ignorado.
@@ -29,6 +30,8 @@ export function criarApp(contexto: Contexto, opcoes: { limiteDeAuth?: number } =
   app.use(pinoHttp({ logger: contexto.logger, serializers: { req: serializarRequisicao } }));
   app.use(express.json());
   app.use(cookieParser());
+  const saude = opcoes.saude ?? criarSaude(() => contexto.prisma.$queryRaw`SELECT 1`);
+  app.use('/api/saude', saude.rotas);
 
   // Swagger só fora de produção (D23, D34).
   if (contexto.config.nodeEnv !== 'production') {

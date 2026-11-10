@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import DetalhesDaConsulta from './DetalhesDaConsulta.jsx'
 
@@ -14,12 +14,86 @@ const consulta = {
   fim: '2026-10-05T11:00:00-03:00',
   status: 'CONFIRMADA',
   observacao: null,
+  versaoObservacao: 0,
   canceladoPor: null,
 }
 const abrir = (opcoes = {}) => renderizarTela(<DetalhesDaConsulta />, { caminho: '/consultas/c-1', rota: '/consultas/:consultaId', usuario: USUARIOS.dentista, ...opcoes })
 const api = (extras = {}) => simularApi({ 'GET /api/consultas/c-1': ok(consulta), 'GET /api/consultas/c-1/observacao/historico': ok([]), ...extras })
 
 describe('Detalhes da consulta (D33)', () => {
+  it('histórico com mesmo timestamp usa identidades distintas sem colisão de chave', async () => {
+    const avisos = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      api({ 'GET /api/consultas/c-1/observacao/historico': ok([
+        { id: 'h-2', versao: 2, texto: 'Segunda versão', autor: 'PACIENTE', editadoEm: '2026-10-05T09:00:00-03:00' },
+        { id: 'h-1', versao: 1, texto: 'Primeira versão', autor: 'PACIENTE', editadoEm: '2026-10-05T09:00:00-03:00' },
+      ]) })
+      abrir()
+      await screen.findByText('Segunda versão')
+      expect(screen.getByText('Primeira versão')).toBeTruthy()
+      expect(avisos.mock.calls.some((argumentos) => argumentos.join(' ').includes('same key'))).toBe(false)
+    } finally {
+      avisos.mockRestore()
+    }
+  })
+
+  it('habilita realização ao atravessar o início sem remontar a tela', async () => {
+    api()
+    const agora = new Date('2026-10-05T12:59:59.900Z')
+    vi.useFakeTimers()
+    try {
+      await act(async () => abrir({ agora }))
+      expect(screen.getByRole('button', { name: /Marcar como realizada/ }).disabled).toBe(true)
+      agora.setTime(Date.parse('2026-10-05T13:00:00Z'))
+      await act(() => vi.advanceTimersByTimeAsync(100))
+      expect(screen.getByRole('button', { name: /Marcar como realizada/ }).disabled).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('reavalia o início ao recuperar foco após suspensão', async () => {
+    api()
+    const agora = new Date('2026-10-05T12:00:00Z')
+    abrir({ agora })
+    expect((await screen.findByRole('button', { name: /Marcar como realizada/ })).disabled).toBe(true)
+    agora.setTime(Date.parse('2026-10-05T13:30:00Z'))
+    await act(async () => window.dispatchEvent(new Event('focus')))
+    expect(screen.getByRole('button', { name: /Marcar como realizada/ }).disabled).toBe(false)
+  })
+
+  it.each([
+    ['realizacao', 'observacao'], ['realizacao', 'situacao'],
+    ['cancelamento', 'observacao'], ['cancelamento', 'situacao'],
+  ])('%s: resposta de %s chega primeiro e preserva status e observação', async (acao, primeira) => {
+    const observacao = Promise.withResolvers()
+    const situacao = Promise.withResolvers()
+    const status = acao === 'realizacao' ? 'REALIZADA' : 'CANCELADA'
+    api({
+      'PUT /api/consultas/c-1/observacao': () => observacao.promise,
+      [`POST /api/consultas/c-1/${acao}`]: () => situacao.promise,
+    })
+    abrir({ agora: new Date('2026-10-05T13:30:00Z') })
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar' }))
+    await userEvent.type(screen.getByLabelText('Observação da consulta'), 'Nota atualizada')
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar observação' }))
+    if (acao === 'realizacao') {
+      await userEvent.click(screen.getByRole('button', { name: /Marcar como realizada/ }))
+    } else {
+      await userEvent.click(screen.getByRole('button', { name: 'Cancelar consulta' }))
+      await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar consulta' }))
+    }
+    const resolverObservacao = () => observacao.resolve(ok({ ...consulta, observacao: 'Nota atualizada', versaoObservacao: 1 }))
+    const resolverSituacao = () => situacao.resolve(ok({ ...consulta, status,
+      ...(acao === 'cancelamento' && { canceladoEm: '2026-10-05T10:30:00-03:00', canceladoPor: 'CLINICA' }),
+    }))
+    await act(async () => (primeira === 'observacao' ? resolverObservacao() : resolverSituacao()))
+    await act(async () => (primeira === 'observacao' ? resolverSituacao() : resolverObservacao()))
+    await waitFor(() => expect(screen.getAllByText(status === 'REALIZADA' ? 'Realizada' : 'Cancelada').length).toBeGreaterThan(0))
+    expect(screen.getByText('Nota atualizada')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Marcar como realizada/ })).toBeNull()
+  })
+
   it('antes do início, "Marcar como realizada" fica desabilitado (relógio às 09:00, consulta às 10:00)', async () => {
     api()
     abrir()

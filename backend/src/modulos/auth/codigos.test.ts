@@ -1,11 +1,13 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { criarContextoDeTeste } from '../../../testes/contexto-de-teste.ts';
 import { gerarCpfValido } from '../../../testes/fabricas.ts';
 import type { FinalidadeCodigo } from '../../generated/prisma/client.ts';
 import { consumirCodigo, emitirCodigo } from './codigos.ts';
+import * as travas from '../../compartilhado/travas.ts';
 
 const contexto = criarContextoDeTeste();
 afterAll(() => contexto.prisma.$disconnect());
+afterEach(() => vi.restoreAllMocks());
 
 const TELEFONE = '47999990000';
 
@@ -70,6 +72,59 @@ describe('emitirCodigo (D3, D19, D25.3)', () => {
 });
 
 describe('consumirCodigo (D3, D19)', () => {
+  it.each(['emissao', 'consumo'])('%s primeiro coordena substituição e consumo do código anterior', async (primeiro) => {
+    const identificador = gerarCpfValido();
+    const anterior = await emitir(identificador);
+    const adquirida = Promise.withResolvers<void>();
+    const concorrente = Promise.withResolvers<void>();
+    const liberar = Promise.withResolvers<void>();
+    const travar = travas.travarChave;
+    let chamadas = 0;
+    vi.spyOn(travas, 'travarChave').mockImplementation(async (tx, chave) => {
+      chamadas += 1;
+      const primeira = chamadas === 1;
+      if (!primeira) concorrente.resolve();
+      await travar(tx, chave);
+      if (primeira) {
+        adquirida.resolve();
+        await liberar.promise;
+      }
+    });
+    const consumirAnterior = () => consumir(identificador, anterior).then(() => 'aceito', () => 'recusado');
+    const inicial = primeiro === 'emissao' ? emitir(identificador) : consumirAnterior();
+    await adquirida.promise;
+    const seguinte = primeiro === 'emissao' ? consumirAnterior() : emitir(identificador);
+    try {
+      await concorrente.promise;
+    } finally {
+      liberar.resolve();
+    }
+    const resultados = await Promise.all([inicial, seguinte]);
+    expect(resultados[primeiro === 'emissao' ? 1 : 0]).toBe(primeiro === 'emissao' ? 'recusado' : 'aceito');
+    const novo = resultados[primeiro === 'emissao' ? 0 : 1]!;
+    await expect(consumir(identificador, novo)).resolves.toEqual({ finalidade: 'RECUPERACAO' });
+  });
+
+  it('revalida a expiração depois da leitura, antes de consumir', async () => {
+    const identificador = gerarCpfValido();
+    const codigo = await emitir(identificador);
+    const prisma = contexto.prisma.$extends({
+      query: {
+        codigoVerificacao: {
+          async findFirst({ args, query }) {
+            const linha = await query(args);
+            contexto.relogio.avancarMinutos(11);
+            return linha;
+          },
+        },
+      },
+    }) as typeof contexto.prisma;
+    await expect(consumirCodigo({ ...contexto, prisma }, {
+      identificador, tipo: 'CLIENTE', finalidades: ['RECUPERACAO'], codigo,
+    })).rejects.toMatchObject(INVALIDO);
+    expect(await contexto.prisma.codigoVerificacao.count({ where: { identificador, usadoEm: { not: null } } })).toBe(0);
+  });
+
   it('código certo vale uma vez e devolve a finalidade', async () => {
     const cpf = gerarCpfValido();
     const codigo = await emitir(cpf);

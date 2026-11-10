@@ -69,5 +69,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+      # Confere presença textual de códigos; não comprova cobertura comportamental.
+      - run: npm run conferir:codigos
       - run: npm test
       - run: npm run build
