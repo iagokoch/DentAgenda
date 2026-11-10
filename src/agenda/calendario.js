@@ -3,14 +3,17 @@
 const NOMES_DOS_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
 const partesDoMes = (mes) => mes.split('-').map(Number)
+const formatoDoDiaDaClinica = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit',
+})
 
 export function mesDaData(data) {
-  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}`
+  return dataDeHoje(data).slice(0, 7)
 }
 
 export function deslocarMes(mes, deslocamento) {
   const [ano, numero] = partesDoMes(mes)
-  return mesDaData(new Date(ano, numero - 1 + deslocamento, 1))
+  return new Date(Date.UTC(ano, numero - 1 + deslocamento, 1)).toISOString().slice(0, 7)
 }
 
 export function nomeDoMes(mes) {
@@ -38,7 +41,10 @@ export const horaDoInstante = (instante) => instante.slice(11, 16)
 export const precoEmReais = (centavos) =>
   (centavos / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-export const dataDeHoje = (agora) => dataDoDia(mesDaData(agora), agora.getDate())
+export function dataDeHoje(agora) {
+  const partes = Object.fromEntries(formatoDoDiaDaClinica.formatToParts(agora).map(({ type, value }) => [type, value]))
+  return `${partes.year}-${partes.month}-${partes.day}`
+}
 
 // "05/10/2026 às 09:30", a partir do instante da API.
 export const dataEHoraLegiveis = (instante) => {

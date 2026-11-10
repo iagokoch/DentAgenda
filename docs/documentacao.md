@@ -1289,6 +1289,11 @@ regra é a mesma para não haver dois formatos no banco.
 4. **Início** mostra consultas de hoje, próxima consulta, total de pacientes e consultas pendentes de registro
    (`/api/consultas/pendentes`). O cartão se chama "Pacientes cadastrados", não "ativos": a API não tem noção
    de paciente ativo, só o total.
+   Os filtros de "hoje" e o mês inicial/mínimo dos calendários da clínica e do paciente seguem
+   `America/Sao_Paulo`, independentemente do fuso do navegador (#21). O relógio fornece o instante; a conversão
+   para dia e mês civis usa esse fuso explicitamente. Aritmética de meses usa UTC sem conversão de fuso, pois
+   trabalha com meses civis, não com instantes. Fixar o fuso apenas nos testes ou reutilizar a conversão clínica
+   para datas sintéticas foi descartado: isso esconderia o defeito ou deslocaria o mês indevidamente.
 5. **Encaixe fora do passo** (`janelasLivres`, só R/D) não aparece na tela: ela oferece só os horários no passo.
    Com "qualquer dentista", cada horário aparece uma vez e vale o primeiro dentista livre.
 
@@ -1420,7 +1425,8 @@ obrigatório, botão que some, mensagem do código de erro certo.
 5. **Grade:** uma linha por dia da semana, com as faixas `HH:mm` de cada dia; "Salvar grade" faz o `PUT` da semana
    inteira. A resposta `consultasForaDaGrade` aparece como lista de consultas para a recepção resolver (D12.5), com link
    para cada uma.
-6. **Bloqueios:** lista os que terminam de hoje em diante (`?de=<hoje>`). O formulário pede início e fim
+6. **Bloqueios:** lista os que terminam de hoje em diante (`?de=<hoje>`, no fuso da clínica, #21).
+   A data inicial sugerida para novos funcionários também usa o dia da clínica. O formulário de bloqueios pede início e fim
    (`datetime-local`) e, para a recepção, os dentistas (feriado em lote: um bloqueio por dentista, tudo ou nada). O
    instante vai com o fuso da clínica fixo em `-03:00`: o Brasil não tem horário de verão desde 2019, e a API recusa
    instante sem fuso. O 409 `CONSULTAS_NO_PERIODO` lista as consultas que impedem o bloqueio.
@@ -1433,7 +1439,8 @@ porque os dois respondem à mesma pergunta ("quando este dentista atende?").
 **Alternativas descartadas:**
 - *Grade e bloqueios em telas separadas:* dois seletores de dentista para a mesma pergunta.
 - *Esconder só os botões e deixar a rota aberta:* a rota abriria e mostraria erro 403 em cada leitura.
-- *Fuso pela API do navegador (`Intl`):* o navegador pode estar em outro fuso; o que vale é o da clínica (D12).
+- *Fuso padrão do navegador:* ele pode estar em outro fuso; o que vale é o da clínica (D12).
+  `Intl` com `timeZone: 'America/Sao_Paulo'` explícito preserva essa regra (#21).
 
 **Em aberto:**
 1. Se o Brasil voltar a ter horário de verão, o `-03:00` fixo do bloqueio precisa virar cálculo pelo fuso
@@ -1519,6 +1526,9 @@ transações, sem nova coluna ou mudança de política de bloqueio.
    - Backend: `criarContextoDeTeste` repõe o relógio no instante inicial antes de cada teste; o ponta a ponta é sequência
      declarada (`shuffle: false`). As duas suítes passam com `npm run test:embaralhado`.
    - Testes novos de `RotaProtegida`, `RotaPublica`, `SessaoProvider`, Início, Detalhes da consulta e Perfil.
+   - #21: regressões de dia/mês da clínica e navegação de meses são executadas em São Paulo, UTC e Tóquio,
+     com instantes ISO explícitos. Saudação e data por extenso do cabeçalho do Início permanecem locais;
+     esta correção cobre os filtros por dia e os calendários.
 5. **Layout em 400px**, conferido no Edge: o Sair vai para o topo (a barra de baixo não tinha espaço e o escondia), a barra
    de baixo rola quando o admin tem mais itens do que cabem, cartões laterais ocupam a largura toda e os seletores fora do
    cartão de agendamento ganharam o mesmo visual (`src/celular.css`).
