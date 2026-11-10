@@ -39,11 +39,11 @@ export default function AppShell({ children, title, wide = false }) {
         <Brand compact/>
         <Profissional usuario={usuario} className="professional--mobile-hidden"/>
         <nav className="sidebar__nav" aria-label="Navegação principal">
-          {links.map((link) => <NavLink key={link.label} to={link.to} end={link.exato} className={() => `nav-link ${estaAtivo(link, pathname) ? 'is-active' : ''}`}><Icon name={link.icon}/><span>{link.label}</span></NavLink>)}
+          {links.map((link) => <NavLink key={link.label} to={link.to} end={link.exato} aria-label={link.label} className={() => `nav-link ${estaAtivo(link, pathname) ? 'is-active' : ''}`}><Icon name={link.icon}/><span>{link.label}</span></NavLink>)}
         </nav>
         {daClinica && <button className="primary-btn sidebar__new" onClick={() => navigate('/agenda')}><Icon name="plus"/> Novo Agendamento</button>}
         <Profissional usuario={usuario} className="sidebar__footer"/>
-        <button className="text-button sidebar__sair" onClick={sair}><Icon name="arrowLeft"/><span>Sair</span></button>
+        <button className="text-button sidebar__sair" aria-label="Sair" onClick={sair}><Icon name="arrowLeft"/><span>Sair</span></button>
       </aside>
       <div className="shell-main">
         <header className="topbar">
