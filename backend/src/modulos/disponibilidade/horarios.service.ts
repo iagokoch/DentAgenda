@@ -4,9 +4,9 @@ import { diaSeguinte, formatarEmSaoPaulo, instanteEmSaoPaulo, type Intervalo } f
 import { naoEncontrado } from '../../compartilhado/erros.ts';
 import type { Procedimento } from '../../generated/prisma/client.ts';
 import { faixasDoDia, lerGrade, type Faixa } from './grade.service.ts';
-import { horariosLivresNoPasso, janelasLivres } from './horarios.ts';
+import { horariosLivresNoPasso, horariosNoPasso, janelasLivres } from './horarios.ts';
 
-// 'passo' = o que o paciente vê; 'encaixe' = o que a clínica vê (horários no passo + janelas livres, D12.3 e D22).
+// Paciente: passo da duração. Clínica: inícios de cinco minutos e janelas livres (D12.3 e D22).
 export type Modo = 'passo' | 'encaixe';
 
 const modoDe = (usuario: UsuarioAutenticado): Modo => (usuario.tipo === 'CLIENTE' ? 'passo' : 'encaixe');
@@ -53,9 +53,12 @@ async function carregarOcupados(contexto: Contexto, dentistaIds: string[], perio
 
 function calcularNoDia(grade: Faixa[], ocupados: Intervalo[], duracaoMinutos: number, data: string, agora: Date, modo: Modo) {
   const entrada = { faixas: faixasDoDia(grade, data), ocupados, duracaoMinutos, agora };
+  const janelas = modo === 'encaixe' ? janelasLivres(entrada) : [];
   return {
-    horarios: horariosLivresNoPasso(entrada),
-    janelas: modo === 'encaixe' ? janelasLivres(entrada) : [],
+    horarios: modo === 'passo'
+      ? horariosLivresNoPasso(entrada)
+      : janelas.flatMap((janela) => horariosNoPasso(janela, duracaoMinutos, 5)),
+    janelas,
   };
 }
 

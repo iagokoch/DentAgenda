@@ -177,8 +177,9 @@ o documento. As mais recentes:
 - Usar num celular de verdade (não só o modo dispositivo do navegador) e com leitor de tela (NVDA ou TalkBack).
 - O teclado foi testado em partes (abas, popup e gaveta); falta uma passada completa só com teclado.
 
-**Fora do escopo por decisão**: abas Documentos e Financeiro do Perfil do Paciente (continuam "em breve") e o encaixe
-fora do passo para a recepção (`janelasLivres`, sem tela; D33).
+**Fora do escopo por decisão**: abas Documentos e Financeiro do Perfil do Paciente (continuam "em breve") e uma
+interface dedicada para `janelasLivres` (D33). A lista existente oferece inícios a cada cinco minutos para a clínica;
+o paciente continua no passo da duração do procedimento (#19).
 
 ## Produção (D40)
 

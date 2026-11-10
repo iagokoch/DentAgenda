@@ -449,8 +449,10 @@ CONFIRMADA e REALIZADA; a cancelada não. Resposta ordenada por `inicio` e depoi
 { "horarios": [{ "dentistaId": "uuid", "inicio": "2026-10-05T08:00:00-03:00" }] }
 ```
 
-**R/D** recebem os mesmos `horarios` **mais** as janelas livres onde cabe o procedimento, para
-encaixe fora do passo (múltiplos de 5 min — D22):
+**R/D** recebem em `horarios` todos os inícios livres em múltiplos de cinco minutos, a partir do
+primeiro múltiplo válido de cada janela, sempre comportando a duração inteira do procedimento. Recebem também
+`janelasLivres`, com os intervalos livres que comportam o procedimento (D22). O passo da duração permanece
+exclusivo de **C**; a grade e a duração não precisam ser múltiplos de cinco:
 
 ```json
 {
