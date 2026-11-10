@@ -55,6 +55,91 @@ describe('Procedimentos (D37, só admin)', () => {
     expect(pedidos.some((pedido) => pedido.metodo === 'POST')).toBe(false)
   })
 
+  it.each(['12.50', '1.5', '12.34,56'])('recusa cadastro com preço %s sem enviar POST', async (texto) => {
+    const pedidos = simularApi({ 'GET /api/procedimentos': ok([]) })
+    abrir()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Novo procedimento/ }))
+    const gaveta = screen.getByRole('dialog')
+    await userEvent.type(within(gaveta).getByLabelText('Nome'), 'Avaliação')
+    await userEvent.type(within(gaveta).getByLabelText('Duração (minutos)'), '30')
+    await userEvent.type(within(gaveta).getByLabelText('Preço (R$)'), texto)
+    await userEvent.click(within(gaveta).getByRole('button', { name: 'Cadastrar' }))
+
+    expect(pedidos.some((pedido) => pedido.metodo === 'POST')).toBe(false)
+    expect(within(gaveta).getByRole('alert').textContent).toBe('Preço em reais, como 180,00.')
+  })
+
+  it.each(['12.50', '1..250'])('recusa edição com preço %s sem enviar PATCH', async (texto) => {
+    const pedidos = simularApi({ 'GET /api/procedimentos': ok([limpeza]) })
+    abrir()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Limpeza' }))
+    const gaveta = screen.getByRole('dialog')
+    const preco = within(gaveta).getByLabelText('Preço (R$)')
+    await userEvent.clear(preco)
+    await userEvent.type(preco, texto)
+    await userEvent.click(within(gaveta).getByRole('button', { name: 'Salvar alterações' }))
+
+    expect(pedidos.some((pedido) => pedido.metodo === 'PATCH')).toBe(false)
+    expect(within(gaveta).getByRole('alert').textContent).toBe('Preço em reais, como 180,00.')
+  })
+
+  it.each([['12,50', 1250], ['1.250,00', 125000]])('cadastra preço %s com centavos corretos', async (texto, centavos) => {
+    const pedidos = simularApi({
+      'GET /api/procedimentos': ok([]),
+      'POST /api/procedimentos': ({ corpo }) => ok({ id: 'p-novo', ...corpo, ativo: true }, 201),
+    })
+    abrir()
+
+    await userEvent.click(await screen.findByRole('button', { name: /Novo procedimento/ }))
+    const gaveta = screen.getByRole('dialog')
+    await userEvent.type(within(gaveta).getByLabelText('Nome'), 'Avaliação')
+    await userEvent.type(within(gaveta).getByLabelText('Duração (minutos)'), '30')
+    await userEvent.type(within(gaveta).getByLabelText('Preço (R$)'), texto)
+    await userEvent.click(within(gaveta).getByRole('button', { name: 'Cadastrar' }))
+
+    await screen.findByText('Procedimento Avaliação cadastrado.')
+    expect(pedidos.find((pedido) => pedido.metodo === 'POST').corpo.precoCentavos).toBe(centavos)
+  })
+
+  it('edita preço com milhar enviando somente os centavos alterados', async () => {
+    const pedidos = simularApi({
+      'GET /api/procedimentos': ok([limpeza]),
+      'PATCH /api/procedimentos/p-limpeza': ({ corpo }) => ok({ ...limpeza, ...corpo }),
+    })
+    abrir()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Limpeza' }))
+    const preco = within(screen.getByRole('dialog')).getByLabelText('Preço (R$)')
+    await userEvent.clear(preco)
+    await userEvent.type(preco, '1.250,00')
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+
+    await screen.findByText('Procedimento Limpeza salvo.')
+    expect(pedidos.find((pedido) => pedido.metodo === 'PATCH').corpo).toEqual({ precoCentavos: 125000 })
+  })
+
+  it('editar somente o nome preserva preço com milhar sem incluí-lo no PATCH', async () => {
+    const procedimento = { ...limpeza, precoCentavos: 125000 }
+    const pedidos = simularApi({
+      'GET /api/procedimentos': ok([procedimento]),
+      'PATCH /api/procedimentos/p-limpeza': ({ corpo }) => ok({ ...procedimento, ...corpo }),
+    })
+    abrir()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Editar Limpeza' }))
+    const gaveta = screen.getByRole('dialog')
+    expect(within(gaveta).getByLabelText('Preço (R$)').value).toBe('1.250,00')
+    const nome = within(gaveta).getByLabelText('Nome')
+    await userEvent.clear(nome)
+    await userEvent.type(nome, 'Limpeza completa')
+    await userEvent.click(within(gaveta).getByRole('button', { name: 'Salvar alterações' }))
+
+    await screen.findByText('Procedimento Limpeza completa salvo.')
+    expect(pedidos.find((pedido) => pedido.metodo === 'PATCH').corpo).toEqual({ nome: 'Limpeza completa' })
+  })
+
   it('nome repetido: mensagem do 409 NOME_JA_CADASTRADO', async () => {
     simularApi({
       'GET /api/procedimentos': ok([limpeza]),
