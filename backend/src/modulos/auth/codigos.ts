@@ -2,8 +2,8 @@ import { createHmac, randomInt, timingSafeEqual } from 'node:crypto';
 import type { Transacao } from '../../compartilhado/banco.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { ErroDeNegocio } from '../../compartilhado/erros.ts';
-import { travarChave } from '../../compartilhado/travas.ts';
 import type { FinalidadeCodigo, TipoConta } from '../../generated/prisma/client.ts';
+import { travarCodigos } from './travas-de-autenticacao.ts';
 
 export const LIMITE_POR_HORA = 3;
 export const LIMITE_POR_DIA = 5;
@@ -34,12 +34,13 @@ type PedidoDeCodigo = {
 // cada vez (trava consultiva), senão todos leriam a contagem antes de qualquer gravação e o limite não seguraria rajada.
 export function emitirCodigo(contexto: Contexto, pedido: PedidoDeCodigo): Promise<string> {
   return contexto.prisma.$transaction(async (tx) => {
-    await travarChave(tx, `codigo:${pedido.tipo}:${pedido.identificador}`);
-    return emitirNaTransacao(tx, contexto, pedido);
+    await travarCodigos(tx, pedido.tipo, [pedido.identificador]);
+    return emitirCodigoNaTransacao(tx, contexto, pedido);
   });
 }
 
-async function emitirNaTransacao(tx: Transacao, contexto: Contexto, pedido: PedidoDeCodigo): Promise<string> {
+// Quem chama já trava o código antes de ler titular e destino.
+export async function emitirCodigoNaTransacao(tx: Transacao, contexto: Contexto, pedido: PedidoDeCodigo): Promise<string> {
   const agora = contexto.relogio.agora();
   const { identificador, tipo, finalidade, destino } = pedido;
   // D25.3: janelas móveis, somando todas as finalidades do par (identificador, tipo).
@@ -85,14 +86,14 @@ export async function consumirCodigo(
   pedido: ConsumoDeCodigo,
 ): Promise<{ finalidade: FinalidadeCodigo }> {
   const resultado = await contexto.prisma.$transaction(async (tx) => {
-    await travarChave(tx, `codigo:${pedido.tipo}:${pedido.identificador}`);
-    return consumirNaTransacao(tx, contexto, pedido);
+    await travarCodigos(tx, pedido.tipo, [pedido.identificador]);
+    return consumirCodigoNaTransacao(tx, contexto, pedido);
   });
   if (!resultado) throw codigoInvalido();
   return resultado;
 }
 
-async function consumirNaTransacao(
+export async function consumirCodigoNaTransacao(
   tx: Transacao,
   contexto: Contexto,
   pedido: ConsumoDeCodigo,
@@ -129,6 +130,21 @@ async function consumirNaTransacao(
   });
   if (usado.count === 0) return null;
   return { finalidade: linha.finalidade };
+}
+
+// Preserva histórico e limites de emissão; deve compartilhar a trava com emissão/consumo.
+export async function invalidarCodigosNaTransacao(
+  tx: Transacao,
+  contexto: Contexto,
+  tipo: TipoConta,
+  identificadores: string[],
+  finalidades: FinalidadeCodigo[],
+): Promise<void> {
+  const agora = contexto.relogio.agora();
+  await tx.codigoVerificacao.updateMany({
+    where: { tipo, identificador: { in: identificadores }, finalidade: { in: finalidades }, usadoEm: null, expiraEm: { gt: agora } },
+    data: { expiraEm: agora },
+  });
 }
 
 function hashesIguais(calculado: string, guardado: string): boolean {

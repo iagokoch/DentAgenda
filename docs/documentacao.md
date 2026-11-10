@@ -1656,6 +1656,32 @@ revogação remota, que continua dependente de resposta do servidor.
 do histórico impede escritas do código antigo; não manter versões antigas e novas escrevendo durante a migração.
 Voltar a imagem não desfaz a migration. Testes e aplicação nesta sessão usam exclusivamente banco descartável.
 
+## D43 — Códigos e alterações de canal de acesso (issue #17)
+
+**O quê:** emissão, edição cadastral e confirmação compartilham a trava de código por `(tipo, identificador)`.
+O titular e o destino são lidos depois dessa trava. Alteração real do telefone expira códigos de recuperação e
+ativação pelo CPF; alteração real do e-mail expira códigos de recuperação dos endereços antigo e novo. Inativar
+funcionário também os expira, de modo que reativá-lo não restaure códigos antigos. Registros e contadores são
+preservados. Editar sem mudar o canal não invalida códigos.
+
+Consumo do código e seu efeito (redefinir senha/revogar sessões ou criar Login/sessão) pertencem à mesma transação.
+Bcrypt fica antes da transação; envio da mensagem, depois do commit. Código incorreto retorna uma decisão inválida
+na transação e só gera `CODIGO_INVALIDO` depois do commit, para manter a tentativa registrada. A ativação compara o
+destino com o telefone cadastrado atual. Validade, limites, endpoints e respostas que não revelam contas permanecem.
+
+**Ordem das travas:** código → identificador de login → conta estável → linhas/sessões, omitindo etapas que a operação
+não usa. Múltiplos identificadores são ordenados e deduplicados. Edição de funcionário começa com uma trava exclusiva
+por id, lê o e-mail antigo, trava os códigos antigo/novo e os identificadores de login na ordem descrita, depois a conta
+e, por último, as linhas dos administradores ordenadas por id. A trava de edição estabiliza a descoberta do e-mail
+antigo sem depender de snapshot externo. Login continua identificador → conta; refresh, conta → sessão.
+
+**Por quê:** um código emitido para A podia redefinir B depois da transferência do e-mail; corrigir o telefone não
+invalidava códigos enviados ao número anterior. Só invalidar na edição deixaria passar uma confirmação que já tivesse
+consumido o código e ainda estivesse calculando a senha. Só comparar o destino não cobre telefone A→B→A.
+
+**Alternativa descartada:** adicionar vínculo de conta por coluna/migration. A coordenação acima resolve os cenários
+sem nova coluna; vínculo imutável isolado ainda exigiria invalidação por canal e atomicidade de consumo/efeito.
+
 ## Próximo
 
 Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos
