@@ -1,75 +1,70 @@
 /**
- * @fileoverview Utilitários de sanitização, formatação e validação algorítmica de CPF (Cadastro de Pessoas Físicas).
- * Implementa validação estrita dos dois dígitos verificadores via módulo 11.
+ * @fileoverview Utilitários para sanitização, formatação e validação de CPF.
+ * Em conformidade com o algoritmo de módulo 11 da Receita Federal do Brasil.
  */
 
+const TAMANHO_CPF = 11;
+
 /**
- * Remove caracteres de pontuação e formatação, mantendo estritamente dígitos numéricos.
+ * Remove qualquer caractere não numérico da string informada.
  *
- * @param valor - Cadeia de caracteres contendo o CPF formatado ou desformatado.
- * @returns Apenas os dígitos numéricos presentes na entrada.
+ * @param valor - Sequência de caracteres a ser limpa.
+ * @returns Apenas os dígitos numéricos.
  *
  * @example
- * sanitizarCpf("123.456.789-00"); // "12345678900"
+ * sanitizarCpf("123.456.789-01"); // "12345678901"
  */
 export function sanitizarCpf(valor: string): string {
   return valor.replace(/\D/g, "");
 }
 
 /**
- * Valida se uma cadeia de caracteres representa um número de CPF válido segundo as regras da Receita Federal.
+ * Valida se uma string é um CPF matematicamente válido.
+ * 
+ * Regras estritas aplicadas:
+ * 1. Deve ser string e possuir exatamente 11 dígitos numéricos (sem pontuação).
+ * 2. Não pode ser sequência com todos os dígitos idênticos (ex.: "11111111111").
+ * 3. Validação dos dois dígitos verificadores via módulo 11.
  *
- * O algoritmo executa:
- * 1. Sanitização para extração exclusiva de dígitos.
- * 2. Checagem de comprimento fixo (11 dígitos).
- * 3. Rejeição de padrões com todos os números repetidos (ex.: "111.111.111-11").
- * 4. Cálculo e validação do primeiro e segundo dígitos verificadores.
- *
- * @param valor - Sequência de caracteres do CPF a ser avaliado.
- * @returns `true` se o CPF for matematicamente válido; caso contrário, `false`.
+ * @param valor - Sequência com exatamente 11 dígitos numéricos.
+ * @returns `true` se for válido; caso contrário, `false`.
  */
 export function cpfValido(valor: string): boolean {
-  const digitos = sanitizarCpf(valor);
-
-  if (digitos.length !== 11) {
+  if (typeof valor !== "string") {
     return false;
   }
 
-  // CPFs com todos os números iguais passam no cálculo mod11, mas são inválidos na Receita Federal
-  if (/^(\d)\1{10}$/.test(digitos)) {
+  // Rejeita qualquer entrada que não tenha exatamente 11 dígitos numéricos puros
+  if (!/^\d{11}$/.test(valor)) {
+    return false;
+  }
+
+  // Rejeita sequências de números repetidos
+  if (/^(\d)\1{10}$/.test(valor)) {
     return false;
   }
 
   const calcularDigito = (limite: number): number => {
     let soma = 0;
     for (let i = 0; i < limite - 1; i++) {
-      soma += Number(digitos[i]) * (limite - i);
+      soma += Number(valor[i]) * (limite - i);
     }
     const resto = (soma * 10) % 11;
     return resto === 10 ? 0 : resto;
   };
 
-  const d1 = calcularDigito(10);
-  const d2 = calcularDigito(11);
+  const digito1 = calcularDigito(10);
+  const digito2 = calcularDigito(11);
 
-  return d1 === Number(digitos[9]) && d2 === Number(digitos[10]);
+  return digito1 === Number(valor[9]) && digito2 === Number(valor[10]);
 }
 
 /**
- * Alias de compatibilidade caso alguma parte do código chame por validarCpf.
+ * Alias de compatibilidade para cpfValido.
  */
 export const validarCpf = cpfValido;
 
 /**
- * Aplica a máscara padrão de CPF (`000.000.000-00`) sobre uma string contendo dígitos.
+ * Formata uma sequência de 11 dígitos no padrão clássico de CPF (000.000.000-00).
  *
- * @param valor - CPF com ou sem máscara prévia.
- * @returns CPF formatado com pontos e hífen ou a string original se não tiver 11 dígitos.
- */
-export function formatarCpf(valor: string): string {
-  const digitos = sanitizarCpf(valor);
-  if (digitos.length !== 11) {
-    return valor;
-  }
-  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
+ * @
