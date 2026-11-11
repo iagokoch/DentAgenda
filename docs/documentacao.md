@@ -346,7 +346,7 @@ dele ficariam presas a uma conta diferente da que administra.
   Ex.: segunda 08:00–12:00 e 14:00–18:00. O almoço é o intervalo entre duas faixas.
 - **Bloqueio:** período (início, fim) em que um dentista não atende — férias, curso, feriado.
 - **Horário livre** = faixas da grade − bloqueios − consultas não canceladas (CONFIRMADA e REALIZADA; ver D18).
-- Os horários de início oferecidos **andam no passo da duração do procedimento**, contados a
+- Para o paciente, os horários de início oferecidos **andam no passo da duração do procedimento**, contados a
   partir do início de cada faixa. Limpeza de 60 min na faixa 08:00–12:00 → 08:00, 09:00,
   10:00, 11:00. A consulta precisa caber inteira dentro de uma faixa.
 - **Sem limites** para o paciente no MVP: sem antecedência mínima, sem horizonte máximo,
@@ -856,6 +856,9 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
    numa transação só. O modelo da D14 não muda: continua sendo uma consulta cancelada + uma nova.
 2. **Dias com vaga no mês:** `GET /api/dias-disponiveis` para o calendário marcar dias lotados.
 3. **Encaixe da clínica em múltiplos de 5 min** (refina a D12.3 "qualquer minuto livre").
+   A oferta de `horarios` para R/D enumera esses inícios nas janelas livres, com a duração inteira dentro da
+   janela. Para C, permanece o passo da duração ancorado no início da faixa. Grade e duração continuam aceitando
+   minutos não múltiplos de cinco (issue #19).
 4. **Consulta retroativa só pela clínica:** R/D registram consulta com horário no passado
    (urgência atendida sem agendamento). Grade e bloqueio não são checados nesse caso;
    sobreposição continua. Nasce `CONFIRMADA` e aparece em pendentes. Paciente → 422.
@@ -1289,7 +1292,8 @@ regra é a mesma para não haver dois formatos no banco.
 4. **Início** mostra consultas de hoje, próxima consulta, total de pacientes e consultas pendentes de registro
    (`/api/consultas/pendentes`). O cartão se chama "Pacientes cadastrados", não "ativos": a API não tem noção
    de paciente ativo, só o total.
-5. **Encaixe fora do passo** (`janelasLivres`, só R/D) não aparece na tela: ela oferece só os horários no passo.
+5. A lista existente oferece horários a cada cinco minutos para R/D e no passo da duração para C (issue #19).
+   `janelasLivres` continua retornado para R/D, sem interface dedicada para manipular esses intervalos.
    Com "qualquer dentista", cada horário aparece uma vez e vale o primeiro dentista livre.
 
 **Por quê:** fecha o fluxo marcar → ver → remarcar/cancelar/realizar sem mudar o contrato do `api.md`; a
@@ -1300,7 +1304,7 @@ alternativa de editar horário na mesma consulta já estava descartada (D14).
 - *Rotular o total como "ativos":* o número não filtra nada; o rótulo mentiria.
 
 **Em aberto:**
-1. Encaixe fora do passo para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
+1. Interface dedicada de janelas para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
 2. ~~Área do paciente (`/minha-conta`) provisória~~: resolvida na D35.
 3. Valor Estimado editável pela clínica: decisão de produto, perguntar à Colzani.
 

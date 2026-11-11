@@ -68,6 +68,96 @@ async function ocupar(dentistaId: string, de: string, ate: string, status: 'CONF
 const bloquear = (dentistaId: string, inicio: string, fim: string) =>
   contexto.prisma.bloqueio.create({ data: { dentistaId, inicio: new Date(inicio), fim: new Date(fim) } });
 
+describe('oferta compatível com a criação e remarcação (#19)', () => {
+  const cenarios = [
+    { duracao: 7, de: '08:00', ate: '08:30', cliente: ['08:00', '08:07', '08:14', '08:21'], clinica: ['08:00', '08:05', '08:10', '08:15', '08:20'] },
+    { duracao: 45, de: '08:02', ate: '10:00', cliente: ['08:02', '08:47'], clinica: ['08:05', '08:10', '08:15', '08:20', '08:25', '08:30', '08:35', '08:40', '08:45', '08:50', '08:55', '09:00', '09:05', '09:10', '09:15'] },
+  ];
+
+  describe.each(cenarios)('duração $duracao, grade $de–$ate', (cenario) => {
+    it.each(['R', 'D', 'C'] as const)('%s escolhe e confirma horários oferecidos sem mudar sua regra', async (papel) => {
+      const dentista = await dentistaComGrade([{ diaSemana: 1, inicio: cenario.de, fim: cenario.ate }]);
+      const procedimento = await criarProcedimento(contexto, { duracaoMinutos: cenario.duracao });
+      const cliente = await criarPaciente(contexto);
+      const token = papel === 'C' ? await tokenDe(contexto, cliente) : papel === 'D' ? await tokenDe(contexto, dentista) : await daRecepcao();
+      const filtro = `procedimentoId=${procedimento.id}&data=2026-10-05&dentistaId=${dentista.id}`;
+      const resposta = await horarios(token, filtro);
+      expect(resposta.status).toBe(200);
+      expect(inicios(resposta.body)).toEqual(papel === 'C' ? cenario.cliente : cenario.clinica);
+      const calendario = await dias(token, `procedimentoId=${procedimento.id}&mes=2026-10&dentistaId=${dentista.id}`);
+      expect(calendario.status).toBe(200);
+      expect(calendario.body.dias).toContain('2026-10-05');
+      const dados = { dentistaId: dentista.id, procedimentoId: procedimento.id, ...(papel === 'C' ? {} : { pacienteId: cliente.id }) };
+      if (papel !== 'C') {
+        const invalida = await request(app).post('/api/consultas').set(com(token))
+          .send({ ...dados, inicio: '2026-10-05T08:07:00-03:00' });
+        expect(invalida.status).toBe(409);
+        expect(invalida.body.erro.codigo).toBe('FORA_DOS_5_MINUTOS');
+      }
+      const inicio = resposta.body.horarios[1].inicio;
+      const criada = await request(app).post('/api/consultas').set(com(token)).send({ ...dados, inicio });
+      expect(criada.status).toBe(201);
+      expect(criada.body.inicio).toBe(inicio);
+      if (papel !== 'C') {
+        const invalida = await request(app).post(`/api/consultas/${criada.body.id}/remarcacao`).set(com(token))
+          .send({ inicio: '2026-10-05T08:07:00-03:00' });
+        expect(invalida.status).toBe(409);
+        expect(invalida.body.erro.codigo).toBe('FORA_DOS_5_MINUTOS');
+        const original = await contexto.prisma.consulta.findUniqueOrThrow({ where: { id: criada.body.id } });
+        expect(original.status).toBe('CONFIRMADA');
+      }
+      const vagas = await horarios(token, filtro);
+      expect(vagas.status).toBe(200);
+      const novoInicio = vagas.body.horarios[0].inicio;
+      const remarcada = await request(app).post(`/api/consultas/${criada.body.id}/remarcacao`).set(com(token))
+        .send({ inicio: novoInicio, justificativa: 'Remarcação no teste da oferta.' });
+      expect(remarcada.status).toBe(201);
+      expect(remarcada.body.cancelada.status).toBe('CANCELADA');
+      expect(remarcada.body.nova.inicio).toBe(novoInicio);
+    });
+  });
+
+  it('duração de um minuto usa janela menor que cinco e mantém dia e oferta coerentes', async () => {
+    const dentista = await dentistaComGrade([{ diaSemana: 1, inicio: '08:02', fim: '08:06' }]);
+    const procedimento = await criarProcedimento(contexto, { duracaoMinutos: 1 });
+    const token = await daRecepcao();
+    const resposta = await horarios(token, `procedimentoId=${procedimento.id}&data=2026-10-05&dentistaId=${dentista.id}`);
+    expect(resposta.status).toBe(200);
+    expect(inicios(resposta.body)).toEqual(['08:05']);
+    const calendario = await dias(token, `procedimentoId=${procedimento.id}&mes=2026-10&dentistaId=${dentista.id}`);
+    expect(calendario.body.dias).toContain('2026-10-05');
+  });
+
+  it('não anuncia dia quando o arredondamento deixa a janela sem duração suficiente', async () => {
+    const dentista = await dentistaComGrade([{ diaSemana: 1, inicio: '08:02', fim: '08:05' }]);
+    const procedimento = await criarProcedimento(contexto, { duracaoMinutos: 1 });
+    const token = await daRecepcao();
+    const resposta = await horarios(token, `procedimentoId=${procedimento.id}&data=2026-10-05&dentistaId=${dentista.id}`);
+    expect(resposta.status).toBe(200);
+    expect(resposta.body).toEqual({ horarios: [], janelasLivres: [] });
+    const calendario = await dias(token, `procedimentoId=${procedimento.id}&mes=2026-10&dentistaId=${dentista.id}`);
+    expect(calendario.body.dias).not.toContain('2026-10-05');
+  });
+
+  it('arredonda agora com segundos e não oferece início cujo término ultrapassa a janela', async () => {
+    contexto.relogio.definir(new Date('2026-10-05T08:02:30-03:00'));
+    const dentista = await dentistaComGrade([{ diaSemana: 1, inicio: '08:00', fim: '08:20' }]);
+    const procedimento = await criarProcedimento(contexto, { duracaoMinutos: 7 });
+    const resposta = await horarios(await daRecepcao(), `procedimentoId=${procedimento.id}&data=2026-10-05&dentistaId=${dentista.id}`);
+    expect(resposta.status).toBe(200);
+    expect(inicios(resposta.body)).toEqual(['08:05', '08:10']);
+  });
+
+  it('mantém todo o procedimento fora do bloqueio e aceita término encostado nele', async () => {
+    const dentista = await dentistaComGrade([{ diaSemana: 1, inicio: '08:00', fim: '08:40' }]);
+    const procedimento = await criarProcedimento(contexto, { duracaoMinutos: 7 });
+    await bloquear(dentista.id, '2026-10-05T08:12:00-03:00', '2026-10-05T08:21:00-03:00');
+    const resposta = await horarios(await daRecepcao(), `procedimentoId=${procedimento.id}&data=2026-10-05&dentistaId=${dentista.id}`);
+    expect(resposta.status).toBe(200);
+    expect(inicios(resposta.body)).toEqual(['08:00', '08:05', '08:25', '08:30']);
+  });
+});
+
 describe('GET /api/horarios-livres', () => {
   it('cliente recebe só horarios no passo, sem janelasLivres', async () => {
     const dentista = await dentistaComGrade(SEGUNDA_MANHA);
@@ -91,7 +181,11 @@ describe('GET /api/horarios-livres', () => {
     const resposta = await horarios(await daRecepcao(), consulta(dentista.id));
 
     expect(resposta.status).toBe(200);
-    expect(inicios(resposta.body)).toEqual(['09:00', '10:00', '11:00']);
+    const oferecidos = inicios(resposta.body);
+    expect(oferecidos).toHaveLength(25);
+    expect(oferecidos[0]).toBe('09:00');
+    expect(oferecidos.at(-1)).toBe('11:00');
+    expect(oferecidos).toContain('09:05');
     // 08:00–08:30 não comporta 60 min e some; sobra a janela das 09:00 às 12:00.
     expect(resposta.body.janelasLivres).toEqual([
       { dentistaId: dentista.id, inicio: '2026-10-05T09:00:00-03:00', fim: '2026-10-05T12:00:00-03:00' },
