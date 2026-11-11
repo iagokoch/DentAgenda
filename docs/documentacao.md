@@ -1300,6 +1300,16 @@ regra é a mesma para não haver dois formatos no banco.
 5. A lista existente oferece horários a cada cinco minutos para R/D e no passo da duração para C (issue #19).
    `janelasLivres` continua retornado para R/D, sem interface dedicada para manipular esses intervalos.
    Com "qualquer dentista", cada horário aparece uma vez e vale o primeiro dentista livre.
+6. **Pendências de registro (#34, opção A):** o lembrete do Início oferece "Ver consultas pendentes" quando há
+   pendências. A página `/consultas/pendentes?pagina=N`, só para funcionários, reutiliza a API existente com 20
+   consultas por página, mais antigas primeiro. Pendência significa `CONFIRMADA` com **fim** no passado (D13).
+   Recepção vê as da clínica; dentista só as próprias, conforme a API. Mostra paciente, data/intervalo e dentista,
+   com acesso aos detalhes. `?origem=pendentes&pagina=N` nos detalhes preserva o retorno inclusive após refresh;
+   somente essa origem enumerada é aceita, sem URL de retorno arbitrária. Ao voltar, a lista é relida; uma página
+   que ficou sem itens recua à última válida. O Início também relê o lembrete ao retornar. A paginação não garante
+   snapshot entre chamadas concorrentes. A lista vira cartões em telas estreitas, mantendo foco visível,
+   carregamento, vazio e erro com nova tentativa. A gaveta foi descartada por exigir mais controle de foco e
+   reabertura ao voltar dos detalhes. Sem item novo no menu, tema escuro, cache global ou ações clínicas em lote.
 
 **Por quê:** fecha o fluxo marcar → ver → remarcar/cancelar/realizar sem mudar o contrato do `api.md`; a
 alternativa de editar horário na mesma consulta já estava descartada (D14).

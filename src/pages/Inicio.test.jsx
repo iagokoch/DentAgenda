@@ -49,6 +49,15 @@ describe('Início (D33)', () => {
     api({ pendentes: 2 })
     renderizarTela(<Inicio />, { usuario: USUARIOS.dentista, caminho: '/inicio' })
     expect(await screen.findByText('2 consultas já passaram e ainda não foram marcadas como realizadas.')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Ver consultas pendentes' }).getAttribute('href')).toBe('/consultas/pendentes')
+  })
+
+  it('não oferece o atalho enquanto não houver pendências confirmadas pela API', async () => {
+    api()
+    renderizarTela(<Inicio />, { caminho: '/inicio' })
+    expect(screen.queryByRole('link', { name: 'Ver consultas pendentes' })).toBeNull()
+    await screen.findByText('Nenhuma consulta pendente de registro.')
+    expect(screen.queryByRole('link', { name: 'Ver consultas pendentes' })).toBeNull()
   })
 
   it('atalhos só levam a telas que o papel abre (#3)', () => {

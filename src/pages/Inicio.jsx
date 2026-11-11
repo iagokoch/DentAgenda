@@ -89,6 +89,9 @@ export default function Inicio() {
             <div>
               <strong>Lembrete do dia</strong>
               <p>{textoDoLembrete(pendentes)}</p>
+              {pendentes.estado === 'pronto' && pendentes.dados.total > 0 && (
+                <Link className="lembrete-pendencias" to="/consultas/pendentes">Ver consultas pendentes</Link>
+              )}
             </div>
           </section>
         </aside>
