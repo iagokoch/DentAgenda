@@ -21,7 +21,8 @@ Tudo pelas telas, nos quatro papéis (recepção, dentista, admin e paciente), s
 ### 1. Recepção — o dia da clínica (Carla)
 
 1. **Início:** consultas de hoje, próxima consulta, total de pacientes e o lembrete "1 consulta já passou e ainda não foi
-   marcada como realizada".
+   marcada como realizada". **Ver consultas pendentes** abre a lista da clínica, com paciente, data/horário e dentista;
+   quando houver mais de 20, use **Anterior** e **Próxima**.
 2. **Pacientes:** busque `marcos` (a busca ignora acento e maiúscula) → abra **Marcos Oliveira (exemplo)**. Mostre dados,
    alertas (adicione "Alergia a látex") e a aba **Histórico**. Teclado: setas trocam de aba.
 3. **Agendar Consulta:** Limpeza, Dra. Ana Costa, um dia da semana que vem, 09:00 → **Confirmar Agendamento** → **Ver
@@ -35,12 +36,13 @@ Tudo pelas telas, nos quatro papéis (recepção, dentista, admin e paciente), s
 
 ### 2. Dentista — o atendimento (Ana)
 
-1. **Início:** mesmo lembrete de consulta pendente. Abra a consulta: **Pacientes** → `marcos` → **Marcos Oliveira
-   (exemplo)** → aba **Histórico** → a consulta do último dia útil, às 09:00.
+1. **Início:** mesmo lembrete de consulta pendente. **Ver consultas pendentes** → **Ver consulta** de **Marcos Oliveira
+   (exemplo)**, no último dia útil às 09:00. A Ana vê somente as próprias consultas pendentes.
 2. **Observações:** escreva "Dente 24 – oclusal. Sem intercorrências." → salve → edite de novo: o histórico mostra as
    duas versões, com o nome da Ana.
-3. **Marcar como realizada:** o status vira Realizada, e o lembrete do Início some. Numa consulta futura o botão fica
-   desabilitado ("disponível a partir do horário da consulta").
+3. **Marcar como realizada:** o status vira Realizada. **Voltar para pendências** relê a lista na mesma página, ou
+   recua se ela ficou vazia. Volte ao **Início**: o lembrete é atualizado e, sem pendências, o atalho desaparece.
+   Numa consulta futura o botão fica desabilitado ("disponível a partir do horário da consulta").
 4. **Disponibilidade:** a Ana vê só a própria grade (sem editar) e bloqueia uma tarde (ex.: sexta 14:00–18:00). Volte
    ao Novo Agendamento na janela da recepção: a tarde bloqueada não oferece horário.
 
