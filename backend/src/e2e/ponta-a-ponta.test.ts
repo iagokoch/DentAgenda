@@ -89,9 +89,11 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
   it('2. a recepção vê os horários livres da grade e marca uma consulta', async () => {
     const livres = await request(app).get('/api/horarios-livres').query({ procedimentoId, data: '2026-10-12', dentistaId }).set(com(recepcao));
     expect(livres.status).toBe(200);
-    expect(livres.body.horarios.map((horario: { inicio: string }) => horario.inicio)).toEqual(
-      ['08:00', '09:00', '10:00', '11:00'].map((hora) => `2026-10-12T${hora}:00-03:00`),
-    );
+    const oferecidos = livres.body.horarios.map((horario: { inicio: string }) => horario.inicio);
+    expect(oferecidos).toHaveLength(37);
+    expect(oferecidos[0]).toBe('2026-10-12T08:00:00-03:00');
+    expect(oferecidos.at(-1)).toBe('2026-10-12T11:00:00-03:00');
+    expect(oferecidos).toContain('2026-10-12T08:05:00-03:00');
 
     const resposta = await marcar(marcos, '09:00');
 

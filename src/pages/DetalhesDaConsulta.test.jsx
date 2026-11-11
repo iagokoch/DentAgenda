@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import axe from 'axe-core'
 import { describe, expect, it, vi } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import DetalhesDaConsulta from './DetalhesDaConsulta.jsx'
@@ -144,5 +145,13 @@ describe('Detalhes da consulta (D33)', () => {
     expect(document.activeElement).toBe(campo)
     await userEvent.tab({ shift: true })
     expect(document.activeElement).toBe(within(dialogo).getByRole('button', { name: 'Cancelar consulta' }))
+  })
+
+  it('o cancelamento tem semântica válida de diálogo (#2)', async () => {
+    api()
+    abrir({ usuario: USUARIOS.recepcao })
+    await userEvent.click(await screen.findByRole('button', { name: /Cancelar consulta/ }))
+    const { violations } = await axe.run(screen.getByRole('dialog'), { runOnly: ['aria-allowed-role'] })
+    expect(violations.map(({ id }) => id)).toEqual([])
   })
 })

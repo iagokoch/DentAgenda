@@ -19,6 +19,24 @@ const MANHA = [intervalo('08:00', '12:00')];
 const MADRUGADA = em('00:00'); // "agora" bem antes de qualquer horário do dia
 
 describe('horariosNoPasso', () => {
+  it('passo de cinco com duração sete oferece todos os inícios que cabem', () => {
+    expect(horas(horariosNoPasso(intervalo('08:00', '08:30'), 7, 5)))
+      .toEqual(['08:00', '08:05', '08:10', '08:15', '08:20']);
+  });
+
+  it('passo explícito não substitui a duração no limite final', () => {
+    expect(horas(horariosNoPasso(intervalo('08:00', '08:12'), 7, 5)))
+      .toEqual(['08:00', '08:05']);
+  });
+
+  it('duração menor que cinco cabe em janela curta sem oferecer minutos desalinhados', () => {
+    expect(horas(horariosNoPasso(intervalo('08:05', '08:08'), 1, 5))).toEqual(['08:05']);
+  });
+
+  it.each([0, -5])('passo explícito %s não gera horários', (passo) => {
+    expect(horariosNoPasso(intervalo('08:00', '08:30'), 7, passo)).toEqual([]);
+  });
+
   it('limpeza de 60 min em 08:00–12:00 → 08:00, 09:00, 10:00, 11:00', () => {
     expect(horas(horariosNoPasso(intervalo('08:00', '12:00'), 60))).toEqual(['08:00', '09:00', '10:00', '11:00']);
   });

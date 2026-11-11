@@ -346,7 +346,7 @@ dele ficariam presas a uma conta diferente da que administra.
   Ex.: segunda 08:00–12:00 e 14:00–18:00. O almoço é o intervalo entre duas faixas.
 - **Bloqueio:** período (início, fim) em que um dentista não atende — férias, curso, feriado.
 - **Horário livre** = faixas da grade − bloqueios − consultas não canceladas (CONFIRMADA e REALIZADA; ver D18).
-- Os horários de início oferecidos **andam no passo da duração do procedimento**, contados a
+- Para o paciente, os horários de início oferecidos **andam no passo da duração do procedimento**, contados a
   partir do início de cada faixa. Limpeza de 60 min na faixa 08:00–12:00 → 08:00, 09:00,
   10:00, 11:00. A consulta precisa caber inteira dentro de uma faixa.
 - **Sem limites** para o paciente no MVP: sem antecedência mínima, sem horizonte máximo,
@@ -856,6 +856,9 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
    numa transação só. O modelo da D14 não muda: continua sendo uma consulta cancelada + uma nova.
 2. **Dias com vaga no mês:** `GET /api/dias-disponiveis` para o calendário marcar dias lotados.
 3. **Encaixe da clínica em múltiplos de 5 min** (refina a D12.3 "qualquer minuto livre").
+   A oferta de `horarios` para R/D enumera esses inícios nas janelas livres, com a duração inteira dentro da
+   janela. Para C, permanece o passo da duração ancorado no início da faixa. Grade e duração continuam aceitando
+   minutos não múltiplos de cinco (issue #19).
 4. **Consulta retroativa só pela clínica:** R/D registram consulta com horário no passado
    (urgência atendida sem agendamento). Grade e bloqueio não são checados nesse caso;
    sobreposição continua. Nasce `CONFIRMADA` e aparece em pendentes. Paciente → 422.
@@ -1289,7 +1292,8 @@ regra é a mesma para não haver dois formatos no banco.
 4. **Início** mostra consultas de hoje, próxima consulta, total de pacientes e consultas pendentes de registro
    (`/api/consultas/pendentes`). O cartão se chama "Pacientes cadastrados", não "ativos": a API não tem noção
    de paciente ativo, só o total.
-5. **Encaixe fora do passo** (`janelasLivres`, só R/D) não aparece na tela: ela oferece só os horários no passo.
+5. A lista existente oferece horários a cada cinco minutos para R/D e no passo da duração para C (issue #19).
+   `janelasLivres` continua retornado para R/D, sem interface dedicada para manipular esses intervalos.
    Com "qualquer dentista", cada horário aparece uma vez e vale o primeiro dentista livre.
 
 **Por quê:** fecha o fluxo marcar → ver → remarcar/cancelar/realizar sem mudar o contrato do `api.md`; a
@@ -1300,7 +1304,7 @@ alternativa de editar horário na mesma consulta já estava descartada (D14).
 - *Rotular o total como "ativos":* o número não filtra nada; o rótulo mentiria.
 
 **Em aberto:**
-1. Encaixe fora do passo para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
+1. Interface dedicada de janelas para a recepção (usa `janelasLivres`): decidir com a Colzani se precisa de tela.
 2. ~~Área do paciente (`/minha-conta`) provisória~~: resolvida na D35.
 3. Valor Estimado editável pela clínica: decisão de produto, perguntar à Colzani.
 
@@ -1661,6 +1665,66 @@ revogação remota, que continua dependente de resposta do servidor.
 **Implantação:** parar escritores, aplicar a migration e iniciar a aplicação atualizada. O novo campo obrigatório
 do histórico impede escritas do código antigo; não manter versões antigas e novas escrevendo durante a migração.
 Voltar a imagem não desfaz a migration. Testes e aplicação nesta sessão usam exclusivamente banco descartável.
+
+## D43 — Falhas de notificação após cancelamento e remarcação (issue #1, parcial)
+
+> **Status: fechada para esta garantia técnica.** Integração com provedores reais continua pendente.
+
+**O quê:** cancelamento e remarcação feitos pela clínica continuam tentando avisar o paciente somente depois do
+commit. A leitura do telefone e o envio ficam protegidos: uma falha nesse trecho preserva o HTTP 200 do cancelamento
+ou o HTTP 201 da remarcação, com o estado já salvo. As regras e os erros da transação permanecem os mesmos.
+
+Falhas geram um aviso `FALHA_NOTIFICACAO_CONSULTA`, com operação e ID da consulta. O aviso não inclui o erro bruto,
+telefone, paciente, procedimento, texto da mensagem ou códigos. O corpo das respostas da API não muda;
+sucesso da operação não comprova envio nem entrega da notificação.
+
+**Por quê:** antes, um erro externo chegava ao cliente como HTTP 500 depois de persistir a alteração. Isso sugeria
+que a operação não tinha ocorrido e incentivava uma repetição que já não poderia cancelar/remarcar a original.
+
+**Limites:** não há provedor real, fila, persistência de entrega ou retentativa automática nesta etapa; uma
+notificação pode ser perdida. O enviador de log continua restrito a desenvolvimento/testes, com produção bloqueada
+pela D16. Autenticação e sua emissão de códigos não foram alteradas. A issue #1 permanece aberta.
+
+**Alternativas descartadas:** propagar a falha após o commit reproduz o falso erro da operação; mover o envio
+para dentro da transação não torna o serviço externo atômico com o banco. Uma fila durável exige um escopo próprio
+de expiração, proteção do conteúdo e recuperação; não foi incluída nesta etapa sem provedor.
+
+**Validação:** regressões com enviador indisponível e falha na leitura do telefone, para cancelamento e
+remarcação. Conferem resposta, persistência e aviso sanitizado, além dos testes existentes de envio bem-sucedido
+e ausência de envio quando a operação é feita pelo paciente.
+
+Execução em 2026-11-10: os quatro casos novos falharam com HTTP 500 antes da correção e os 24 testes focados
+passaram depois. Suíte completa aprovada: **646 testes de integração e 32 isolados**; lint, typecheck, build e
+conferência dos 33 códigos de erro aprovados. Revisão independente sem achados acionáveis.
+Os testes usaram PostgreSQL 17 descartável, sem volumes persistentes, restrito a `127.0.0.1:15434`, com segredos
+gerados apenas em memória e sem arquivos de ambiente reais. Um segundo banco vazio, no mesmo container,
+serviu exclusivamente ao teste de recusa de limpeza fora de `_test`. Nenhum banco existente foi acessado.
+
+## D44 — Códigos e alterações de canal de acesso (issue #17)
+
+**O quê:** emissão, edição cadastral e confirmação compartilham a trava de código por `(tipo, identificador)`.
+O titular e o destino são lidos depois dessa trava. Alteração real do telefone expira códigos de recuperação e
+ativação pelo CPF; alteração real do e-mail expira códigos de recuperação dos endereços antigo e novo. Inativar
+funcionário também os expira, de modo que reativá-lo não restaure códigos antigos. Registros e contadores são
+preservados. Editar sem mudar o canal não invalida códigos.
+
+Consumo do código e seu efeito (redefinir senha/revogar sessões ou criar Login/sessão) pertencem à mesma transação.
+Bcrypt fica antes da transação; envio da mensagem, depois do commit. Código incorreto retorna uma decisão inválida
+na transação e só gera `CODIGO_INVALIDO` depois do commit, para manter a tentativa registrada. A ativação compara o
+destino com o telefone cadastrado atual. Validade, limites, endpoints e respostas que não revelam contas permanecem.
+
+**Ordem das travas:** código → identificador de login → conta estável → linhas/sessões, omitindo etapas que a operação
+não usa. Múltiplos identificadores são ordenados e deduplicados. Edição de funcionário começa com uma trava exclusiva
+por id, lê o e-mail antigo, trava os códigos antigo/novo e os identificadores de login na ordem descrita, depois a conta
+e, por último, as linhas dos administradores ordenadas por id. A trava de edição estabiliza a descoberta do e-mail
+antigo sem depender de snapshot externo. Login continua identificador → conta; refresh, conta → sessão.
+
+**Por quê:** um código emitido para A podia redefinir B depois da transferência do e-mail; corrigir o telefone não
+invalidava códigos enviados ao número anterior. Só invalidar na edição deixaria passar uma confirmação que já tivesse
+consumido o código e ainda estivesse calculando a senha. Só comparar o destino não cobre telefone A→B→A.
+
+**Alternativa descartada:** adicionar vínculo de conta por coluna/migration. A coordenação acima resolve os cenários
+sem nova coluna; vínculo imutável isolado ainda exigiria invalidação por canal e atomicidade de consumo/efeito.
 
 ## Próximo
 

@@ -41,7 +41,8 @@ Confira antes de assumir qualquer coisa:
   depende do provedor escolhido com a Colzani; (2) respostas da clínica em `docs/pendencias-colzani.md`, entre elas o
   prazo de retenção (90 dias provisórios, D40) e se o paciente marca pelo sistema (D35); (3) conferência humana no
   navegador e no celular de verdade (README, "O que falta"). Fora do escopo por decisão: abas Documentos e Financeiro
-  (continuam "em breve") e encaixe fora do passo (`janelasLivres`, D33).
+  (continuam "em breve") e uma interface dedicada de `janelasLivres` (D33). A lista existente oferece inícios a cada
+  cinco minutos para a clínica; paciente continua no passo da duração (#19).
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
   Express 5 + cookie-parser, swagger-ui-express (D34), pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.

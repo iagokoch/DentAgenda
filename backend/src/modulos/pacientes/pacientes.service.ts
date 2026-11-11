@@ -6,6 +6,8 @@ import { violacaoDoBanco } from '../../compartilhado/erros-do-banco.ts';
 import { paginar } from '../../compartilhado/paginacao.ts';
 import { validar } from '../../compartilhado/validacao.ts';
 import type { Cliente, EnderecoCliente } from '../../generated/prisma/client.ts';
+import { invalidarCodigosNaTransacao } from '../auth/codigos.ts';
+import { travarCodigos } from '../auth/travas-de-autenticacao.ts';
 import {
   CAMPOS_EDITAVEIS_PELO_CLIENTE,
   esquemaEdicaoPelaRecepcao,
@@ -108,17 +110,26 @@ export async function editarPaciente(contexto: Contexto, usuario: UsuarioAutenti
     mudancas = validar(esquemaEdicaoPelaRecepcao, campos);
   }
 
-  const existe = await contexto.prisma.cliente.findUnique({ where: { id }, select: { id: true } });
-  if (!existe) throw naoEncontrado();
+  const existente = await contexto.prisma.cliente.findUnique({ where: { id }, select: { cpf: true } });
+  if (!existente) throw naoEncontrado();
   const { nascimento, pacienteDesde, ...resto } = mudancas as typeof mudancas & { pacienteDesde?: string };
-  const cliente = await contexto.prisma.cliente.update({
-    where: { id },
-    data: {
-      ...resto,
-      ...(nascimento !== undefined ? { nascimento: nascimento === null ? null : dataDoBanco(nascimento) } : {}),
-      ...(pacienteDesde ? { pacienteDesde: dataDoBanco(pacienteDesde) } : {}),
-    },
-    include: INCLUIR,
+  const cliente = await contexto.prisma.$transaction(async (tx) => {
+    await travarCodigos(tx, 'CLIENTE', [existente.cpf]);
+    const atual = await tx.cliente.findUnique({ where: { id }, select: { telefone: true } });
+    if (!atual) throw naoEncontrado();
+    const editado = await tx.cliente.update({
+      where: { id },
+      data: {
+        ...resto,
+        ...(nascimento !== undefined ? { nascimento: nascimento === null ? null : dataDoBanco(nascimento) } : {}),
+        ...(pacienteDesde ? { pacienteDesde: dataDoBanco(pacienteDesde) } : {}),
+      },
+      include: INCLUIR,
+    });
+    if (editado.telefone !== atual.telefone) {
+      await invalidarCodigosNaTransacao(tx, contexto, 'CLIENTE', [existente.cpf], ['RECUPERACAO', 'ATIVACAO']);
+    }
+    return editado;
   });
   return paraResposta(cliente);
 }
