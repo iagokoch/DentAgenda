@@ -2,9 +2,9 @@ import { precoEmReais } from '../agenda/calendario.js'
 
 // D37: preço digitado em reais, com vírgula e ponto de milhar opcional; a API recebe centavos inteiros (D11).
 export function centavosDoTexto(texto) {
-  const limpo = texto.trim().replace(/\./g, '')
-  if (!/^\d+(,\d{1,2})?$/.test(limpo)) return null
-  const [reais, centavos = ''] = limpo.split(',')
+  const limpo = texto.trim()
+  if (!/^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(limpo)) return null
+  const [reais, centavos = ''] = limpo.replace(/\./g, '').split(',')
   return Number(reais) * 100 + Number(centavos.padEnd(2, '0'))
 }
 

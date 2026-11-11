@@ -1421,6 +1421,12 @@ obrigatório, botão que some, mensagem do código de erro certo.
 3. **Funcionário novo** não recebe senha (D21.1): a tela avisa que a pessoa define a dela em "Esqueci minha senha" com o
    e-mail cadastrado. A edição manda só os campos que mudaram.
 4. **Preço** é digitado em reais (`180,00`) e enviado em centavos inteiros; duração em minutos inteiros.
+   O campo aceita inteiros sem agrupamento (`1250`) ou com grupos de milhar de três dígitos (`1.250`),
+   com fração opcional de uma ou duas casas após vírgula (`12,5`, `12,50`, `1.250,00`); espaços externos são ignorados.
+   Os separadores são validados antes da conversão (#20): `12.50`, `1.5` e agrupamentos inválidos são recusados com
+   a mensagem existente. Não se aceita ponto decimal, pois o ponto representa milhar; removê-lo indiscriminadamente
+   poderia salvar um preço maior que o pretendido. Interpretar os dois padrões por tentativa foi descartado para
+   manter uma regra única e preservar formatos brasileiros válidos.
 5. **Grade:** uma linha por dia da semana, com as faixas `HH:mm` de cada dia; "Salvar grade" faz o `PUT` da semana
    inteira. A resposta `consultasForaDaGrade` aparece como lista de consultas para a recepção resolver (D12.5), com link
    para cada uma.
