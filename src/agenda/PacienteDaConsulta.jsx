@@ -40,7 +40,7 @@ function BuscaDePaciente({ podeCadastrar, aoEscolher }) {
       <form className="patient-search" onSubmit={buscar}>
         <label className="search-box">
           <Icon name="search" />
-          <input aria-label="Buscar paciente por nome ou CPF" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por nome ou CPF..." />
+          <input aria-label="Buscar paciente por nome ou CPF" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Nome ou CPF" />
         </label>
         <button type="submit" className="soft-btn">Buscar</button>
         {podeCadastrar && <Link className="soft-btn" to="/pacientes/novo"><Icon name="users" /> Novo Paciente</Link>}

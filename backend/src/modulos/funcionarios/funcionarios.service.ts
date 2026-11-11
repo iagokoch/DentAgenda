@@ -3,7 +3,9 @@ import { ErroDeNegocio, naoEncontrado } from '../../compartilhado/erros.ts';
 import { violacaoDoBanco } from '../../compartilhado/erros-do-banco.ts';
 import { gerarHashDeSenha, gerarSenhaAleatoria } from '../../compartilhado/senhas.ts';
 import type { Funcionario } from '../../generated/prisma/client.ts';
+import { invalidarCodigosNaTransacao } from '../auth/codigos.ts';
 import { revogarTodasAsSessoes } from '../auth/sessoes.ts';
+import { travarCodigos, travarConta, travarEdicaoFuncionario, travarIdentificadores } from '../auth/travas-de-autenticacao.ts';
 import type { EdicaoDeFuncionario, NovoFuncionario } from './funcionarios.schemas.ts';
 
 // Nunca devolve senhaHash.
@@ -66,8 +68,15 @@ export async function criarFuncionario(contexto: Contexto, entrada: NovoFunciona
 export async function editarFuncionario(contexto: Contexto, id: string, entrada: EdicaoDeFuncionario) {
   const funcionario = await recusandoRepetido(
     contexto.prisma.$transaction(async (tx) => {
+      await travarEdicaoFuncionario(tx, id);
+      const anterior = await tx.funcionario.findUnique({ where: { id }, select: { email: true } });
+      if (!anterior) throw naoEncontrado();
+      const emails = [anterior.email, entrada.email ?? anterior.email];
+      await travarCodigos(tx, 'FUNCIONARIO', emails);
+      await travarIdentificadores(tx, 'FUNCIONARIO', emails);
+      await travarConta(tx, { funcionarioId: id });
       const admins = await tx.$queryRaw<{ id: string }[]>`
-        SELECT id FROM "Funcionario" WHERE "isAdmin" = true AND ativo = true FOR UPDATE`;
+        SELECT id FROM "Funcionario" WHERE "isAdmin" = true AND ativo = true ORDER BY id FOR UPDATE`;
       const atual = await tx.funcionario.findUnique({ where: { id } });
       if (!atual) throw naoEncontrado();
 
@@ -84,6 +93,9 @@ export async function editarFuncionario(contexto: Contexto, id: string, entrada:
         data: { ...resto, ...(dataInicio ? { dataInicio: dataDoBanco(dataInicio) } : {}) },
         select: CAMPOS_DA_RESPOSTA,
       });
+      if (editado.email !== atual.email || (atual.ativo && !editado.ativo)) {
+        await invalidarCodigosNaTransacao(tx, contexto, 'FUNCIONARIO', emails, ['RECUPERACAO']);
+      }
       // D21.5: quem saiu da clínica não pode continuar com sessão aberta.
       if (atual.ativo && entrada.ativo === false) {
         await revogarTodasAsSessoes(tx, { funcionarioId: id }, contexto);

@@ -13,3 +13,25 @@
 
 /* Texto só para leitor de tela. */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+/* Opção A (#2): branco sobre azul escuro = 5,94:1; a seleção não depende só da cor (aria-pressed). */
+.days button.active,.time-grid button.active{background:#036b94;color:#fff;border-color:#036b94}
+/* O separador branco distingue o foco da seleção escura; o anel externo mantém 7,94:1 contra o branco. */
+.days button.active:focus-visible,.time-grid button.active:focus-visible{box-shadow:0 0 0 2px #fff}
+.money-input{color:#626c80}
+
+/* O menu inferior usa camada 50: todo fundo modal deve cobrir também a navegação. */
+.drawer-backdrop,.dialogo-fundo{z-index:60}
+.dialogo__form{display:flex;flex-direction:column;gap:14px}
+
+/* O título ilustrado some junto com o painel em telas menores; mantém a hierarquia sem mudar o desenho. */
+.auth-split__titulo-compacto{display:none}
+@media(max-width:950px){.auth-split__titulo-compacto{display:block}}
+
+/* B1: a busca continua junto do botão; cadastrar paciente fica na linha seguinte nas telas pequenas. */
+@media(max-width:700px){
+  .patient-search{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px}
+  .patient-search .search-box{min-width:0}
+  .patient-search>.soft-btn{min-height:44px}
+  .patient-search>a{grid-column:1/-1}
+}
