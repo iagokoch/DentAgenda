@@ -88,7 +88,7 @@ export default function EditarPaciente({ paciente, aoFechar, aoAtualizar }) {
 
   return (
     <div className="drawer-backdrop" onMouseDown={(evento) => evento.target === evento.currentTarget && aoFechar()}>
-      <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="editar-titulo" ref={painel}>
+      <div className="drawer" role="dialog" aria-modal="true" aria-labelledby="editar-titulo" ref={painel}>
         <header className="drawer__header">
           <div><h2 id="editar-titulo">Editar dados</h2><p>{paciente.nome}</p></div>
           <button type="button" className="icon-button" aria-label="Fechar" onClick={aoFechar}><Icon name="close" /></button>
@@ -126,7 +126,7 @@ export default function EditarPaciente({ paciente, aoFechar, aoAtualizar }) {
             <button type="submit" className="primary-btn primary-btn--solid" disabled={enviando}>{enviando ? 'Salvando…' : 'Salvar alterações'}</button>
           </div>
         </form>
-      </aside>
+      </div>
     </div>
   )
 }

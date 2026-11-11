@@ -68,6 +68,15 @@ const TELAS = [
 ]
 
 describe('acessibilidade das telas com axe (#2)', () => {
+  it.each([
+    ['Login', <Login key="login" />],
+    ['Cadastro', <Cadastro key="cadastro" />],
+  ])('%s mantém um título principal quando o painel ilustrado está oculto (#2)', (_nome, elemento) => {
+    renderizarTela(elemento, { estado: 'anonimo' })
+    document.querySelector('.auth-split__hero').style.display = 'none'
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('DentAgenda')
+  })
+
   it.each(TELAS)('$nome', async ({ elemento, caminho, rota, usuario, pronta }) => {
     simularApi(API)
     const { container } = renderizarTela(elemento, { caminho, rota, usuario })

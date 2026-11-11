@@ -26,7 +26,7 @@ export default function Gaveta({ titulo, subtitulo, aoFechar, children }) {
 
   return (
     <div className="drawer-backdrop" onMouseDown={(evento) => evento.target === evento.currentTarget && aoFechar()}>
-      <aside className="drawer" role="dialog" aria-modal="true" aria-labelledby="gaveta-titulo" ref={painel}>
+      <div className="drawer" role="dialog" aria-modal="true" aria-labelledby="gaveta-titulo" ref={painel}>
         <header className="drawer__header">
           <div>
             <h2 id="gaveta-titulo">{titulo}</h2>
@@ -35,7 +35,7 @@ export default function Gaveta({ titulo, subtitulo, aoFechar, children }) {
           <button type="button" className="icon-button" aria-label="Fechar" onClick={aoFechar}><Icon name="close" /></button>
         </header>
         {children}
-      </aside>
+      </div>
     </div>
   )
 }
