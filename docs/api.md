@@ -545,7 +545,9 @@ Consultas `CONFIRMADA` com `fim` no passado, mais antigas primeiro. Paginado.
 `justificativa` é opcional, exceto no caso abaixo.
 
 - **200** consulta cancelada (`canceladoPor` e funcionário vêm do token).
-- Clínica cancelou → paciente recebe SMS (simulado — D16).
+- Clínica cancelou → tenta avisar o paciente por SMS após a gravação (simulado — D16).
+  Falha na notificação mantém o **200** e o cancelamento salvo; gera aviso operacional sem conteúdo ou telefone (D43).
+  O **200** confirma o cancelamento, não a entrega do SMS. Ainda não há retentativa ou fila de entrega.
 - **422** `CONSULTA_NAO_CANCELAVEL` — status diferente de `CONFIRMADA`.
 - **422** `CONSULTA_JA_INICIADA` — **C** depois do horário de início.
 - **422** `JUSTIFICATIVA_OBRIGATORIA` — **C** com menos de 24 h e sem justificativa. É o código
@@ -564,7 +566,9 @@ nova (com todas as regras do `POST /api/consultas`). Se qualquer parte falhar, n
 
 - **201** `{ "cancelada": {...}, "nova": {...} }`.
 - Erros: os do cancelamento e os da criação.
-- Remarcação feita pela clínica → **um** SMS ao paciente com o horário novo (D25.11).
+- Remarcação feita pela clínica → tenta enviar **um** SMS ao paciente com o horário novo após a gravação (D25.11).
+  Falha na notificação mantém o **201**, a original cancelada e a nova confirmada; gera o mesmo aviso operacional (D43).
+  O **201** confirma a remarcação, não a entrega do SMS. Ainda não há retentativa ou fila de entrega.
 
 ### `POST /api/consultas/{id}/realizacao` (D10, D13)
 
