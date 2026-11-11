@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
+import { useConsultasDeHoje } from '../agenda/useConsultasDeHoje.js'
 import { dataDeHoje, horaDoInstante } from '../agenda/calendario.js'
 import { STATUS_DA_CONSULTA } from '../agenda/status.js'
 import AppShell from '../components/AppShell'
@@ -34,7 +35,7 @@ export default function Inicio() {
   const relogio = useRelogio()
   const [agora] = useState(() => relogio.agora())
   const hoje = dataDeHoje(agora)
-  const consultasDeHoje = useDadosDaApi(`/api/consultas?${new URLSearchParams({ de: hoje, ate: hoje, porPagina: '100' })}`)
+  const consultasDeHoje = useConsultasDeHoje(hoje)
   const pacientes = useDadosDaApi('/api/pacientes?porPagina=1')
   const pendentes = useDadosDaApi('/api/consultas/pendentes?porPagina=1')
 
