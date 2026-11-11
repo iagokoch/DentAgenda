@@ -12,7 +12,12 @@ const origemDoAlerta = (alerta) =>
 
 // "Observações Importantes" do perfil: lista, adiciona e remove (a remoção só marca; o histórico fica no banco).
 export default function Alertas({ pacienteId }) {
+  return <AlertasDoPaciente key={pacienteId} pacienteId={pacienteId} />
+}
+
+function AlertasDoPaciente({ pacienteId }) {
   const [resposta, setResposta] = useState({ pacienteId: null })
+  const [alteracoes, setAlteracoes] = useState(() => new Map())
   const [erro, setErro] = useState('')
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -29,8 +34,12 @@ export default function Alertas({ pacienteId }) {
   }, [pacienteId])
 
   const estado = resposta.pacienteId !== pacienteId ? 'carregando' : resposta.erro ? 'erro' : 'pronto'
-  const alertas = resposta.alertas ?? []
-  const setAlertas = (mudar) => setResposta((atual) => ({ ...atual, alertas: mudar(atual.alertas ?? []) }))
+  const porId = new Map((resposta.alertas ?? []).map((alerta) => [alerta.id, alerta]))
+  for (const [id, alerta] of alteracoes) {
+    if (alerta === null) porId.delete(id)
+    else porId.set(id, alerta)
+  }
+  const alertas = [...porId.values()]
 
   async function executar(acao) {
     setErro('')
@@ -49,7 +58,7 @@ export default function Alertas({ pacienteId }) {
     if (!texto.trim()) return
     return executar(async () => {
       const criado = await api.pedir(`/api/pacientes/${pacienteId}/alertas`, { metodo: 'POST', corpo: { texto: texto.trim() } })
-      setAlertas((lista) => [...lista, criado])
+      setAlteracoes((atuais) => new Map(atuais).set(criado.id, criado))
       setTexto('')
     })
   }
@@ -57,7 +66,7 @@ export default function Alertas({ pacienteId }) {
   const remover = (alerta) =>
     executar(async () => {
       await api.pedir(`/api/pacientes/${pacienteId}/alertas/${alerta.id}`, { metodo: 'DELETE' })
-      setAlertas((lista) => lista.filter((outro) => outro.id !== alerta.id))
+      setAlteracoes((atuais) => new Map(atuais).set(alerta.id, null))
     })
 
   return (
