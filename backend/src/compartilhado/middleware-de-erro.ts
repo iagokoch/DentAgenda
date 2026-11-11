@@ -41,6 +41,7 @@ function traduzirErro(erro: unknown): RespostaDeErro {
     const campos = erro.issues.map((problema) => ({ caminho: problema.path.join('.'), mensagem: problema.message }));
     return entradaInvalida(campos);
   }
+  if (erro instanceof URIError && 'status' in erro && erro.status === 400) return entradaInvalida([]);
   if (erroDoCorpo(erro)) return entradaInvalida([]);
   const violacao = violacaoDoBanco(erro);
   if (violacao?.codigoSql === '23P01' && violacao.restricao) {
