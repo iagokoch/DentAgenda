@@ -22,7 +22,7 @@ describe('Procedimentos (D37, só admin)', () => {
     expect(linhaDe('Clareamento').textContent).toMatch(/90 min.*R\$ 600,00.*Inativo/)
   })
 
-  it('cadastra convertendo o preço para centavos', async () => {
+  it('cadastra por Enter na gaveta convertendo o preço para centavos (#2)', async () => {
     const pedidos = simularApi({
       'GET /api/procedimentos': ok([limpeza]),
       'POST /api/procedimentos': ({ corpo }) => ok({ id: 'p-novo', ...corpo, ativo: true }, 201),
@@ -33,8 +33,7 @@ describe('Procedimentos (D37, só admin)', () => {
     const gaveta = screen.getByRole('dialog', { name: 'Novo procedimento' })
     await userEvent.type(within(gaveta).getByLabelText('Nome'), 'Restauração')
     await userEvent.type(within(gaveta).getByLabelText('Duração (minutos)'), '45')
-    await userEvent.type(within(gaveta).getByLabelText('Preço (R$)'), '250,50')
-    await userEvent.click(within(gaveta).getByRole('button', { name: 'Cadastrar' }))
+    await userEvent.type(within(gaveta).getByLabelText('Preço (R$)'), '250,50{Enter}')
 
     expect(await screen.findByText('Procedimento Restauração cadastrado.')).toBeTruthy()
     expect(pedidos.find((pedido) => pedido.metodo === 'POST').corpo).toEqual({ nome: 'Restauração', duracaoMinutos: 45, precoCentavos: 25050 })
