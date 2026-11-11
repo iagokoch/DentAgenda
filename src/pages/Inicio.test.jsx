@@ -24,7 +24,7 @@ function api({ pendentes = 0 } = {}) {
 const cartao = (titulo) => screen.getByText(titulo).closest('article')
 
 describe('Início (D33)', () => {
-  it('saúda pela hora do relógio e lê as consultas de hoje no fuso do navegador', async () => {
+  it('saúda pela hora do relógio e lê as consultas de hoje no fuso da clínica', async () => {
     const pedidos = api()
 
     renderizarTela(<Inicio />, { usuario: USUARIOS.recepcao, caminho: '/inicio' })
