@@ -1660,6 +1660,66 @@ revogação remota, que continua dependente de resposta do servidor.
 do histórico impede escritas do código antigo; não manter versões antigas e novas escrevendo durante a migração.
 Voltar a imagem não desfaz a migration. Testes e aplicação nesta sessão usam exclusivamente banco descartável.
 
+## D43 — Falhas de notificação após cancelamento e remarcação (issue #1, parcial)
+
+> **Status: fechada para esta garantia técnica.** Integração com provedores reais continua pendente.
+
+**O quê:** cancelamento e remarcação feitos pela clínica continuam tentando avisar o paciente somente depois do
+commit. A leitura do telefone e o envio ficam protegidos: uma falha nesse trecho preserva o HTTP 200 do cancelamento
+ou o HTTP 201 da remarcação, com o estado já salvo. As regras e os erros da transação permanecem os mesmos.
+
+Falhas geram um aviso `FALHA_NOTIFICACAO_CONSULTA`, com operação e ID da consulta. O aviso não inclui o erro bruto,
+telefone, paciente, procedimento, texto da mensagem ou códigos. O corpo das respostas da API não muda;
+sucesso da operação não comprova envio nem entrega da notificação.
+
+**Por quê:** antes, um erro externo chegava ao cliente como HTTP 500 depois de persistir a alteração. Isso sugeria
+que a operação não tinha ocorrido e incentivava uma repetição que já não poderia cancelar/remarcar a original.
+
+**Limites:** não há provedor real, fila, persistência de entrega ou retentativa automática nesta etapa; uma
+notificação pode ser perdida. O enviador de log continua restrito a desenvolvimento/testes, com produção bloqueada
+pela D16. Autenticação e sua emissão de códigos não foram alteradas. A issue #1 permanece aberta.
+
+**Alternativas descartadas:** propagar a falha após o commit reproduz o falso erro da operação; mover o envio
+para dentro da transação não torna o serviço externo atômico com o banco. Uma fila durável exige um escopo próprio
+de expiração, proteção do conteúdo e recuperação; não foi incluída nesta etapa sem provedor.
+
+**Validação:** regressões com enviador indisponível e falha na leitura do telefone, para cancelamento e
+remarcação. Conferem resposta, persistência e aviso sanitizado, além dos testes existentes de envio bem-sucedido
+e ausência de envio quando a operação é feita pelo paciente.
+
+Execução em 2026-11-10: os quatro casos novos falharam com HTTP 500 antes da correção e os 24 testes focados
+passaram depois. Suíte completa aprovada: **646 testes de integração e 32 isolados**; lint, typecheck, build e
+conferência dos 33 códigos de erro aprovados. Revisão independente sem achados acionáveis.
+Os testes usaram PostgreSQL 17 descartável, sem volumes persistentes, restrito a `127.0.0.1:15434`, com segredos
+gerados apenas em memória e sem arquivos de ambiente reais. Um segundo banco vazio, no mesmo container,
+serviu exclusivamente ao teste de recusa de limpeza fora de `_test`. Nenhum banco existente foi acessado.
+
+## D44 — Códigos e alterações de canal de acesso (issue #17)
+
+**O quê:** emissão, edição cadastral e confirmação compartilham a trava de código por `(tipo, identificador)`.
+O titular e o destino são lidos depois dessa trava. Alteração real do telefone expira códigos de recuperação e
+ativação pelo CPF; alteração real do e-mail expira códigos de recuperação dos endereços antigo e novo. Inativar
+funcionário também os expira, de modo que reativá-lo não restaure códigos antigos. Registros e contadores são
+preservados. Editar sem mudar o canal não invalida códigos.
+
+Consumo do código e seu efeito (redefinir senha/revogar sessões ou criar Login/sessão) pertencem à mesma transação.
+Bcrypt fica antes da transação; envio da mensagem, depois do commit. Código incorreto retorna uma decisão inválida
+na transação e só gera `CODIGO_INVALIDO` depois do commit, para manter a tentativa registrada. A ativação compara o
+destino com o telefone cadastrado atual. Validade, limites, endpoints e respostas que não revelam contas permanecem.
+
+**Ordem das travas:** código → identificador de login → conta estável → linhas/sessões, omitindo etapas que a operação
+não usa. Múltiplos identificadores são ordenados e deduplicados. Edição de funcionário começa com uma trava exclusiva
+por id, lê o e-mail antigo, trava os códigos antigo/novo e os identificadores de login na ordem descrita, depois a conta
+e, por último, as linhas dos administradores ordenadas por id. A trava de edição estabiliza a descoberta do e-mail
+antigo sem depender de snapshot externo. Login continua identificador → conta; refresh, conta → sessão.
+
+**Por quê:** um código emitido para A podia redefinir B depois da transferência do e-mail; corrigir o telefone não
+invalidava códigos enviados ao número anterior. Só invalidar na edição deixaria passar uma confirmação que já tivesse
+consumido o código e ainda estivesse calculando a senha. Só comparar o destino não cobre telefone A→B→A.
+
+**Alternativa descartada:** adicionar vínculo de conta por coluna/migration. A coordenação acima resolve os cenários
+sem nova coluna; vínculo imutável isolado ainda exigiria invalidação por canal e atomicidade de consumo/efeito.
+
 ## Próximo
 
 Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos

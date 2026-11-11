@@ -1,14 +1,16 @@
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { criarContextoDeTeste } from '../../../testes/contexto-de-teste.ts';
 import { criarConsultaNoBanco, criarFuncionario, criarPaciente, criarProcedimento, tokenDe } from '../../../testes/fabricas.ts';
 import { criarApp } from '../../app.ts';
 import { instanteEmSaoPaulo } from '../../compartilhado/datas.ts';
+import { criarLogger } from '../../compartilhado/logger.ts';
 import type { Cliente, Funcionario, Procedimento } from '../../generated/prisma/client.ts';
 
 const contexto = criarContextoDeTeste();
 const app = criarApp(contexto);
 afterAll(() => contexto.prisma.$disconnect());
+afterEach(() => vi.restoreAllMocks());
 
 // Relógio dos testes: segunda, 2026-10-05, 07:00 em São Paulo. Grade padrão: segunda 08:00–12:00. Limpeza: 60 min.
 let recepcionista: Funcionario;
@@ -39,6 +41,58 @@ const remarcar = (token: string, id: string, corpo: object) => request(app).post
 const marcarEm = (dentistaId: string, data: string, hora: string, clienteId = paciente.id) =>
   criarConsultaNoBanco(contexto, { clienteId, dentistaId, procedimentoId: limpeza.id, inicio: instanteEmSaoPaulo(data, hora) });
 const mensagensPara = (telefone: string) => contexto.enviador.mensagens.filter((mensagem) => mensagem.destino === telefone);
+
+describe('falhas de notificação depois da gravação (#1)', () => {
+  it.each([
+    ['cancelamento', 'envio', 200],
+    ['cancelamento', 'leitura do telefone', 200],
+    ['remarcacao', 'envio', 201],
+    ['remarcacao', 'leitura do telefone', 201],
+  ] as const)('%s preserva sucesso quando falha %s', async (operacao, origemDaFalha, statusEsperado) => {
+    const dentista = await dentistaNovo();
+    const original = await marcarEm(dentista.id, '2026-10-12', '09:00');
+    const token = await tokenDe(contexto, recepcionista);
+    const linhas: string[] = [];
+    const logger = criarLogger({ write: (linha: string) => linhas.push(linha) });
+    const appComLog = criarApp({ ...contexto, logger });
+    const falha = new Error('detalhe-privado-ficticio');
+    const envio = vi.spyOn(contexto.enviador, 'enviar');
+    if (origemDaFalha === 'envio') envio.mockRejectedValue(falha);
+    else vi.spyOn(contexto.prisma.cliente, 'findUniqueOrThrow').mockRejectedValue(falha);
+
+    const resposta = await request(appComLog)
+      .post(`/api/consultas/${original.id}/${operacao}`)
+      .set(com(token))
+      .send(operacao === 'remarcacao' ? { inicio: '2026-10-12T10:00:00-03:00' } : {});
+
+    expect(resposta.status).toBe(statusEsperado);
+    expect((await contexto.prisma.consulta.findUniqueOrThrow({ where: { id: original.id } })).status).toBe('CANCELADA');
+    let consultaNotificadaId = original.id;
+    if (operacao === 'remarcacao') {
+      expect(resposta.body.cancelada.id).toBe(original.id);
+      expect(resposta.body.nova.status).toBe('CONFIRMADA');
+      const nova = await contexto.prisma.consulta.findUniqueOrThrow({ where: { id: resposta.body.nova.id } });
+      expect(nova.inicio).toEqual(instanteEmSaoPaulo('2026-10-12', '10:00'));
+      expect(nova.status).toBe('CONFIRMADA');
+      consultaNotificadaId = nova.id;
+    } else expect(resposta.body).toMatchObject({ id: original.id, status: 'CANCELADA' });
+    expect(await contexto.prisma.consulta.count({ where: { clienteId: paciente.id } })).toBe(operacao === 'remarcacao' ? 2 : 1);
+    expect(envio).toHaveBeenCalledTimes(origemDaFalha === 'envio' ? 1 : 0);
+    expect(mensagensPara(paciente.telefone)).toHaveLength(0);
+    const avisos = linhas.map((linha) => JSON.parse(linha) as Record<string, unknown>)
+      .filter((registro) => registro.evento === 'FALHA_NOTIFICACAO_CONSULTA');
+    expect(avisos).toHaveLength(1);
+    expect(avisos[0]).toMatchObject({
+      level: 40,
+      operacao: operacao === 'cancelamento' ? 'CANCELAMENTO' : 'REMARCACAO',
+      consultaId: consultaNotificadaId,
+    });
+    const log = linhas.join('');
+    expect(log).not.toContain(falha.message);
+    expect(log).not.toContain(paciente.telefone);
+    expect(log).not.toContain(limpeza.nome);
+  });
+});
 
 describe('POST /api/consultas/{id}/cancelamento', () => {
   it('cliente cancela com 48 h sem justificativa → 200, canceladoPor PACIENTE', async () => {

@@ -8,16 +8,27 @@ function diaEHora(instante: Date): string {
   return `${dia}/${mes} às ${hora}:${minuto}`;
 }
 
-async function enviarAoPaciente(contexto: Contexto, pacienteId: string, texto: string): Promise<void> {
-  const { telefone } = await contexto.prisma.cliente.findUniqueOrThrow({ where: { id: pacienteId }, select: { telefone: true } });
-  await contexto.enviador.enviar(telefone, texto);
+async function enviarAoPaciente(
+  contexto: Contexto,
+  consulta: ConsultaComRelacoes,
+  operacao: 'CANCELAMENTO' | 'REMARCACAO',
+  texto: string,
+): Promise<void> {
+  // A consulta já foi salva: falhas nesta leitura ou no transporte não devem transformar sucesso em HTTP 500.
+  try {
+    const { telefone } = await contexto.prisma.cliente.findUniqueOrThrow({ where: { id: consulta.cliente.id }, select: { telefone: true } });
+    await contexto.enviador.enviar(telefone, texto);
+  } catch {
+    contexto.logger.warn({ evento: 'FALHA_NOTIFICACAO_CONSULTA', operacao, consultaId: consulta.id }, 'Notificação da consulta não enviada após gravação.');
+  }
 }
 
 // D14.5: o SMS sai depois do commit, para uma falha no envio nunca desfazer o cancelamento.
 export function avisarCancelamentoDaClinica(contexto: Contexto, consulta: ConsultaComRelacoes): Promise<void> {
   return enviarAoPaciente(
     contexto,
-    consulta.cliente.id,
+    consulta,
+    'CANCELAMENTO',
     `A clínica cancelou sua consulta de ${consulta.procedimento.nome} de ${diaEHora(consulta.inicio)}. Ligue para reagendar.`,
   );
 }
@@ -26,7 +37,8 @@ export function avisarCancelamentoDaClinica(contexto: Contexto, consulta: Consul
 export function avisarRemarcacaoDaClinica(contexto: Contexto, nova: ConsultaComRelacoes): Promise<void> {
   return enviarAoPaciente(
     contexto,
-    nova.cliente.id,
+    nova,
+    'REMARCACAO',
     `Sua consulta de ${nova.procedimento.nome} foi remarcada para ${diaEHora(nova.inicio)}.`,
   );
 }
