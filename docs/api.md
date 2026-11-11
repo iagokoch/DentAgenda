@@ -219,6 +219,11 @@ a tela é a mesma e não sabe qual dos casos aconteceu (D19).
 Não existe rota que só verifica o código: a tela de recuperação continua em etapas, mas envia
 código e senha nova juntos no final (D20).
 
+Alterar o telefone cadastrado invalida os códigos anteriores de recuperação e ativação; alterar o e-mail de
+funcionário invalida os códigos dos endereços antigo e novo. Inativar funcionário também invalida seus códigos de
+recuperação. Restaurar o telefone/e-mail ou reativar a conta não restaura esses códigos: é preciso pedir outro.
+A recusa mantém `400 CODIGO_INVALIDO`; editar sem mudar o canal preserva o código (D44).
+
 ---
 
 ## Pacientes (`pacientes`)
