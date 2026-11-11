@@ -28,7 +28,7 @@ export function sanitizarCpf(valor: string): string {
  * @param valor - Sequência de caracteres do CPF a ser avaliado.
  * @returns `true` se o CPF for matematicamente válido; caso contrário, `false`.
  */
-export function validarCpf(valor: string): boolean {
+export function cpfValido(valor: string): boolean {
   const digitos = sanitizarCpf(valor);
 
   if (digitos.length !== 11) {
@@ -54,6 +54,11 @@ export function validarCpf(valor: string): boolean {
 
   return d1 === Number(digitos[9]) && d2 === Number(digitos[10]);
 }
+
+/**
+ * Alias de compatibilidade caso alguma parte do código chame por validarCpf.
+ */
+export const validarCpf = cpfValido;
 
 /**
  * Aplica a máscara padrão de CPF (`000.000.000-00`) sobre uma string contendo dígitos.
