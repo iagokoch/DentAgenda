@@ -25,7 +25,7 @@ describe('Equipe (D37, só admin)', () => {
     expect(within(linhaDe('Bruno Dias')).getByRole('button', { name: 'Reativar Bruno Dias' })).toBeTruthy()
   })
 
-  it('cadastra uma dentista e avisa como ela define a senha', async () => {
+  it('cadastra uma dentista por Enter na gaveta e avisa como ela define a senha (#2)', async () => {
     const funcionarios = [rita]
     const pedidos = simularApi({
       'GET /api/funcionarios': () => ok([...funcionarios]),
@@ -42,8 +42,7 @@ describe('Equipe (D37, só admin)', () => {
     await userEvent.type(within(gaveta).getByLabelText('CPF'), '390.533.447-05')
     await userEvent.type(within(gaveta).getByLabelText('E-mail'), 'julia@colzani.com.br')
     await userEvent.selectOptions(within(gaveta).getByLabelText('Categoria'), 'DENTISTA')
-    await userEvent.type(within(gaveta).getByLabelText('CRO'), 'SC-999')
-    await userEvent.click(within(gaveta).getByRole('button', { name: 'Cadastrar' }))
+    await userEvent.type(within(gaveta).getByLabelText('CRO'), 'SC-999{Enter}')
 
     expect(await screen.findByText(/Júlia Ramos define a senha em “Esqueci minha senha”, com o e-mail julia@colzani.com.br/)).toBeTruthy()
     expect(pedidos.find((pedido) => pedido.metodo === 'POST').corpo).toEqual({

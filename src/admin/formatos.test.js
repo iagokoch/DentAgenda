@@ -13,6 +13,27 @@ describe('formatos da administração (D37)', () => {
     for (const texto of ['', 'abc', '-10', '10,999', '1,2,3']) expect(centavosDoTexto(texto)).toBeNull()
   })
 
+  it.each([
+    ['12,50', 1250], ['12,5', 1250], ['1.250,00', 125000], ['1.250', 125000],
+    ['1250', 125000], ['1.234.567,89', 123456789], [' 1.250,5 ', 125050],
+    ['0,01', 1], ['0,1', 10], ['0,00', 0], ['00012,50', 1250], ['1234,56', 123456],
+  ])('preserva o preço brasileiro %s como %i centavos', (texto, centavos) => {
+    expect(centavosDoTexto(texto)).toBe(centavos)
+  })
+
+  it.each([
+    '12.50', '1.5', '12.34,56', '1..250', '1.250.', '.125', '125.',
+    '1234.567', '1.23.456', '1,250.00', '1.250,000', '1 250,00', '1.250,',
+  ])('recusa separadores inválidos em %s antes de converter', (texto) => {
+    expect(centavosDoTexto(texto)).toBeNull()
+  })
+
+  it('preços formatados para edição voltam ao mesmo valor em centavos', () => {
+    for (const centavos of [0, 1, 10, 1250, 125000, 123456789]) {
+      expect(centavosDoTexto(textoDosCentavos(centavos))).toBe(centavos)
+    }
+  })
+
   it('centavos voltam para o texto do campo', () => {
     expect(textoDosCentavos(18000)).toBe('180,00')
     expect(textoDosCentavos(125050)).toBe('1.250,50')

@@ -20,14 +20,14 @@ function somarMinutos(instante: Date, minutos: number): Date {
   return new Date(instante.getTime() + minutos * MINUTO);
 }
 
-// D12: os inícios andam no passo da duração, contados a partir do início da faixa, e a consulta cabe inteira nela.
-export function horariosNoPasso(faixa: Intervalo, duracaoMinutos: number): Date[] {
-  if (duracaoMinutos <= 0) return [];
+// D12: o passo padrão é a duração; a clínica informa cinco minutos nas janelas já alinhadas (D22).
+export function horariosNoPasso(faixa: Intervalo, duracaoMinutos: number, passoMinutos = duracaoMinutos): Date[] {
+  if (duracaoMinutos <= 0 || passoMinutos <= 0) return [];
   const horarios: Date[] = [];
   for (
     let inicio = faixa.inicio;
     somarMinutos(inicio, duracaoMinutos) <= faixa.fim;
-    inicio = somarMinutos(inicio, duracaoMinutos)
+    inicio = somarMinutos(inicio, passoMinutos)
   ) {
     horarios.push(inicio);
   }

@@ -219,6 +219,11 @@ a tela é a mesma e não sabe qual dos casos aconteceu (D19).
 Não existe rota que só verifica o código: a tela de recuperação continua em etapas, mas envia
 código e senha nova juntos no final (D20).
 
+Alterar o telefone cadastrado invalida os códigos anteriores de recuperação e ativação; alterar o e-mail de
+funcionário invalida os códigos dos endereços antigo e novo. Inativar funcionário também invalida seus códigos de
+recuperação. Restaurar o telefone/e-mail ou reativar a conta não restaura esses códigos: é preciso pedir outro.
+A recusa mantém `400 CODIGO_INVALIDO`; editar sem mudar o canal preserva o código (D44).
+
 ---
 
 ## Pacientes (`pacientes`)
@@ -449,8 +454,10 @@ CONFIRMADA e REALIZADA; a cancelada não. Resposta ordenada por `inicio` e depoi
 { "horarios": [{ "dentistaId": "uuid", "inicio": "2026-10-05T08:00:00-03:00" }] }
 ```
 
-**R/D** recebem os mesmos `horarios` **mais** as janelas livres onde cabe o procedimento, para
-encaixe fora do passo (múltiplos de 5 min — D22):
+**R/D** recebem em `horarios` todos os inícios livres em múltiplos de cinco minutos, a partir do
+primeiro múltiplo válido de cada janela, sempre comportando a duração inteira do procedimento. Recebem também
+`janelasLivres`, com os intervalos livres que comportam o procedimento (D22). O passo da duração permanece
+exclusivo de **C**; a grade e a duração não precisam ser múltiplos de cinco:
 
 ```json
 {
@@ -545,7 +552,9 @@ Consultas `CONFIRMADA` com `fim` no passado, mais antigas primeiro. Paginado.
 `justificativa` é opcional, exceto no caso abaixo.
 
 - **200** consulta cancelada (`canceladoPor` e funcionário vêm do token).
-- Clínica cancelou → paciente recebe SMS (simulado — D16).
+- Clínica cancelou → tenta avisar o paciente por SMS após a gravação (simulado — D16).
+  Falha na notificação mantém o **200** e o cancelamento salvo; gera aviso operacional sem conteúdo ou telefone (D43).
+  O **200** confirma o cancelamento, não a entrega do SMS. Ainda não há retentativa ou fila de entrega.
 - **422** `CONSULTA_NAO_CANCELAVEL` — status diferente de `CONFIRMADA`.
 - **422** `CONSULTA_JA_INICIADA` — **C** depois do horário de início.
 - **422** `JUSTIFICATIVA_OBRIGATORIA` — **C** com menos de 24 h e sem justificativa. É o código
@@ -564,7 +573,9 @@ nova (com todas as regras do `POST /api/consultas`). Se qualquer parte falhar, n
 
 - **201** `{ "cancelada": {...}, "nova": {...} }`.
 - Erros: os do cancelamento e os da criação.
-- Remarcação feita pela clínica → **um** SMS ao paciente com o horário novo (D25.11).
+- Remarcação feita pela clínica → tenta enviar **um** SMS ao paciente com o horário novo após a gravação (D25.11).
+  Falha na notificação mantém o **201**, a original cancelada e a nova confirmada; gera o mesmo aviso operacional (D43).
+  O **201** confirma a remarcação, não a entrega do SMS. Ainda não há retentativa ou fila de entrega.
 
 ### `POST /api/consultas/{id}/realizacao` (D10, D13)
 
