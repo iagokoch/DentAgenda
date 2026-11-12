@@ -357,8 +357,12 @@ Dentistas ativos, para o paciente escolher. **200** `[{ "id", "nome" }]`.
 - `GET` → `[{ "id", "nome", "duracaoMinutos", "precoCentavos", "ativo" }]`, em ordem de `nome`.
   Cliente recebe só os ativos; funcionário recebe todos.
 - `POST` → `{ "nome", "duracaoMinutos", "precoCentavos" }` → **201** com o procedimento
-  (`ativo: true`). `duracaoMinutos` inteiro > 0, `precoCentavos` inteiro ≥ 0. **409** `NOME_JA_CADASTRADO`.
+  (`ativo: true`). `duracaoMinutos` inteiro de **1 a 2147483647 minutos**, `precoCentavos` inteiro de
+  **0 a 2147483647 centavos** (limite técnico do PostgreSQL, D45). Valores fora da faixa ou de outro tipo
+  retornam **400** `ENTRADA_INVALIDA`, sem criar registro. **409** `NOME_JA_CADASTRADO`.
 - `PATCH` → qualquer campo + `ativo`; só os enviados mudam. Responde **200** com o procedimento.
+  As mesmas faixas e tipos do POST valem para os campos enviados; entrada inválida retorna **400**
+  `ENTRADA_INVALIDA` e preserva integralmente o registro, inclusive os outros campos enviados.
   Nome de outro procedimento → **409** `NOME_JA_CADASTRADO`. Não existe `DELETE` (D18). Mudar `duracaoMinutos` não
   altera consultas já marcadas (`fim` guardado — D13).
 
