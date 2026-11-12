@@ -211,3 +211,34 @@ Os comandos existentes foram preservados. `src/qa/**` fica explicitamente fora d
 | `docs/qa/break-it-report.md`, `break-it-evidence.json` | Relatório e resumo sanitizado persistente |
 
 Resultados transitórios permanecem locais e ignorados, sem tokens, senhas ou dados pessoais nos documentos. O helper Python de validação da skill não iniciou por ausência de PyYAML; a estrutura simples do frontmatter e referências foi conferida por validação independente, sem instalar dependência Python adicional. Revisão independente de código avaliou runners, configurações e skill; corrigidos os problemas de instrução de instalação, alias de navegador e drenagem de saída do k6. Não houve achado de código morto de produção durante a passagem.
+
+## 10. Resolução do BUG-001 — PR de correção separada
+
+Branch de correção: `fix/procedures-integer-overflow`, baseada em `chore/break-it-qa`. As evidências anteriores
+permanecem históricas. A correção substitui `z.int()` por `z.int32()` nos dois campos compartilhados por POST/PATCH,
+preservando duração positiva e preço não negativo. A decisão D45 e o contrato registram as unidades e o máximo
+técnico de 2147483647. Não há migration, mudança de exceções, frontend ou dependências.
+
+Os dois casos originais foram transportados da suíte QA para
+`backend/src/modulos/procedimentos/procedimentos.limites.test.ts`, com expectativa explícita de
+`400 ENTRADA_INVALIDA`, e ampliados para **40 regressões**. Cada execução usou PostgreSQL novo em tmpfs,
+com banco real conferido por SQL antes de migrations.
+
+| Momento | Resultado | Evidência |
+|---|---|---|
+| Antes do schema corrigido | 36 passaram / 4 falharam | HTTP 500 em vez de 400 nos dois campos, em POST e PATCH |
+| Após `z.int32()` | 40 passaram / 0 falharam | Faixas mínimas/máximas aceitas; valores/tipos inválidos recusados com campo identificado |
+
+Os 6 casos válidos verificam retorno e persistência sem truncamento. Os 34 inválidos verificam acima do máximo,
+negativos, duração zero, frações, strings, null, booleanos, arrays e objetos. Para PATCH, nome e ativo válidos são
+enviados junto do campo inválido; o registro completo é comparado antes/depois. POST inválido não cria registro.
+
+Reprodução atual da regressão, em `backend/`:
+`npm run qa:isolado -- baseline src/modulos/procedimentos/procedimentos.limites.test.ts`.
+O comando histórico `qa:isolado -- integracao` agora executa somente as 11 integrações aprovadas de infraestrutura.
+As regressões da correção participam da suíte normal do backend e, portanto, da CI existente.
+
+Validação final da branch de correção: **727 testes PostgreSQL + 32 isolados aprovados**, 11 integrações
+QA aprovadas, 48 testes da configuração pura aprovados, lint/typecheck/build e 33 códigos de erro aprovados.
+Frontend não foi modificado na correção; a branch de infraestrutura já teve 290 testes, 6 propriedades,
+build/lint e 16 E2E aprovados. As duas branches preservam a separação entre infraestrutura e correção.

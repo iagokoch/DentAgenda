@@ -48,6 +48,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
 | D41  | Roteiro de demonstração e paciente de exemplo     | Fechada                      |
 | D42  | Logout local e versões sequenciais de observação | Aprovada em 2026-11-09       |
+| D45  | Limites técnicos dos inteiros de procedimento    | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1735,6 +1736,30 @@ consumido o código e ainda estivesse calculando a senha. Só comparar o destino
 
 **Alternativa descartada:** adicionar vínculo de conta por coluna/migration. A coordenação acima resolve os cenários
 sem nova coluna; vínculo imutável isolado ainda exigiria invalidação por canal e atomicidade de consumo/efeito.
+
+## D45 — Limites técnicos dos inteiros de procedimento (BUG-001)
+
+**O quê:** criação e edição de procedimento aceitam `duracaoMinutos` entre 1 e 2147483647, em minutos,
+e `precoCentavos` entre 0 e 2147483647, em centavos. Os valores devem ser números inteiros JSON;
+strings numéricas, frações e outros tipos continuam inválidos. A faixa vem do `Int` Prisma persistido
+como `integer` PostgreSQL de 32 bits, combinada às restrições de positividade/não negatividade da D11/D18.
+Não é um limite clínico novo nem altera duração/preço de consultas existentes.
+
+**Por quê:** a auditoria Break-It reproduziu HTTP 500 ao enviar 2147483648 em cada campo. A investigação
+de regressão confirmou a mesma falha em POST e PATCH. `z.int()` permitia inteiros maiores que o tipo SQL;
+os schemas compartilhados passam a usar `z.int32()` e o middleware Zod existente mantém
+`400 ENTRADA_INVALIDA`, com o caminho do campo. Uma entrada inválida é recusada antes da persistência:
+não cria procedimento nem altera os demais campos de uma edição combinada.
+
+**Alternativas descartadas:** ampliar o banco para bigint sem necessidade de domínio; tratar todo erro
+Prisma como entrada inválida; confiar somente no formulário, que pode ser contornado. Não há migration,
+alteração de exceções, atualização de dependências ou mudança visual. O frontend continua convertendo reais
+para centavos e exibindo as mensagens de `ENTRADA_INVALIDA` já existentes.
+
+**Verificação executada:** 40 regressões de criação e edição para mínimos, máximos, imediatamente acima,
+negativos, zero, frações, tipos inválidos e ausência de efeitos parciais, em PostgreSQL descartável.
+Antes: 36 aprovadas e 4 falhas HTTP 500; depois: 40 aprovadas. Suíte completa: 727 testes PostgreSQL
+e 32 isolados aprovados, além de lint, typecheck, build e conferência dos 33 códigos de erro.
 
 ## Próximo
 
