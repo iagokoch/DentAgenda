@@ -1,0 +1,212 @@
+{
+  "date": "2026-11-12",
+  "baseCommit": "1251b442e75bc57647b573dd3a33f1a1fdbfb6f0",
+  "scope": "Auditoria controlada local; sem correcao de producao",
+  "versions": {
+    "node": "v24.19.0",
+    "playwright": "1.65.0",
+    "fastCheck": "4.10.2",
+    "strykerCore": "10.1.1",
+    "strykerVitest": "10.1.1",
+    "vitest": "5.0.3",
+    "k6": "1.4.0",
+    "postgres": "17.11",
+    "edge": "157.0.4341.46"
+  },
+  "baseline": {
+    "frontend": {
+      "files": 25,
+      "passed": 290,
+      "shuffledPassed": 290,
+      "shuffleSeed": 1794491885438
+    },
+    "backend": {
+      "files": 46,
+      "passed": 687,
+      "isolatedPassed": 32,
+      "shuffledPassed": 687,
+      "shuffleSeed": 1794494106715
+    },
+    "checks": [
+      "frontend lint/build",
+      "backend lint/typecheck/build/conferir:codigos:33"
+    ]
+  },
+  "added": {
+    "namedTests": 44,
+    "passed": 42,
+    "failed": 2,
+    "frontendProperties": {
+      "tests": 6,
+      "numRuns": 250,
+      "seed": 20261112
+    },
+    "backendProperties": {
+      "tests": 9,
+      "numRuns": 300,
+      "seed": 20261112
+    },
+    "integration": {
+      "tests": 13,
+      "passed": 11,
+      "failed": 2,
+      "repeatedRuns": 3
+    },
+    "e2e": {
+      "tests": 16,
+      "passed": 16,
+      "durationSeconds": 13,
+      "api": "synthetic; Vite without proxy, envDir false, guard tested"
+    }
+  },
+  "confirmedBugs": [
+    {
+      "id": "BUG-001",
+      "severity": "Media",
+      "endpoint": "POST /api/procedimentos",
+      "fields": [
+        "duracaoMinutos",
+        "precoCentavos"
+      ],
+      "value": 2147483648,
+      "httpStatus": 500,
+      "errorCode": "ERRO_INTERNO",
+      "partialCreation": false,
+      "reproductionsPerField": 3
+    }
+  ],
+  "mutation": {
+    "file": "backend/src/modulos/disponibilidade/horarios.ts",
+    "generated": 86,
+    "byStatus": {
+      "Killed": 76,
+      "Timeout": 5,
+      "Survived": 5
+    },
+    "score": 94.19,
+    "scoreIncludesTimeouts": true,
+    "survivors": [
+      {
+        "id": "53",
+        "file": "src/modulos/disponibilidade/horarios.ts",
+        "location": {
+          "end": {
+            "column": 43,
+            "line": 54
+          },
+          "start": {
+            "column": 13,
+            "line": 54
+          }
+        },
+        "mutatorName": "ConditionalExpression",
+        "replacement": "true"
+      },
+      {
+        "id": "55",
+        "file": "src/modulos/disponibilidade/horarios.ts",
+        "location": {
+          "end": {
+            "column": 43,
+            "line": 54
+          },
+          "start": {
+            "column": 13,
+            "line": 54
+          }
+        },
+        "mutatorName": "EqualityOperator",
+        "replacement": "pedaco.inicio <= ocupado.inicio"
+      },
+      {
+        "id": "59",
+        "file": "src/modulos/disponibilidade/horarios.ts",
+        "location": {
+          "end": {
+            "column": 37,
+            "line": 55
+          },
+          "start": {
+            "column": 13,
+            "line": 55
+          }
+        },
+        "mutatorName": "ConditionalExpression",
+        "replacement": "true"
+      },
+      {
+        "id": "61",
+        "file": "src/modulos/disponibilidade/horarios.ts",
+        "location": {
+          "end": {
+            "column": 37,
+            "line": 55
+          },
+          "start": {
+            "column": 13,
+            "line": 55
+          }
+        },
+        "mutatorName": "EqualityOperator",
+        "replacement": "ocupado.fim <= pedaco.fim"
+      },
+      {
+        "id": "75",
+        "file": "src/modulos/disponibilidade/horarios.ts",
+        "location": {
+          "end": {
+            "column": 45,
+            "line": 73
+          },
+          "start": {
+            "column": 24,
+            "line": 73
+          }
+        },
+        "mutatorName": "EqualityOperator",
+        "replacement": "janela.inicio <= agora"
+      }
+    ],
+    "interpretation": "Cinco candidatos a equivalentes; equivalencia nao provada"
+  },
+  "load": {
+    "vus": 5,
+    "seconds": 20,
+    "fixture": {
+      "dentists": 1,
+      "patients": 10,
+      "appointments": 20
+    },
+    "httpRequests": 370,
+    "readChecks": 369,
+    "failedRequests": 0,
+    "requestsPerSecond": 18.257661,
+    "latencyMs": {
+      "avg": 21.41,
+      "median": 14.93,
+      "p95": 58.8,
+      "p99": 109.66,
+      "max": 156.61
+    },
+    "writesUnderLoad": false,
+    "source": "performance/resultados/break-it-k6.txt"
+  },
+  "dependenciesAudit": {
+    "backendAffectedPackages": 9,
+    "high": 3,
+    "moderate": 6,
+    "exploitabilityVerified": false,
+    "newQaTree": [
+      "minimatch@10.2.6",
+      "typed-rest-client@2.3.1"
+    ]
+  },
+  "limitations": [
+    "E2E sem banco real",
+    "Carga pequena somente GET",
+    "Sem metrica CPU/RAM",
+    "Sem cobertura percentual global",
+    "Sem caos real de PostgreSQL durante transacao",
+    "Idade por fuso ainda sem contrato confirmado"
+  ]
+}
