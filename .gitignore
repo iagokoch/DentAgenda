@@ -40,3 +40,9 @@ performance/resultados/
 backups/
 *.dump
 *.dump.sha256
+
+# Resultados transitórios da auditoria Break-It
+test-results/
+playwright-report/
+reports/
+.stryker-tmp/

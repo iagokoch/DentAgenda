@@ -8,6 +8,7 @@ if (process.env.DATABASE_URL_TESTE) process.env.DATABASE_URL = process.env.DATAB
 export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
+    exclude: ['src/qa/**'],
     // Um banco só para todos os arquivos: em série, limpo antes de cada arquivo (D23).
     fileParallelism: false,
     globalSetup: ['testes/configuracao-global.ts'],
