@@ -1017,6 +1017,10 @@ compatível com a versão do Zod instalada — conferir na documentação atual 
 **O quê:**
 1. **CPF válido** = 11 dígitos com dígitos verificadores corretos; recusa sequência repetida
    (`11111111111`).
+   A API exige o CPF sem pontuação. O backend mantém apenas `cpfValido`, consumido por
+   `esquemaCpf`; sanitização, formatação e o alias `validarCpf` foram removidos por não terem
+   consumidores (#32). A formatação para exibição continua no frontend. Aceitar pontuação
+   por sanitização automática foi descartado para preservar o contrato de entrada.
 2. **Bloqueio do funcionário:** as falhas contam a partir do último `SUCESSO`, `REDEFINICAO` ou
    do fim do último bloqueio. Tentativa durante o bloqueio → 423, gravada como `FALHA`, sem
    estender os 15 min. Senha **certa** durante o bloqueio (cliente ou funcionário) → 423.
