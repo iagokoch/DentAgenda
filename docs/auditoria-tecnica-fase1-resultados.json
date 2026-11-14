@@ -1,0 +1,299 @@
+{
+  "commit": "443f0a8",
+  "date": "2026-11-14",
+  "scope": "historical local isolated phase1 validation; no fixes implemented",
+  "suites": [
+    {
+      "name": "frontend",
+      "files": 25,
+      "collected": 290,
+      "passed": 290,
+      "failed": 0,
+      "ignored": 0,
+      "blockedFiles": 0,
+      "success": true,
+      "configuration": "vite.config.js",
+      "testSelection": "src/**/*.test.{js,jsx}"
+    },
+    {
+      "name": "backend-isolados",
+      "files": 4,
+      "collected": 32,
+      "passed": 32,
+      "failed": 0,
+      "ignored": 0,
+      "blockedFiles": 0,
+      "success": true,
+      "configuration": "backend/vitest.seguranca.config.ts",
+      "testSelection": "backend/testes/**/*.test.ts"
+    },
+    {
+      "name": "backend-integracao",
+      "files": 46,
+      "collected": 687,
+      "passed": 687,
+      "failed": 0,
+      "ignored": 0,
+      "blockedFiles": 0,
+      "success": true,
+      "configuration": "backend/vitest.config.ts",
+      "testSelection": "backend/src/**/*.test.ts"
+    }
+  ],
+  "totals": {
+    "files": 75,
+    "collected": 1009,
+    "passed": 1009,
+    "failed": 0,
+    "ignored": 0,
+    "blockedFiles": 0
+  },
+  "audits": {
+    "front-audit": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "packages": []
+    },
+    "front-audit-prod": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 0,
+        "high": 0,
+        "critical": 0,
+        "total": 0
+      },
+      "packages": []
+    },
+    "backend-audit": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 2,
+        "high": 3,
+        "critical": 0,
+        "total": 5
+      },
+      "packages": [
+        {
+          "name": "body-parser",
+          "severity": "high",
+          "via": [
+            "https://github.com/advisories/GHSA-27r3-jxmh-p828"
+          ],
+          "installedVersion": "2.3.0",
+          "projectPriority": "P1"
+        },
+        {
+          "name": "fast-uri",
+          "severity": "moderate",
+          "via": [
+            "https://github.com/advisories/GHSA-w74x-v6f9-j3xg",
+            "https://github.com/advisories/GHSA-xhq7-xmqj-769h",
+            "https://github.com/advisories/GHSA-wjr9-j795-jxcr",
+            "https://github.com/advisories/GHSA-333x-w4r6-6crp"
+          ],
+          "installedVersion": "3.1.8",
+          "projectPriority": "P3"
+        },
+        {
+          "name": "qs",
+          "severity": "moderate",
+          "via": [
+            "https://github.com/advisories/GHSA-6pq8-jhm2-2vcw"
+          ],
+          "installedVersion": "6.16.0",
+          "projectPriority": "P3"
+        },
+        {
+          "name": "vite",
+          "severity": "high",
+          "via": [
+            "https://github.com/advisories/GHSA-698v-4r3x-3vcv",
+            "https://github.com/advisories/GHSA-r825-w8mm-5pxw",
+            "https://github.com/advisories/GHSA-587h-7wmj-h5pm",
+            "https://github.com/advisories/GHSA-9jrq-w75r-8gcw",
+            "https://github.com/advisories/GHSA-rq7h-c2jc-7f22",
+            "https://github.com/advisories/GHSA-vfpm-58rq-9qcg"
+          ],
+          "installedVersion": "8.3.2",
+          "projectPriority": "P3"
+        },
+        {
+          "name": "zod",
+          "severity": "high",
+          "via": [
+            "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+          ],
+          "installedVersion": "4.6.5",
+          "projectPriority": "P2"
+        }
+      ]
+    },
+    "backend-audit-prod": {
+      "counts": {
+        "info": 0,
+        "low": 0,
+        "moderate": 2,
+        "high": 2,
+        "critical": 0,
+        "total": 4
+      },
+      "packages": [
+        {
+          "name": "body-parser",
+          "severity": "high",
+          "via": [
+            "https://github.com/advisories/GHSA-27r3-jxmh-p828"
+          ],
+          "installedVersion": "2.3.0",
+          "projectPriority": "P1"
+        },
+        {
+          "name": "fast-uri",
+          "severity": "moderate",
+          "via": [
+            "https://github.com/advisories/GHSA-w74x-v6f9-j3xg",
+            "https://github.com/advisories/GHSA-xhq7-xmqj-769h",
+            "https://github.com/advisories/GHSA-wjr9-j795-jxcr",
+            "https://github.com/advisories/GHSA-333x-w4r6-6crp"
+          ],
+          "installedVersion": "3.1.8",
+          "projectPriority": "P3"
+        },
+        {
+          "name": "qs",
+          "severity": "moderate",
+          "via": [
+            "https://github.com/advisories/GHSA-6pq8-jhm2-2vcw"
+          ],
+          "installedVersion": "6.16.0",
+          "projectPriority": "P3"
+        },
+        {
+          "name": "zod",
+          "severity": "high",
+          "via": [
+            "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5"
+          ],
+          "installedVersion": "4.6.5",
+          "projectPriority": "P2"
+        }
+      ]
+    }
+  },
+  "httpSmoke": {
+    "requests": 20,
+    "concurrency": 2,
+    "status200": 20,
+    "errors": 0,
+    "elapsedMs": 116.78,
+    "p50Ms": 8.43,
+    "p95Ms": 23.93,
+    "loginSamples": 1,
+    "loginMs": 411.05,
+    "scope": "local bounded read smoke; not capacity or stress test"
+  },
+  "health": [
+    {
+      "phase": "before",
+      "path": "viva",
+      "status": 200,
+      "elapsedMs": 35
+    },
+    {
+      "phase": "before",
+      "path": "pronta",
+      "status": 200,
+      "elapsedMs": 73
+    },
+    {
+      "phase": "paused",
+      "path": "viva",
+      "status": 200,
+      "elapsedMs": 26
+    },
+    {
+      "phase": "paused",
+      "path": "pronta",
+      "status": 503,
+      "elapsedMs": 1005
+    },
+    {
+      "phase": "after",
+      "path": "viva",
+      "status": 200,
+      "elapsedMs": 26
+    },
+    {
+      "phase": "after",
+      "path": "pronta",
+      "status": 200,
+      "elapsedMs": 5
+    }
+  ],
+  "restoreApi": {
+    "checks": [
+      {
+        "operation": "POST /api/auth/funcionario/login",
+        "status": 200
+      },
+      {
+        "operation": "GET /api/pacientes?busca=<termo-ficticio>",
+        "status": 200
+      },
+      {
+        "operation": "GET /api/consultas",
+        "status": 200
+      },
+      {
+        "operation": "POST /api/consultas",
+        "status": 201
+      },
+      {
+        "operation": "PUT /api/consultas/<id>/observacao",
+        "status": 200
+      },
+      {
+        "operation": "GET /api/consultas/<id>/observacao/historico",
+        "status": 200
+      },
+      {
+        "operation": "POST /api/consultas/<id>/cancelamento",
+        "status": 200
+      }
+    ],
+    "passed": 7,
+    "failed": 0,
+    "finalStatus": "CANCELADA",
+    "historyEntries": 1,
+    "environment": "exclusive disposable restored database"
+  },
+  "coverage": {
+    "available": false,
+    "reason": "coverage provider not declared in approved lockfiles"
+  },
+  "goNoGo": "NO-GO for external exposure",
+  "documentation": {
+    "report": "auditoria-tecnica-fase1.md",
+    "securityProposal": "proposta-sec05.md",
+    "rawExecutionReportsVersioned": false,
+    "sensitiveAndLocalResourceDetailsOmitted": true
+  },
+  "originalRepositoryChangedDuringValidation": false,
+  "findingAliases": {
+    "AUD-11": [
+      "OPS01"
+    ],
+    "AUD-12": [
+      "DOC01",
+      "DOC02"
+    ]
+  }
+}
