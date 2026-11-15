@@ -85,6 +85,7 @@ remota e validação integral do deploy ficam no backlog.
 
 Os 1.038 testes combinados e as 619 respostas HTTP 200 do checkpoint anterior são evidência histórica
 de outro ensaio; nenhuma nova carga foi executada. Esta candidata passou em **1.039 testes**, lint,
-tipos/builds, roteiro HTTP real, jornada da recepção no navegador, reinícios e restauração em banco novo.
+tipos/builds, roteiro HTTP real, jornada da recepção e conferência dos demais perfis no navegador,
+reinícios e restauração em banco novo.
 Evidências e limites estão em `docs/estado-fase2.md`. `Estado` deve mostrar **SAUDAVEL**;
 quando incompleto, a consulta informa o problema sem encerrar o terminal com erro.

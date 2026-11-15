@@ -11,7 +11,8 @@ Branch aprovada `demo/local-apresentacao`, criada de `657e497` (#48). Origens co
 aplicados sem conflitos: `05234e5` (#43, transação) → `865d57f`; `843204d` (#44, testes críticos) →
 `129e1df`; `ff15872` (#45, estado temporal) → `d378e94`; `6bf3edc` (#49, esperas dependentes de #45)
 → `6b387d7`. As branches e PRs anteriores foram preservadas, sem merge automático.
-A PR desta entrega deve ter base `fix/deploy-reinicio-servicos` (#48), preservando a cadeia existente;
+A [PR #50](https://github.com/iagokoch/DentAgenda/pull/50) foi aberta, sem merge, com base
+`fix/deploy-reinicio-servicos` (#48), preservando a cadeia existente; implementação em `e4ca96c`;
 os cherry-picks de #43/#44/#45/#49 são cópias explícitas autorizadas, não merges dessas PRs.
 
 ### Evidências desta candidata
@@ -27,6 +28,7 @@ os cherry-picks de #43/#44/#45/#49 são cópias explícitas autorizadas, não me
 | `Preparar` | PostgreSQL exclusivo, quatro migrations aplicadas, seeds fictícios, quatro perfis e baseline com SHA256 |
 | `Iniciar` e verificador HTTP | Admin/recepção/dentista/paciente: login, identidade, papéis, listas, disponibilidade, agendamento/conflito, remarcação, cancelamento, refresh/logout aprovados |
 | Navegador Orca — recepção | Lista/perfil do paciente, criação em 18/11, remarcação, cancelamento, grade semanal e logout aprovados; recarga restaurou sessão |
+| Navegador Orca — demais perfis, após restauração | Admin abriu Equipe com três funcionários; paciente abriu próxima consulta/histórico e recarregou mantendo sessão; dentista abriu Início com papel e menu corretos; logout dos três aprovado |
 | `Estado` e listeners do Windows | API 3000, frontend 5173 e PostgreSQL 5434 somente em `127.0.0.1`; HTTP e banco saudáveis |
 | `ReiniciarApi`, `ReiniciarFront`, `Parar` → `Iniciar` | Processos retomados, container/volume preservados, identidades fictícias preservadas, roteiro HTTP aprovado novamente |
 | `Backup`, `Restaurar` → `Iniciar` | Cópia inicial restaurada em banco novo, original preservado, identidades e autenticação dos quatro perfis conferidas, estado saudável |
