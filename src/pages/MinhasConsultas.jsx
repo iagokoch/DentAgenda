@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/api.js'
+import { ErroDaApi } from '../api/cliente-http.js'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
 import DialogoDeCancelamento from '../agenda/DialogoDeCancelamento.jsx'
 import { dataDeHoje, dataEHoraLegiveis } from '../agenda/calendario.js'
@@ -14,18 +15,66 @@ import { useSessao } from '../sessao/sessao-contexto.js'
 const POR_PAGINA = '100'
 const AVISO_DO_PACIENTE = 'A clínica vê o cancelamento na agenda. Esta ação não pode ser desfeita; para outro horário, marque uma nova consulta.'
 const AVISO_DE_MENOS_DE_24_HORAS = 'Faltam menos de 24 h para a consulta: conte à clínica o motivo do cancelamento.'
+const AVISO_DE_CONSULTA_INICIADA = 'A consulta já começou e não pode mais ser cancelada pelo aplicativo.'
+const VINTE_E_QUATRO_HORAS_EM_MS = 24 * 60 * 60 * 1000
 
 // Área do paciente (D35): as próximas consultas, com cancelamento, e o histórico. Só o paciente logado (C) chega aqui.
 export default function MinhasConsultas() {
   const { usuario } = useSessao()
   const relogio = useRelogio()
   const [abertaEm] = useState(() => relogio.agora())
+  const [agora, setAgora] = useState(() => relogio.agora())
   const proximas = useDadosDaApi(`/api/consultas?${new URLSearchParams({ status: 'CONFIRMADA', de: dataDeHoje(abertaEm), porPagina: POR_PAGINA })}`)
   const todas = useDadosDaApi(`/api/consultas?${new URLSearchParams({ porPagina: POR_PAGINA })}`)
   const [cancelando, setCancelando] = useState(null)
   const [aviso, setAviso] = useState('')
+  const fecharCancelamento = useCallback(() => setCancelando(null), [])
+  const itensProximos = proximas.dados?.itens
+  const itensDoHistorico = todas.dados?.itens
+  const consultaEmCancelamento = cancelando?.consulta
+
+  useEffect(() => {
+    let temporizador
+    function atualizar() {
+      clearTimeout(temporizador)
+      const instante = relogio.agora()
+      setAgora((anterior) => anterior.getTime() === instante.getTime() ? anterior : instante)
+      if (consultaEmCancelamento && jaComecou(consultaEmCancelamento, instante)) {
+        setCancelando(null)
+        setAviso(AVISO_DE_CONSULTA_INICIADA)
+      }
+      const fronteiras = [...(itensProximos ?? []), ...(itensDoHistorico ?? [])]
+        .filter((consulta) => consulta.status === 'CONFIRMADA')
+        .flatMap((consulta) => {
+          const inicio = Date.parse(consulta.inicio)
+          // Exatamente 24 h ainda permite cancelar sem justificativa (D14).
+          return [inicio, inicio - VINTE_E_QUATRO_HORAS_EM_MS + 1]
+        })
+      const falta = Math.min(...fronteiras.filter((fronteira) => fronteira > instante.getTime())) - instante.getTime()
+      // Consultas distantes usam etapas para respeitar o limite do setTimeout.
+      if (Number.isFinite(falta)) temporizador = setTimeout(atualizar, Math.min(falta, 2_147_483_647))
+    }
+    atualizar()
+    window.addEventListener('focus', atualizar)
+    document.addEventListener('visibilitychange', atualizar)
+    return () => {
+      clearTimeout(temporizador)
+      window.removeEventListener('focus', atualizar)
+      document.removeEventListener('visibilitychange', atualizar)
+    }
+  }, [consultaEmCancelamento, itensProximos, itensDoHistorico, relogio])
 
   async function cancelar(justificativa) {
+    const instante = relogio.agora()
+    setAgora(instante)
+    if (jaComecou(cancelando.consulta, instante)) {
+      setCancelando(null)
+      setAviso(AVISO_DE_CONSULTA_INICIADA)
+      return
+    }
+    if (faltamMenosDe24Horas(cancelando.consulta, instante) && !justificativa) {
+      throw new ErroDaApi(422, 'JUSTIFICATIVA_OBRIGATORIA', 'Informe o motivo: faltam menos de 24 horas para a consulta.')
+    }
     await api.pedir(`/api/consultas/${cancelando.consulta.id}/cancelamento`, { metodo: 'POST', corpo: justificativa ? { justificativa } : {} })
     setCancelando(null)
     setAviso('Consulta cancelada.')
@@ -34,8 +83,14 @@ export default function MinhasConsultas() {
   }
 
   function abrirCancelamento(consulta) {
+    const instante = relogio.agora()
+    setAgora(instante)
+    if (jaComecou(consulta, instante)) {
+      setAviso(AVISO_DE_CONSULTA_INICIADA)
+      return
+    }
     setAviso('')
-    setCancelando({ consulta, justificativaObrigatoria: faltamMenosDe24Horas(consulta, relogio.agora()) })
+    setCancelando({ consulta })
   }
 
   return (
@@ -50,16 +105,16 @@ export default function MinhasConsultas() {
       <div aria-live="polite">{aviso && <p className="form-info form-sucesso">{aviso}</p>}</div>
 
       <div className="minha-conta">
-        <ListaDeConsultas titulo="Próximas consultas" agora={abertaEm} leitura={proximas} vazio="Você não tem consultas marcadas." filtrar={(itens) => proximasDoPaciente(itens, abertaEm)} aoCancelar={abrirCancelamento} />
-        <ListaDeConsultas titulo="Histórico" leitura={todas} vazio="Nenhuma consulta anterior." filtrar={(itens) => historicoDoPaciente(itens, abertaEm)} />
+        <ListaDeConsultas titulo="Próximas consultas" agora={agora} leitura={proximas} vazio="Você não tem consultas marcadas." filtrar={(itens) => proximasDoPaciente(itens, agora)} aoCancelar={abrirCancelamento} />
+        <ListaDeConsultas titulo="Histórico" leitura={todas} vazio="Nenhuma consulta anterior." filtrar={(itens) => historicoDoPaciente(itens, agora)} />
       </div>
 
       {cancelando && (
         <DialogoDeCancelamento
-          aviso={cancelando.justificativaObrigatoria ? AVISO_DE_MENOS_DE_24_HORAS : AVISO_DO_PACIENTE}
-          justificativaObrigatoria={cancelando.justificativaObrigatoria}
+          aviso={faltamMenosDe24Horas(cancelando.consulta, agora) ? AVISO_DE_MENOS_DE_24_HORAS : AVISO_DO_PACIENTE}
+          justificativaObrigatoria={faltamMenosDe24Horas(cancelando.consulta, agora)}
           aoCancelar={cancelar}
-          aoFechar={() => setCancelando(null)}
+          aoFechar={fecharCancelamento}
         />
       )}
     </AppShell>
