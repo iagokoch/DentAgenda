@@ -166,13 +166,13 @@ describe('Minhas consultas (D35)', () => {
     abrir()
 
     const proximas = await screen.findByRole('region', { name: 'Próximas consultas' })
-    expect(within(proximas).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    expect((await within(proximas).findAllByRole('listitem')).map((item) => item.textContent)).toEqual([
       expect.stringContaining('05/10/2026 às 15:00'),
       expect.stringContaining('06/10/2026 às 10:00'),
     ])
     expect(within(proximas).getAllByRole('button', { name: /Cancelar/ })).toHaveLength(2)
     const historico = screen.getByRole('region', { name: 'Histórico' })
-    expect(within(historico).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    expect((await within(historico).findAllByRole('listitem')).map((item) => item.textContent)).toEqual([
       expect.stringMatching(/10\/09\/2026.*Cancelada pela clínica/),
       expect.stringMatching(/01\/09\/2026.*Realizada/),
     ])
@@ -202,7 +202,7 @@ describe('Minhas consultas (D35)', () => {
     })
     abrir()
 
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Próximas consultas' })).getByRole('button', { name: /Cancelar/ }))
+    await userEvent.click(await within(screen.getByRole('region', { name: 'Próximas consultas' })).findByRole('button', { name: /Cancelar/ }))
     const dialogo = screen.getByRole('dialog', { name: 'Cancelar consulta' })
     expect(within(dialogo).getByLabelText(/Justificativa/).required).toBe(false)
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar consulta' }))
