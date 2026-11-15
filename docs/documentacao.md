@@ -1795,6 +1795,22 @@ e preserva o anterior. Testes destrutivos usam banco próprio separado. Os resul
 continuam históricos e não comprovam deploy remoto. AUD-02, Cloudflare, mensageria remota e validação
 completa de produção permanecem no backlog. Procedimento: `docs/operacao-local.md`.
 
+## D47 — Demonstração remota restrita por Quick Tunnel
+
+> **Status: aprovada em 15/11/2026 pelo usuário.** Implementação e validação local autorizadas; abertura externa depende de lista exata de e-mails e autorização específica posterior.
+
+**O quê:** pacote separado para dados fictícios, frontend compilado no Nginx, API em produção e PostgreSQL exclusivo em Docker. Cloudflared com saída para a Cloudflare, rede privada exclusiva até o proxy, outra rede proxy/API e rede interna API/banco. Nenhum serviço remoto publica portas no host. O proxy valida IP/protocolo da cadeia isolada e reescreve headers de encaminhamento; a API só confia nesse último salto. Quick Tunnel exige `--allowed-mail` com e-mail exato; lista vazia, domínio inteiro ou opção não suportada interrompem a operação. Nunca abrir túnel irrestrito como recuperação.
+
+**Mensageria:** perfil explícito de demonstração restrita, habilitação adicional e banco exclusivo fictício. Enviador indisponível não entrega nem registra destino/texto/código; falha de forma explícita. Seis rotas de cadastro/recuperação ficam indisponíveis com 503 e código `MENSAGERIA_INDISPONIVEL_DEMO`. Quatro contas fictícias são pré-ativadas. Login, autorização, refresh, logout e cookies Secure/HttpOnly preservados. D16 continua recusando production + log; produção normal não ativa demo automaticamente. Notificações de consulta continuam posteriores ao commit, com falha sanitizada sem desfazer consultas.
+
+**Por quê:** permite demonstrar os fluxos principais sem provedor real, códigos públicos ou servidor Vite exposto. O ambiente local D46, seus bancos, configuração DPAPI e volumes permanecem como contingência. Credenciais remotas ficam fora do Git; runtime e migrations usam papéis distintos. Backup individual validado antes de alterar arquivos existentes.
+
+**Alternativas descartadas:** publicar development/test ou permitir log em produção enfraqueceria D16/D46; apenas loopback não autentica o conector perante processos locais; provedor real adicionaria credenciais e escopo desnecessários; túnel irrestrito não satisfaz acesso restrito. Express servindo frontend no host reduz containers, mas exige resolver autenticação de origem no host; reutilizar o empacotamento Docker mantém a cadeia isolada.
+
+**Validação:** TDD nas guardas de configuração/mensageria e bloqueio de rotas; headers inválidos/falsificados, IPv4/IPv6, rate limit por cliente, cookies/sessões e quatro perfis pela cadeia compilada. Após autorização de exposição, ensaiar PIN e permanência da sessão, assets GET/POST, navegação por minutos e fluxos completos HTTPS; investigar a issue cloudflared #1752 sem remover restrição. Dispositivo externo e dois IPs devem ser verificados ou ficar explicitamente pendentes. Sem carga pela Cloudflare. Se crítico persistir: NO-GO remoto e apresentação local. Tunnel nomeado + Access exige proposta/autorização própria.
+
+**Operação/Git:** branch demo/quick-tunnel-restrito, dependente de #50; sem commits, pushes, PR ou merge automáticos. Inicializar o stack não inicia o túnel. Encerrar preserva banco/volumes; nova execução do túnel gera outra URL e exige revalidação. Plano e evidências: docs/plano-demo-remota.md e runbook remoto.
+
 ## Próximo
 
 Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos

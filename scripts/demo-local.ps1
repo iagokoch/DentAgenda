@@ -1,11 +1,18 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet('Preparar', 'Iniciar', 'Estado', 'Parar', 'ReiniciarApi', 'ReiniciarFront', 'Backup', 'Restaurar', 'Credenciais')]
+  [ValidateSet('Preparar', 'Iniciar', 'Estado', 'Parar', 'ReiniciarApi', 'ReiniciarFront', 'Backup', 'Restaurar', 'Credenciais', 'RemotoPreparar', 'RemotoCompilar', 'RemotoInicializarBanco', 'RemotoIniciar', 'RemotoEstado', 'RemotoVerificar', 'RemotoParar', 'RemotoBackup', 'RemotoIniciarTunel', 'RemotoPararTunel', 'RemotoUrl')]
   [string]$Acao,
-  [string]$ArquivoBackup
+  [string]$ArquivoBackup,
+  [string]$EmailAutorizado,
+  [switch]$ConfirmarExposicao,
+  [switch]$Publico
 )
 
+if ($Acao.StartsWith('Remoto')) {
+  & (Join-Path $PSScriptRoot 'demo-remota.ps1') -Acao $Acao.Substring(6) -EmailAutorizado $EmailAutorizado -ConfirmarExposicao:$ConfirmarExposicao -Publico:$Publico
+  return
+}
 $ErrorActionPreference = 'Stop'
 $repoDemo = Split-Path $PSScriptRoot -Parent
 $privadoDemo = Join-Path $repoDemo '.codex/demo-local'

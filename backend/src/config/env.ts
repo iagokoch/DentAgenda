@@ -34,7 +34,8 @@ const esquemaDasVariaveis = z
     DATABASE_URL: z.string().min(1),
     JWT_SEGREDO: segredo,
     CODIGO_HMAC_SEGREDO: segredo,
-    ENVIADOR_MENSAGEM: z.enum(['log']),
+    ENVIADOR_MENSAGEM: z.enum(['log', 'indisponivel-demo']),
+    DEMONSTRACAO_RESTRITA: z.string().optional(),
     PROXY_CONFIAVEL: proxyConfiavel,
     // D40: prazo de retenção de tentativas de login, códigos e sessões mortas. 90 dias: pendente com a Colzani.
     // Vazio (como vem do .env.example) vale o padrão.
@@ -44,6 +45,24 @@ const esquemaDasVariaveis = z
   .refine((variaveis) => !(variaveis.ENVIADOR_MENSAGEM === 'log' && variaveis.NODE_ENV === 'production'), {
     error: 'não pode ser "log" com NODE_ENV=production',
     path: ['ENVIADOR_MENSAGEM'],
+  })
+  .refine((variaveis) => {
+    if (variaveis.ENVIADOR_MENSAGEM !== 'indisponivel-demo') return true;
+    if (variaveis.NODE_ENV !== 'production'
+        || variaveis.DEMONSTRACAO_RESTRITA !== 'APENAS_DADOS_FICTICIOS_SEM_MENSAGENS') return false;
+    try {
+      const banco = new URL(variaveis.DATABASE_URL);
+      return ['postgres:', 'postgresql:'].includes(banco.protocol)
+        && banco.hostname === 'banco'
+        && (!banco.port || banco.port === '5432')
+        && banco.pathname === '/dentagenda_demo_remota'
+        && !banco.search && !banco.hash;
+    } catch {
+      return false;
+    }
+  }, {
+    error: 'requer produção, confirmação explícita e banco exclusivo da demonstração restrita',
+    path: ['ENVIADOR_MENSAGEM'],
   });
 
 export type Config = {
@@ -52,7 +71,7 @@ export type Config = {
   databaseUrl: string;
   jwtSegredo: string;
   codigoHmacSegredo: string;
-  enviadorMensagem: 'log';
+  enviadorMensagem: 'log' | 'indisponivel-demo';
   proxyConfiavel: false | number | string[];
   retencaoDias: number;
 };
