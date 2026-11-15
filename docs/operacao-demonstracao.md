@@ -55,6 +55,32 @@ Conferir no ambiente final: reinício, falha/retorno de banco, requisição em a
 efetivo de portas e comportamento de cookies sob HTTPS. Uma indisponibilidade deve gerar alerta externo ao host.
 CPU, memória, disco, latência, erros, conexões, locks e idade do último backup precisam de coleta e alertas definidos.
 
+## Reinício e manutenção (D45)
+
+`banco`, `api` e `front` usam `restart: unless-stopped`. O Docker pode recuperar uma saída do processo;
+uma parada intencional é preservada, inclusive após reiniciar o daemon. `migrations` continua execução única:
+reiniciar a aplicação não aplica migrations nem autoriza repeti-las automaticamente.
+
+Com o ambiente de implantação já aprovado e configurado, a parada e a retomada intencionais usam:
+
+```powershell
+docker compose -f deploy/demonstracao/compose.yaml stop front api banco
+docker compose -f deploy/demonstracao/compose.yaml start banco api front
+```
+
+Os serviços são explícitos para não retomar `migrations`, mesmo se seu perfil estiver ativo no ambiente.
+Esses comandos preservam o volume do banco. Depois da retomada, conferir saúde e fluxos de negócio; a política
+não configura o Docker para iniciar com o sistema nem comprova recuperação após queda de energia ou reboot.
+As dependências `service_healthy` orientam operações Compose, mas não substituem o ensaio da cadeia no destino.
+
+Healthcheck/readiness falho sozinho não dispara reinício. Uma configuração inválida pode repetir falhas:
+o operador precisa corrigir a causa e validar a retomada. A política não resolve schema, credenciais ou envio
+de mensagens, não substitui alertas externos e não muda a guarda que recusa o enviador por log em produção.
+
+Na preparação local, validar o Compose sem interpolação e ensaiar o comportamento básico em um container próprio,
+sem rede, portas ou volumes persistentes: saída do processo, incremento de `RestartCount`, novo início e parada
+manual respeitada. Esse ensaio não comprova restart da API/frontend reais, persistência ou reboot do ambiente final.
+
 ## Backup e restauração
 
 Os scripts Bash exigem clientes PostgreSQL 17 e parâmetros `PGHOST`, `PGPORT`, `PGUSER`, `PGDATABASE` e autenticação

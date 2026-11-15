@@ -9,6 +9,7 @@ x-logs: &logs
 services:
   banco:
     image: postgres:17
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_DB: dentagenda
@@ -37,6 +38,7 @@ services:
     logging: *logs
 
   api:
+    restart: unless-stopped
     build:
       context: ../..
       dockerfile: backend/Dockerfile
@@ -65,6 +67,7 @@ services:
     logging: *logs
 
   front:
+    restart: unless-stopped
     build:
       context: ../..
       dockerfile: Dockerfile
