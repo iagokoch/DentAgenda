@@ -40,3 +40,6 @@ performance/resultados/
 backups/
 *.dump
 *.dump.sha256
+
+# Configuração DPAPI, processos e evidências privadas da apresentação local (D46)
+.codex/demo-local/

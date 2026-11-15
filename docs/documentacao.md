@@ -51,6 +51,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D43  | Falhas de notificação após cancelamento e remarcação | Implementada (issue #1 parcial) |
 | D44  | Códigos e alterações de canal de acesso          | Implementada                 |
 | D45  | Reinício dos serviços contínuos da demonstração | Fechada (ensaio no destino pendente) |
+| D46  | Apresentação exclusivamente local no Windows | Fechada (sem exposição externa) |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1769,6 +1770,30 @@ O procedimento operacional fica em `docs/operacao-demonstracao.md`.
 
 Referências: [políticas de reinício do Docker](https://docs.docker.com/engine/containers/start-containers-automatically/)
 e [ordem de inicialização do Compose](https://docs.docker.com/compose/how-tos/startup-order/).
+
+## D46 — Apresentação exclusivamente local no Windows
+
+> **Status: aprovada em 15/11/2026.** Validação operacional registrada no roteiro local.
+
+**O quê:** apresentação com janela compartilhada, dados fictícios e acesso exclusivo ao próprio computador.
+PostgreSQL em Docker Desktop, com container/volume/bancos próprios e porta em `127.0.0.1`; API e frontend
+no host em desenvolvimento, explicitamente vinculados a `127.0.0.1`. O proxy do Vite usa IPv4 explícito.
+A API conserva a escuta de produção necessária aos containers. A D16 permanece intacta:
+`production + log` continua recusado. Não há túnel, provedor real ou enviador remoto novo.
+
+**Por quê:** o pacote de produção ainda depende de mensageria aprovada e validação da cadeia de proxy.
+O ambiente local permite demonstrar os fluxos acadêmicos existentes sem expor códigos ou serviços na rede.
+Credenciais fictícias ficam fora do Git, protegidas por DPAPI do usuário Windows; o operador compartilha
+somente a janela da aplicação. Inicialização não usa nem sobrescreve o `.env` existente.
+
+**Alternativas descartadas para esta apresentação:** liberar log em produção violaria D16; publicar
+development/test não atende ao isolamento; provedor real ou caixa privada remota acrescentariam escopo
+e dependências que o usuário adiou. O Compose de produção não é convertido em ambiente de desenvolvimento.
+
+**Operação e limites:** configuração e dados persistem entre reinicializações; restauração usa banco novo
+e preserva o anterior. Testes destrutivos usam banco próprio separado. Os resultados de carga anteriores
+continuam históricos e não comprovam deploy remoto. AUD-02, Cloudflare, mensageria remota e validação
+completa de produção permanecem no backlog. Procedimento: `docs/operacao-local.md`.
 
 ## Próximo
 
