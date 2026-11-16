@@ -1,10 +1,11 @@
+import { PrismaPg } from '@prisma/adapter-pg';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { criarContextoDeTeste } from '../../../testes/contexto-de-teste.ts';
 import { criarFuncionario, criarPaciente, criarProcedimento, tokenDe } from '../../../testes/fabricas.ts';
 import { criarApp } from '../../app.ts';
 import { instanteEmSaoPaulo } from '../../compartilhado/datas.ts';
-import type { Cliente, Funcionario, Procedimento } from '../../generated/prisma/client.ts';
+import { PrismaClient, type Cliente, type Funcionario, type Procedimento } from '../../generated/prisma/client.ts';
 
 const contexto = criarContextoDeTeste();
 const app = criarApp(contexto);
@@ -41,6 +42,36 @@ const marcar = (token: string, corpo: object) => request(app).post('/api/consult
 const dia = (hora: string) => `2026-10-05T${hora}:00-03:00`;
 
 describe('POST /api/consultas', () => {
+  it('cria consulta com uma única conexão no pool', async () => {
+    const dentista = await dentistaComGrade();
+    const token = await tokenDe(contexto, paciente);
+    const prisma = new PrismaClient({
+      adapter: new PrismaPg({ connectionString: contexto.config.databaseUrl, max: 1, connectionTimeoutMillis: 500 }),
+    });
+    const appComUmaConexao = criarApp({ ...contexto, prisma });
+
+    try {
+      const resposta = await request(appComUmaConexao)
+        .post('/api/consultas')
+        .set(com(token))
+        .send({ dentistaId: dentista.id, procedimentoId: limpeza.id, inicio: dia('09:00') });
+
+      expect(resposta.status).toBe(201);
+      expect(resposta.body).toMatchObject({
+        paciente: { id: paciente.id },
+        dentista: { id: dentista.id },
+        inicio: '2026-10-05T09:00:00-03:00',
+        fim: '2026-10-05T10:00:00-03:00',
+        status: 'CONFIRMADA',
+      });
+      const persistidas = await prisma.consulta.findMany({ where: { clienteId: paciente.id } });
+      expect(persistidas).toHaveLength(1);
+      expect(persistidas[0]).toMatchObject({ id: resposta.body.id, status: 'CONFIRMADA' });
+    } finally {
+      await prisma.$disconnect();
+    }
+  });
+
   it('cliente marca às 09:00 → 201 CONFIRMADA, fim 10:00, no formato D24.3', async () => {
     const dentista = await dentistaComGrade();
 
