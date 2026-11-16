@@ -18,6 +18,8 @@ Confira antes de assumir qualquer coisa:
   - **Clínica (F2, F3, D33):** Início, busca e cadastro de pacientes (cadastro só recepção), Perfil com dados, endereço,
     alertas, "Editar dados" e Histórico; Novo Agendamento (`/agenda`, remarca com `?remarcar=<id>`); Detalhes da
     consulta (cancelar, remarcar, realizar, observação com histórico).
+  - **Consultas da clínica (D48):** `/consultas` (visões Dia por dentista e Lista, filtros, ações; dentista só a própria
+    agenda); o paciente sem consulta vê "Nenhuma consulta" e o botão para agendar.
   - **Paciente (D35):** `/minha-conta` (próximas e histórico; cancelar, com justificativa já obrigatória a menos de
     24 h) e `/minha-conta/agendar` (marcar), no mesmo `AppShell` com a navegação do paciente.
   - **Administração (D37):** `/admin/equipe` e `/admin/procedimentos` (só admin, `RotaProtegida permitir={ehAdmin}`) e
@@ -36,13 +38,18 @@ Confira antes de assumir qualquer coisa:
     anônimo, R, R-admin, D, C, conferida contra o `api.md` e `docs/matriz-de-papeis.md`); `auth.concorrencia.test.ts`
     (corridas, D38). O relógio dos testes volta ao instante inicial a cada teste; as suítes passam com
     `npm run test:embaralhado`.
-  - Em caso de conflito entre código e documento, vale `docs/documentacao.md` (D1 a D41).
+  - Em caso de conflito entre código e documento, vale `docs/documentacao.md` (D1 a D48).
 - **O que falta:** (1) enviador real de SMS e e-mail (issue #1; sem ele a API recusa `NODE_ENV=production`, D16), que
   depende do provedor escolhido com a Colzani; (2) respostas da clínica em `docs/pendencias-colzani.md`, entre elas o
   prazo de retenção (90 dias provisórios, D40) e se o paciente marca pelo sistema (D35); (3) conferência humana no
   navegador e no celular de verdade (README, "O que falta"). Fora do escopo por decisão: abas Documentos e Financeiro
   (continuam "em breve") e uma interface dedicada de `janelasLivres` (D33). A lista existente oferece inícios a cada
   cinco minutos para a clínica; paciente continua no passo da duração (#19).
+- **Demonstração remota (D46, D47):** pacote Docker próprio (`deploy/remoto/`, banco fictício `dentagenda_demo_remota`) e
+  Quick Tunnel da Cloudflare, operados por `scripts/demo-local.ps1 Remoto*` (detalhes em `docs/operacao-remota.md` e
+  `docs/roteiro-apresentacao.md`). Dois modos de túnel: restrito por e-mail (falhou no ensaio, cloudflared#1752) e
+  **público temporário** (`RemotoIniciarTunel -Publico -ConfirmarExposicao`), com login do DentAgenda sempre obrigatório.
+  `RemotoCompilar` constrói a partir da árvore atual: compile na branch que contém as telas novas.
 - **Stack:** PostgreSQL 17 em Docker Compose (D6, D8), TypeScript 7 no Node 24 (D7), Prisma
   7.10 com driver adapter `pg` (client gerado em `backend/src/generated/`, fora do git), Zod 4,
   Express 5 + cookie-parser, swagger-ui-express (D34), pino 10 + pino-http, bcrypt 6, jsonwebtoken 9, Vitest 5 + Supertest.
@@ -99,8 +106,9 @@ src/
   components/   AppShell (menu por papel), AuthLayout, Brand, Gaveta (painel lateral), Icon
   assets/       consultorio.png (foto do painel do login)
   pages/        Login, Cadastro, RecuperarSenha, Inicio, Pacientes, NovoPaciente, PerfilPaciente, Agenda,
-                DetalhesDaConsulta, Disponibilidade, admin/Equipe e admin/Procedimentos (D37), MinhasConsultas e
+                DetalhesDaConsulta, Consultas (D48), Disponibilidade, admin/Equipe e admin/Procedimentos (D37), MinhasConsultas e
                 MarcarConsulta (paciente, D35); *.test.jsx = testes de tela
+  consultas/    visao (puro: dia, colunas por dentista, filtro por paciente; com testes)
   agenda/       calendario (puro, com testes), status, useEscolhaDeHorario (mês/dia/horário e vagas), CalendarioDeDias,
                 Horarios, PacienteDaConsulta, DialogoDeCancelamento, ObservacaoDaConsulta
   minha-conta/  consultas-do-paciente (puro: próximas, histórico, regra das 24 h)

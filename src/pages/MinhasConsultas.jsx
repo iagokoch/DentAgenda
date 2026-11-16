@@ -93,6 +93,8 @@ export default function MinhasConsultas() {
     setCancelando({ consulta })
   }
 
+  const semNenhumaConsulta = todas.estado === 'pronto' && todas.dados.itens.length === 0
+
   return (
     <AppShell title="Minhas consultas">
       <header className="page-heading">
@@ -104,10 +106,10 @@ export default function MinhasConsultas() {
       </header>
       <div aria-live="polite">{aviso && <p className="form-info form-sucesso">{aviso}</p>}</div>
 
-      <div className="minha-conta">
+      {semNenhumaConsulta ? <SemConsultas /> : <div className="minha-conta">
         <ListaDeConsultas titulo="Próximas consultas" agora={agora} leitura={proximas} vazio="Você não tem consultas marcadas." filtrar={(itens) => proximasDoPaciente(itens, agora)} aoCancelar={abrirCancelamento} />
         <ListaDeConsultas titulo="Histórico" leitura={todas} vazio="Nenhuma consulta anterior." filtrar={(itens) => historicoDoPaciente(itens, agora)} />
-      </div>
+      </div>}
 
       {cancelando && (
         <DialogoDeCancelamento
@@ -118,6 +120,17 @@ export default function MinhasConsultas() {
         />
       )}
     </AppShell>
+  )
+}
+
+function SemConsultas() {
+  return (
+    <section className="panel consultas-vazio" aria-labelledby="titulo-sem-consultas">
+      <span className="consultas-vazio__icone" aria-hidden="true"><Icon name="calendar" /></span>
+      <h2 id="titulo-sem-consultas">Nenhuma consulta</h2>
+      <p>Você ainda não tem consultas marcadas. Escolha o procedimento, o dentista e um horário livre para agendar a sua.</p>
+      <Link className="primary-btn primary-btn--solid" to="/minha-conta/agendar"><Icon name="plus" /> Agendar consulta</Link>
+    </section>
   )
 }
 

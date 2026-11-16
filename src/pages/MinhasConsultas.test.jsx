@@ -179,15 +179,26 @@ describe('Minhas consultas (D35)', () => {
     expect(within(historico).queryByRole('button')).toBeNull()
   })
 
-  it('sem consultas: estados vazios e o atalho para marcar', async () => {
+  it('sem nenhuma consulta: mensagem "Nenhuma consulta" e botão para agendar no lugar das listas', async () => {
     simularApi({ [PROXIMAS]: lista([]), [TODAS]: lista([]) })
 
     abrir()
 
-    expect(await screen.findByText('Você não tem consultas marcadas.')).toBeTruthy()
-    expect(screen.getByText('Nenhuma consulta anterior.')).toBeTruthy()
-    await userEvent.click(screen.getAllByRole('link', { name: /Marcar consulta/ })[0])
+    expect(await screen.findByRole('heading', { name: 'Nenhuma consulta' })).toBeTruthy()
+    expect(screen.queryByRole('region', { name: 'Próximas consultas' })).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Histórico' })).toBeNull()
+    await userEvent.click(screen.getByRole('link', { name: /Agendar consulta/ }))
     expect(screen.getByText('Navegou para /minha-conta/agendar')).toBeTruthy()
+  })
+
+  it('com consultas só no histórico: mantém as listas e o aviso de que não há próximas', async () => {
+    const passada = { id: 'c-antiga', inicio: '2026-09-01T12:00:00.000Z', fim: '2026-09-01T13:00:00.000Z', status: 'REALIZADA', procedimento: { nome: 'Limpeza' }, dentista: { nome: 'Ana Costa' } }
+    simularApi({ [PROXIMAS]: lista([]), [TODAS]: lista([passada]) })
+
+    abrir()
+
+    expect(await screen.findByText('Você não tem consultas marcadas.')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Nenhuma consulta' })).toBeNull()
   })
 
   it('cancela com mais de 24 h sem justificativa e recarrega as listas', async () => {

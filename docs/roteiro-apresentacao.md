@@ -6,6 +6,25 @@ Arquitetura: computador de casa → Docker Desktop (banco, API, Nginx) → Cloud
 
 **Modo público:** quem tem a URL vê a tela de login, **sem e-mail nem PIN da Cloudflare**. Todas as funcionalidades exigem login do DentAgenda (dados e contas fictícios).
 
+## 0. Hoje à noite: subir a versão com as telas novas (Consultas)
+
+`RemotoCompilar` constrói as imagens a partir dos arquivos que estão na pasta **agora**: faça-o na branch que contém as telas novas (`feat/telas-consultas`, ou a `main` depois do merge). Não mexe no banco nem nos volumes.
+
+```powershell
+cd C:\Users\potat\orca\DentAgenda
+git status --short                              # confira que está na branch certa e sem alterações soltas
+git switch feat/telas-consultas
+.\scripts\demo-local.ps1 RemotoPararTunel       # se houver túnel aberto (RemotoVerificar não roda com túnel ativo)
+.\scripts\demo-local.ps1 RemotoCompilar         # reconstrói API e frontend (alguns minutos)
+.\scripts\demo-local.ps1 RemotoIniciar          # recria os containers com a imagem nova; sem migrations nem seed
+.\scripts\demo-local.ps1 RemotoEstado           # banco, API e frontend "healthy"
+.\scripts\demo-local.ps1 RemotoVerificar        # 12 grupos pela cadeia compilada
+```
+
+Se algo falhar: `git switch demo/quick-tunnel-restrito`, depois `RemotoCompilar` e `RemotoIniciar` de novo (versão anterior, já ensaiada). Não rode `RemotoInicializarBanco`.
+
+As telas novas só se conferem pelo navegador, com o túnel aberto (seção 3): menu **Consultas**, visões Dia e Lista, e um paciente sem consultas mostrando "Nenhuma consulta".
+
 ## 1. Em casa, antes de sair (PowerShell na raiz do projeto, Docker Desktop aberto)
 
 ```powershell
@@ -49,10 +68,10 @@ cd C:\Users\potat\orca\DentAgenda
 
 ## 5. Sequência sugerida (≈10 min)
 
-1. **Administração:** equipe, procedimentos, disponibilidade.
-2. **Recepção:** busca de pacientes, perfil (dados, alertas, histórico), novo agendamento, conflito de horário, remarcação, cancelamento.
-3. **Dentista:** suas consultas, detalhes, realizar consulta, observação com histórico, bloqueios próprios.
-4. **Paciente:** `/minha-conta`, marcar, cancelar (justificativa obrigatória a menos de 24 h).
+1. **Administração:** equipe, procedimentos, disponibilidade e **Consultas** (se a conta de administração for de recepção, vê todos os dentistas).
+2. **Recepção:** menu **Consultas** (visão Dia por dentista e Lista com filtros; remarcar, cancelar e marcar realizada), busca de pacientes, perfil (dados, alertas, histórico), novo agendamento, conflito de horário, remarcação, cancelamento.
+3. **Dentista:** **Minhas consultas** (só a agenda dele, Dia e Lista), detalhes, realizar consulta, observação com histórico, bloqueios próprios.
+4. **Paciente:** `/minha-conta` (paciente sem consulta vê "Nenhuma consulta" e o botão para agendar), marcar, cancelar (justificativa obrigatória a menos de 24 h).
 5. Mostre que cadastro e recuperação ficam indisponíveis neste perfil (sem SMS/e-mail real, D16).
 
 Alternar perfis: **Sair** (no celular fica no topo) e entrar com outra conta.
