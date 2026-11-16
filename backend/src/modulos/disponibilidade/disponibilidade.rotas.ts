@@ -11,7 +11,7 @@ export function criarRotasDisponibilidade(contexto: Contexto): Router {
   const rotas = Router();
   rotas.use(autenticar(contexto));
   rotas.get('/:id/grade', exigirPapel('R', 'A', 'D'), controller.lerGrade);
-  rotas.put('/:id/grade', exigirPapel('A'), controller.gravarGrade);
+  rotas.put('/:id/grade', exigirPapel('R', 'A', 'D'), controller.gravarGrade);
   rotas.get('/:id/bloqueios', exigirPapel('R', 'D'), controller.listarBloqueios);
   return rotas;
 }
@@ -40,7 +40,7 @@ export const rotasDocumentadasDisponibilidade: ModuloDocumentado = {
   tag: 'Disponibilidade',
   rotas: [
     { metodo: 'get', caminho: '/:id/grade', acesso: ['R', 'A', 'D'], resumo: 'Lê a grade semanal do dentista' },
-    { metodo: 'put', caminho: '/:id/grade', acesso: ['A'], resumo: 'Substitui a grade semanal do dentista', corpo: esquemaGrade },
+    { metodo: 'put', caminho: '/:id/grade', acesso: ['R', 'A', 'D'], resumo: 'Substitui a grade semanal do dentista', corpo: esquemaGrade },
     { metodo: 'get', caminho: '/:id/bloqueios', acesso: ['R', 'D'], resumo: 'Lista os bloqueios do dentista em um período', consulta: esquemaPeriodo },
   ],
 };
