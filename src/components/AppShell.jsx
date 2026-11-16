@@ -5,7 +5,7 @@ import Brand from './Brand';
 import Icon from './Icon';
 import { termoDeBusca } from '../pacientes/formatar.js';
 
-const LINKS_DA_CLINICA = [{to:'/inicio',label:'Início',icon:'home'},{to:'/agenda',label:'Agenda',icon:'calendar'},{to:'/pacientes',label:'Pacientes',icon:'users'},{to:'/disponibilidade',label:'Disponibilidade',icon:'clock'}];
+const LINKS_DA_CLINICA = [{to:'/inicio',label:'Início',icon:'home'},{to:'/agenda',label:'Agenda',icon:'calendar'},{to:'/consultas',label:'Consultas',icon:'clipboard'},{to:'/pacientes',label:'Pacientes',icon:'users'},{to:'/disponibilidade',label:'Disponibilidade',icon:'clock'}];
 // D37: o menu só mostra o que o papel abre (a API é quem garante).
 const LINKS_DO_ADMIN = [{to:'/admin/equipe',label:'Equipe',icon:'id'},{to:'/admin/procedimentos',label:'Procedimentos',icon:'clipboard'}];
 // D35: o paciente usa o mesmo layout, com a navegação dele e sem a busca de pacientes.
@@ -29,7 +29,8 @@ export default function AppShell({ children, title, wide = false }) {
   const { usuario, sair } = useSessao();
   const [busca, setBusca] = useState('');
   const daClinica = usuario.tipo === 'FUNCIONARIO';
-  const links = !daClinica ? LINKS_DO_PACIENTE : ehAdmin(usuario) ? [...LINKS_DA_CLINICA, ...LINKS_DO_ADMIN] : LINKS_DA_CLINICA;
+  const linksDaClinica = usuario.categoria === 'DENTISTA' ? LINKS_DA_CLINICA.map((link) => link.to === '/consultas' ? { ...link, label: 'Minhas consultas' } : link) : LINKS_DA_CLINICA;
+  const links = !daClinica ? LINKS_DO_PACIENTE : ehAdmin(usuario) ? [...linksDaClinica, ...LINKS_DO_ADMIN] : linksDaClinica;
   const buscarPaciente = (evento) => { evento.preventDefault(); navigate('/pacientes?busca=' + encodeURIComponent(termoDeBusca(busca))); setBusca(''); };
 
   return (

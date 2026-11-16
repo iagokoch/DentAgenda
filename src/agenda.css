@@ -40,3 +40,8 @@ a.appointment{text-decoration:none;color:inherit}
 .consultas-do-paciente .appointment:hover{background:#fff}
 @media(max-width:950px){.minha-conta{grid-template-columns:1fr}}
 @media(max-width:700px){.consultas-do-paciente .appointment .status{display:inline-block}}
+.consultas-vazio{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding:56px 24px}
+.consultas-vazio h2{margin:0;font-size:22px}
+.consultas-vazio p{margin:0;max-width:420px;color:var(--muted);line-height:1.5}
+.consultas-vazio__icone{width:84px;height:84px;border-radius:50%;background:var(--surface-soft);color:var(--primary-dark);display:grid;place-items:center}
+.consultas-vazio__icone svg{width:40px;height:40px}
