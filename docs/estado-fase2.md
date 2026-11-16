@@ -1,5 +1,13 @@
 # Fase 2 — Correções e preparação do deploy
 
+## Atualização — telas de consultas, carga e túnel público (15/11/2026, noite)
+
+- **Túnel:** o modo restrito por e-mail falhou no ensaio (`Forbidden` depois do PIN; origem no cloudflared/Access, issue #1752; o Nginx não recebeu requisição). A apresentação usa o **modo público temporário** (`RemotoIniciarTunel -Publico -ConfirmarExposicao`), sem PIN da Cloudflare e com o login do DentAgenda sempre obrigatório (D47, atualizada). PR #51 (base `demo/local-apresentacao`) contém os dois modos; o túnel precisa rodar num PowerShell do usuário, não numa sessão do Claude Code. **A validação externa (login, quatro perfis, sessão, 5 min) é manual e não está registrada aqui.**
+- **Telas (D48):** `/consultas` (Dia por dentista e Lista, ações, dentista só a própria agenda) e o estado vazio "Nenhuma consulta" do paciente. Só front-end, branch `feat/telas-consultas` (base `demo/quick-tunnel-restrito`), front com 317 testes. Fora desta entrega: visão Semana, bloqueios na grade do dia, paginação da lista.
+- **Carga** (k6, local, dados fictícios): smoke, conflito (1 reserva + 1 conflito), tela de consultas (10 usuários, 3 min) e `pico` (20 usuários, 10 min) sem erros e dentro dos limites: `docs/performance-resultados-2026-11-15.md`. Não é capacidade do servidor final.
+- **Para amanhã:** `RemotoCompilar` constrói da pasta atual, então compile na branch com as telas novas e confira com `RemotoVerificar`; passo a passo e checklist em `docs/roteiro-apresentacao.md`.
+- **Pendências:** validação externa do túnel público, merge das PRs #50, #51 e da PR das telas (sem merge automático), D47/D48 aprovadas por conversa, issue #1 (SMS/e-mail reais) e respostas da clínica.
+
 ## Atualização — Quick Tunnel restrito implementado, abertura pendente (15/11/2026)
 
 **Stack remoto privado validado; NO-GO para apresentação remota até autorização e ensaio HTTPS/Access.** Nenhum Quick Tunnel foi aberto e não existe URL externa nesta entrega. D47 foi aprovada pelo usuário, inclusive mensageria indisponível e downloads oficiais; D16 permanece intacta. A demonstração local foi reconferida SAUDAVEL.

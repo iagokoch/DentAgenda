@@ -56,6 +56,8 @@ Documento para explicar o sistema numa apresentação acadêmica. Fontes: o cód
 - **Pacientes:** busca, cadastro (só recepção), perfil com dados, endereço, alertas, edição e histórico.
 - **Funcionários e procedimentos:** telas `/admin/equipe` e `/admin/procedimentos`, somente administração.
 - **Disponibilidade:** grade semanal por dentista (faixas por dia da semana) e bloqueios (férias, cursos).
+- **Consultas da clínica (D48):** menu **Consultas** (dentista: **Minhas consultas**) com visão **Dia** (uma coluna por dentista, navegação por dia) e **Lista** (30 dias, filtros por dentista, status e paciente), e as ações marcar realizada, remarcar, cancelar e detalhes. A recepção e a administração veem todos os dentistas; o dentista só a própria agenda.
+- **Área do paciente:** próximas consultas e histórico, cancelar e marcar; sem nenhuma consulta, aparece "Nenhuma consulta" e o botão **Agendar consulta**.
 - **Agenda e agendamento:** escolha de mês, dia e horário; a clínica encaixa em qualquer minuto livre (múltiplos de 5), o paciente segue o passo da duração do procedimento.
 - **Remarcação:** é cancelar e criar nova, e o histórico mostra a original cancelada (D14).
 - **Cancelamento:** clínica e paciente; justificativa obrigatória do paciente a menos de 24 h.
@@ -81,7 +83,7 @@ Proteções existentes: senhas com bcrypt; JWT curto; refresh em cookie `httpOnl
 
 **Perfil de demonstração remota (D47):** dados fictícios; produção real nunca usa o enviador de log (D16 preservada). Neste perfil cadastro e recuperação respondem 503, nenhum SMS ou e-mail real é enviado e nenhum código é exibido. O Nginx só aceita IP de cliente e HTTPS vindos do conector do túnel; o PostgreSQL não tem porta publicada.
 
-**Cloudflare × DentAgenda.** O Quick Tunnel só entrega o tráfego HTTPS até o computador de casa. No modo restrito, a Cloudflare autenticava por e-mail e PIN (Access); no modo público, não há autenticação Cloudflare. **A autenticação do DentAgenda (CPF/e-mail e senha) é sempre obrigatória** para qualquer funcionalidade; a URL pública mostra só a tela de login e os arquivos do front.
+**Cloudflare × DentAgenda.** O Quick Tunnel só entrega o tráfego HTTPS até o computador de casa. No modo restrito, a Cloudflare autenticava por e-mail e PIN (Access); esse modo falhou no ensaio (`Forbidden` depois do PIN, issue #1752). Na apresentação usa-se o modo público temporário, sem autenticação Cloudflare e com dados fictícios. **A autenticação do DentAgenda (CPF/e-mail e senha) é sempre obrigatória** para qualquer funcionalidade; a URL pública mostra só a tela de login e os arquivos do front.
 
 ## 8. Infraestrutura
 
@@ -94,7 +96,8 @@ Proteções existentes: senhas com bcrypt; JWT curto; refresh em cookie `httpOnl
 - API: Vitest + Supertest contra Postgres real, incluindo matriz de papéis (43 rotas × 5 papéis) e testes de corrida; fluxo ponta a ponta da clínica.
 - Front: testes de tela (Testing Library + jsdom), axe em 14 telas, nenhum botão sem ação, relógio injetado.
 - Demonstração remota: testes de configuração, mensageria e proxy; `RemotoVerificar` percorre 12 grupos pela cadeia compilada (quatro perfis, permissões, agendamento, conflito, remarcação, cancelamento, CSRF, rotação do refresh e logout).
-- Último total informado pelo grupo: 1.039 testes aprovados.
+- Último total informado pelo grupo: 1.039 testes aprovados antes das telas novas. Front com as telas de consultas: 317 testes, incluindo axe nas visões Dia e Lista.
+- **Carga** (k6, ambiente local isolado com dados fictícios: 5 dentistas, 5 mil pacientes, 50 mil consultas): resultados e limites em `docs/performance-resultados-2026-11-15.md`.
 - **Validado só localmente** (cadeia interna). A validação por URL externa (HTTPS, cookies no navegador, sessão após minutos) é registrada em `docs/operacao-remota.md`.
 
 ## 10. Limitações e próximos passos

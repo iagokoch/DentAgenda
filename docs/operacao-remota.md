@@ -1,6 +1,6 @@
 # Operação da demonstração remota restrita (D47)
 
-Pacote de apresentação com dados fictícios. **Sem autorização de exposição e e-mail exato do operador, não iniciar túnel.** O stack privado não comprova HTTPS/Access. GO remoto depende do roteiro externo ao fim deste documento.
+Pacote de apresentação com dados fictícios. Dois modos de túnel, sempre explícitos: **público temporário** (decisão de 15/11/2026, abaixo; é o usado na apresentação) e **restrito por e-mail** (falhou no ensaio, issue #1752). O stack privado não comprova HTTPS externo: GO remoto depende do roteiro externo ao fim deste documento.
 
 ## Preparar uma vez
 
@@ -20,6 +20,20 @@ PowerShell na raiz, Docker Desktop aberto, mesmo usuário Windows que gerou a co
 Dados/configuração privados: `.codex/demo-remota/config.xml` protegido com DPAPI CurrentUser e ignorado pelo Git. As quatro senhas são novas, distintas das locais e não aparecem nos comandos. Banco: `dentagenda_demo_remota`; papéis separados `app_demo` (runtime sem DDL) e `migrations_demo`. Nenhuma porta remota é publicada no host. Rede do conector usa subnet exclusiva `172.30.247.0/29`: colisão deve interromper operação. Não alterar somente o IP do conector: Compose, proxy e fixtures precisam acompanhar.
 
 Frontend compilado no Nginx, `/api` mesma origem, API produção com enviador explicitamente indisponível. Cadastro/recuperação respondem 503 neste perfil. Nenhum SMS/e-mail real é enviado pela aplicação. PIN Cloudflare é serviço separado, enviado ao e-mail autorizado do participante.
+
+## Atualizar o frontend ou a API (por exemplo, com as telas novas)
+
+`RemotoCompilar` constrói as imagens `api` e `front` **a partir dos arquivos da pasta no momento**; confira a branch (`git status --short --branch`) antes. O banco e o volume não mudam.
+
+```powershell
+.\scripts\demo-local.ps1 RemotoPararTunel   # se houver túnel
+.\scripts\demo-local.ps1 RemotoCompilar
+.\scripts\demo-local.ps1 RemotoIniciar      # recria os containers com a imagem nova
+.\scripts\demo-local.ps1 RemotoEstado
+.\scripts\demo-local.ps1 RemotoVerificar
+```
+
+Para voltar à versão anterior: troque a branch e repita `RemotoCompilar` e `RemotoIniciar`.
 
 ## Conferir e retomar
 

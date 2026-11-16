@@ -1811,6 +1811,39 @@ completa de produção permanecem no backlog. Procedimento: `docs/operacao-local
 
 **Operação/Git:** branch demo/quick-tunnel-restrito, dependente de #50; sem commits, pushes, PR ou merge automáticos. Inicializar o stack não inicia o túnel. Encerrar preserva banco/volumes; nova execução do túnel gera outra URL e exige revalidação. Plano e evidências: docs/plano-demo-remota.md e runbook remoto.
 
+**Atualização de 15/11/2026 — modo público temporário.** No ensaio do modo restrito, depois de e-mail e PIN o navegador mostrou `Forbidden`. A origem foi o cloudflared/Access (`HTTP request authorization failed before origin selection`); o Nginx não registrou requisição 4xx, então nada chegou à origem. É compatível com a issue cloudflare/cloudflared#1752. O usuário autorizou, só para a demonstração com dados fictícios, um Quick Tunnel sem `--allowed-mail`. Decisão: `RemotoIniciarTunel -Publico -ConfirmarExposicao` (nunca fallback do modo restrito, que continua disponível e não aceita `-Publico` junto de e-mail). Qualquer visitante vê a tela de login; toda funcionalidade exige o login do DentAgenda, e permanecem matriz de papéis, CSRF, cookies seguros, limite por IP, cadastro/recuperação em 503 e D16. Ação `RemotoUrl` mostra a URL do último túnel. Alternativa descartada: manter o e-mail/PIN e investigar o #1752, sem prazo para a apresentação. Risco aceito: a URL, enquanto durar, é pública; os dados são fictícios e o túnel é encerrado ao fim da demonstração.
+
+## D48 — Tela "Consultas" da clínica e estado vazio do paciente
+
+> **Status: aprovada em 15/11/2026 pelo usuário (mockups no artefato de design); só front-end.**
+
+**O quê:**
+- Rota `/consultas` (funcionários; no menu "Consultas", e "Minhas consultas" para o dentista) com duas visões:
+  **Dia** (uma coluna por dentista, navegação por dia, "Hoje") e **Lista** (período padrão de hoje a 30 dias, filtros de
+  dentista, status e nome do paciente).
+- Recepção e administração veem todos os dentistas; o dentista recebe da API só a própria agenda (D10, `GET /api/consultas`).
+  O filtro de dentista não aparece para ele.
+- Ações por consulta, as mesmas dos Detalhes: **Marcar realizada** (só depois do início), **Remarcar**
+  (`/agenda?remarcar=<id>`), **Cancelar** (diálogo existente) e **Detalhes**. Consulta confirmada cujo fim passou aparece como
+  "Passou, sem registro", com aviso da quantidade (as "pendentes" da D13).
+- Paciente sem nenhuma consulta vê "Nenhuma consulta" e o botão "Agendar consulta" (`/minha-conta/agendar`) no lugar
+  das listas; com consultas só no histórico, as listas continuam.
+
+**Por quê:** só havia "Consultas de hoje" no Início e o histórico por paciente; faltava ver o dia por dentista e a lista
+geral. A API já aceitava `de`, `ate`, `dentistaId` e `status`, então nenhuma rota ou regra de permissão mudou.
+
+**Não existe passo de "confirmar":** a consulta nasce `CONFIRMADA` (D13). O equivalente é "marcar realizada".
+
+**Alternativas descartadas / fora desta entrega:** visão Semana (os mockups tinham o botão; não foi implementada),
+bloqueios desenhados na grade do dia, filtro de paciente na API (a busca por nome é feita na tela sobre a página carregada,
+até 100 consultas) e telas separadas por perfil (uma só rota atende os dois, pela regra da API).
+
+**Limitação conhecida:** a conta de administração só vê todos os dentistas se for de recepção (flag somada, D10); um
+administrador que também é dentista recebe só a própria agenda.
+
+**Validação:** testes de tela (12) e de funções puras (6), axe nas duas visões, suíte do front 317/317. Carga em
+`docs/performance-resultados-2026-11-15.md`.
+
 ## Próximo
 
 Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos

@@ -11,8 +11,8 @@ O que falta depende da clínica (veja "O que falta").
 
 - **Backend** (`backend/`): as 43 rotas de `docs/api.md`, com 628 testes contra Postgres real, entre eles o ponta a ponta
   da clínica, a matriz rota × papel e os pedidos simultâneos de login, refresh e códigos.
-- **Front-end** (`src/`): todas as telas ligadas à API, com 175 testes (funções, telas e acessibilidade com axe).
-  Conferido em 400px.
+- **Front-end** (`src/`): todas as telas ligadas à API, com 317 testes (funções, telas e acessibilidade com axe).
+  Conferido em 400px. Inclui a tela **Consultas** da clínica (visões Dia e Lista, D48) e o estado vazio do paciente.
 
 ## Stack
 
@@ -111,6 +111,7 @@ src/
   sessao/           Sessão do usuário e rotas protegidas por tipo e papel
   components/       AppShell (menu por papel), AuthLayout, Brand, Gaveta, Icon, useFocoPreso
   pages/            Uma página por rota (admin/ para Equipe e Procedimentos); *.test.jsx = testes de tela
+  consultas/        Funções puras da tela Consultas da clínica (dia, colunas por dentista, filtro por paciente)
   agenda/           Calendário, horários, cancelamento, observação e a escolha de horário compartilhada
   pacientes/        Formatação, endereço, alertas, edição e histórico do paciente
   minha-conta/      Regras da área do paciente
@@ -149,7 +150,7 @@ docs/               Decisões, contrato da API, matriz de papéis, roteiros e pe
 
 ## Decisões
 
-Todas em `docs/documentacao.md` (D1 a D41), com o quê, por quê e a alternativa descartada; em conflito com o código, vale
+Todas em `docs/documentacao.md` (D1 a D48), com o quê, por quê e a alternativa descartada; em conflito com o código, vale
 o documento. As mais recentes:
 
 | # | Decisão |
@@ -161,6 +162,9 @@ o documento. As mais recentes:
 | D39 | Acessibilidade (axe, contraste, foco, teclado), botões sem ação, matriz de papéis, relógio injetável, layout em 400px |
 | D40 | Produção: `PROXY_CONFIAVEL`, refresh fora do limite por IP, índices, RESTRICT e retenção de dados |
 | D41 | Roteiro de demonstração e paciente de exemplo no `db:seed:dev` |
+| D46 | Apresentação exclusivamente local no Windows |
+| D47 | Demonstração remota por Quick Tunnel (modo restrito por e-mail e modo público temporário) |
+| D48 | Tela Consultas da clínica (Dia e Lista) e estado vazio do paciente |
 
 ## O que falta
 
@@ -201,7 +205,7 @@ O que configurar no servidor, além do que o `backend/.env.example` lista. A API
 
 ## Regras do grupo
 
-- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D42**)
+- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D49**)
   antes de virar código.
 - **Backend em TDD**, com nomes em português (D23). Biblioteca nova: conferir versão e API no context7 antes de usar.
 - **Se o front precisar de algo que a API não dá**, vira decisão e mudança no `docs/api.md`, não gambiarra no front.
@@ -209,10 +213,14 @@ O que configurar no servidor, além do que o `backend/.env.example` lista. A API
 
 ## Documentação
 
-- `docs/documentacao.md`: decisões de arquitetura e modelagem (D1 a D41). Em conflito com o código, vale este documento.
+- `docs/documentacao.md`: decisões de arquitetura e modelagem (D1 a D48). Em conflito com o código, vale este documento.
 - `docs/api.md`: contrato da API (rotas, entrada, saída, erros).
 - `docs/matriz-de-papeis.md`: quem chama cada rota da API e cada tela do front, com o status esperado.
 - `docs/roteiro-de-demonstracao.md`: a apresentação, nos quatro papéis.
+- `docs/roteiro-apresentacao.md`: passo a passo de 16/11/2026 (túnel público, checklist e contingência).
+- `docs/operacao-remota.md`: operação do pacote remoto e do Quick Tunnel.
+- `docs/guia-completo-dentagenda.md`: como o sistema funciona (para explicar na apresentação).
+- `docs/performance-resultados-2026-11-15.md`: testes de carga e resultados.
 - `docs/ponta-a-ponta.md`: roteiro do fluxo da clínica para conferir no navegador.
 - `docs/acessibilidade.md`: conferência de acessibilidade e de layout em 400px.
 - `docs/spec-backend-mvp.md`: visão geral do backend do MVP.
