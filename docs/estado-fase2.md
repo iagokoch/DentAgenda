@@ -1,5 +1,61 @@
 # Fase 2 — Correções e preparação do deploy
 
+## Atualização — Quick Tunnel restrito implementado, abertura pendente (15/11/2026)
+
+**Stack remoto privado validado; NO-GO para apresentação remota até autorização e ensaio HTTPS/Access.** Nenhum Quick Tunnel foi aberto e não existe URL externa nesta entrega. D47 foi aprovada pelo usuário, inclusive mensageria indisponível e downloads oficiais; D16 permanece intacta. A demonstração local foi reconferida SAUDAVEL.
+
+- Branch `demo/quick-tunnel-restrito`, baseada em `6cd7b81` (#50), mesma worktree. Alterações sem commit, staging vazio; sem push, nova PR ou merge. #50 e anteriores preservadas. PR futura tem base `demo/local-apresentacao` e precisa autorização própria para publicação.
+- Pacote Docker separado: frontend compilado, Nginx, API produção e banco `dentagenda_demo_remota`. Nenhuma porta publicada no host. Conector só tem `--version` por padrão, profile `tunel`, sem reinício automático; operação externa separada exige confirmação e um e-mail exato.
+- Proxy confia somente no peer fixo do conector na rede exclusiva; parser realip valida IPv4/IPv6, protocolo exige https, XFF/XFP/XFH são substituídos e headers alternativos removidos. API permanece com um único proxy confiável por topologia isolada.
+- Configuração demo exige enviador `indisponivel-demo`, produção, confirmação exata e host/banco exclusivos sem query/hash/porta alternativa. Cadastro/recuperação têm seis rotas bloqueadas com 503; enviador falha sem entregar ou registrar conteúdo. Quatro contas fictícias pré-ativadas, senhas privadas novas em DPAPI, separadas da demo local.
+- Runtime PostgreSQL sem superuser/createdb/createrole e sem CREATE no schema; migrations têm papel separado. Quatro migrations aplicadas no banco novo. Volumes e banco locais preservados.
+
+### Verificações desta entrega
+
+| Execução | Resultado confirmado |
+| --- | --- |
+| TDD `testes/demo-remota.test.ts` | Inicial: 8 falhas esperadas; final: 25 aprovados, sem banco |
+| HTTP `testes/proxy-auth-demo.test.ts` | 3 aprovados: cota por IPv4/rede IPv6 e refresh fora do limiter, sem banco |
+| `node node_modules/vitest/vitest.mjs run --config vitest.seguranca.config.ts` em backend | 81 testes, 8 arquivos, todos aprovados; inclui os 28 novos, não somar outra vez |
+| Lint raiz/backend, typecheck e build backend | Aprovados; build frontend executado na imagem Docker com lockfile |
+| `node --check` dos dois verificadores; parser PowerShell dos scripts | Aprovados |
+| Compose remoto e fixture `config --no-interpolate --quiet`; revisão `git diff --check` | Aprovados; valores secretos não renderizados |
+| Fixture Docker do proxy (`proxy-teste.compose.yaml`) | IPv4/IPv6/mapped e normalização upstream aprovados; IPs inválidos/listas/portas/headers duplicados/protocolo inválido recusados; peer diferente recusado na página/API. Fixture removida, sem banco/volumes |
+| Preparar/Compilar/Iniciar inicial | DPAPI, banco exclusivo, quatro migrations, quatro contas e imagens compiladas aprovados; início inicial ainda incluía migrations, depois separado em InicializarBanco |
+| `RemotoVerificar` | 12 grupos aprovados: assets/SPA, saúde, docs fechadas, códigos indisponíveis, quatro perfis/cookies, papéis/listas, disponibilidade, agendamento/conflito, remarcação/cancelamento, CSRF/rotação/logout/revogação |
+| Backup → Parar → Iniciar → Verificar | Catálogo dump e checksum validados; volume preservado; retomada sem migrations/seed e novamente 12 grupos aprovados |
+| Inspeção sanitizada Docker/roles/logs | Banco/API/front healthy, PortBindings vazios; privilégios mínimos confirmados; logs sem valores secretos da configuração DPAPI nem mensagens simuladas |
+| `scripts/demo-local.ps1 Estado` após ciclo remoto | API/front em loopback e HTTP200; banco local healthy somente 127.0.0.1:5434; Estado geral SAUDAVEL |
+| Launcher/parada no PowerShell 5.1 | Corrigidos stderr informativo que interrompia pipeline e quoting de labels Docker; teste sintético stderr e fixture cloudflared --version sem rede aprovados; parada real de túnel ainda depende do ensaio externo |
+
+O primeiro roteiro completo parou por uma expectativa incorreta no verificador: refresh sem header próprio retorna **401** pelo contrato existente, não 403. Corrigida somente a expectativa; o roteiro completo passou depois. Reservas dos ensaios foram canceladas e sessões encerradas. Não foi repetida auditoria completa, suíte frontend nem carga.
+
+### Imagens e risco de sessão Access
+
+Imagens oficiais Linux/amd64, origem/digest e versão conferidos, bases remotas fixadas:
+
+| Componente | Versão / digest |
+| --- | --- |
+| Node | 24.22.3, `sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54` |
+| Nginx | 1.30.6-alpine, `sha256:901e593c95dc85f5a729f5765516321366ef4ac401821431d408897e95287d0a` |
+| PostgreSQL | 17.12, `sha256:0d938e975177bef9f1f61f3f9dbcf2e0aa0a139568f66d3415ed8892eb97f6ac` |
+| cloudflared | 2026.11.0, `sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344` |
+
+Nginx 1.28 foi baixado inicialmente, mas descartado para a cadeia remota ao conferir o [advisory map+regex](https://nginx.org/en/security_advisories.html); pacote remoto usa 1.30.6. PostgreSQL remoto usa a [minor suportada atual](https://www.postgresql.org/support/versioning/), mantendo a imagem/container locais. Digest comprova artefato utilizado, não auditoria completa de todas as bibliotecas da imagem.
+
+`cloudflared --version` e `tunnel --help` foram executados com `--network none`; `--allowed-mail` está presente. Nenhuma instalação no PATH ou login Cloudflare necessário. A [issue #1752](https://github.com/cloudflare/cloudflared/issues/1752) segue aberta e inclui relato de 15/11 em Windows/2026.11.0. Não foi reproduzida neste projeto; não existe correção confirmada nesta entrega. Exigir navegação, assets, GET/POST e operação após pelo menos cinco minutos autenticado, não apenas PIN/HTML200. Se reproduzir, manter restrição e propor túnel nomeado + Access com autorização própria ou usar local.
+
+### Operação e próximos passos exatos
+
+Runbook: [operacao-remota.md](operacao-remota.md). Script local delega ações `Remoto*`; `RemotoInicializarBanco` é administrativo, separado da retomada `RemotoIniciar`. Verificador ocupa o IP exclusivo do conector e não deve rodar com túnel ativo. Backups privados validados por catálogo/checksum; restauração remota ainda não ensaiada. A validação de restauração anterior é do ambiente local, não do remoto.
+
+1. O usuário já informou o e-mail exato de operador; registrado somente no ai-memory para continuidade com Claude Code. Ainda falta autorização específica para exposição externa. Não abrir antes; não inventar endereço/domínio nem fallback irrestrito.
+2. Iniciar túnel restrito; obter URL real e executar roteiro HTTPS/Access, cookies no navegador, quatro perfis, operações após minutos e dispositivo externo/dois IPs quando disponíveis. Testes internos com headers sintéticos não comprovam esses itens.
+3. Registrar evidências sanitizadas e só declarar GO após critérios; se bloqueio crítico, preservar NO-GO remoto e contingência local.
+4. Commits/push/PR somente mediante autorização específica. Nenhuma PR nova aberta nesta implementação.
+
+Especialistas: `architecture_qa` implementou perfil/TDD e revisou Docker/QA; `security` implementou proxy/Compose/fixture e identificou base Nginx vulnerável; `devops_sre` implementou operação/seed/papéis e corrigiu paths e retomada sem migrations; Tech Lead integrou, fixou imagens e executou os ensaios. Backups individuais verificados em TEMP antes de alterações; a primeira tentativa de backup documental foi bloqueada e o original limpo de HEAD foi recuperado e validado. Arquivos privados e não rastreados preexistentes preservados.
+
 ## Atualização — demonstração local validada em 15/11/2026
 
 **GO para apresentação exclusivamente local neste Windows; NO-GO para exposição externa.**

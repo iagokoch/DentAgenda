@@ -1,0 +1,2 @@
+# O entrypoint PostgreSQL roda em Linux também a partir de checkouts Windows.
+deploy/remoto/*.sh text eol=lf

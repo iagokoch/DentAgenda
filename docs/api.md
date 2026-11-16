@@ -5,6 +5,22 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
 Consultas). Fora de produção, `/api/docs` mostra o Swagger gerado dos schemas Zod e `/api/docs.json` o OpenAPI (D34); este
 documento continua sendo o contrato (status, códigos de erro e regras).
 
+## Perfil de demonstração remota restrita (D47)
+
+Exclusivamente com enviador `indisponivel-demo`, produção, confirmação explícita e banco fictício exclusivo:
+os seis POSTs de cadastro/recuperação (`cliente/cadastro/codigo`, `cliente/cadastro/confirmar`,
+`cliente/recuperacao/codigo`, `cliente/recuperacao/confirmar`, `funcionario/recuperacao/codigo` e
+`funcionario/recuperacao/confirmar`, sob `/api/auth/`) respondem **503 `MENSAGERIA_INDISPONIVEL_DEMO`**,
+sem gerar/enviar códigos ou executar seus controllers. Resposta:
+
+```json
+{"erro":{"codigo":"MENSAGERIA_INDISPONIVEL_DEMO","mensagem":"Cadastro e recuperação indisponíveis nesta demonstração. Utilize uma conta de demonstração preparada."}}
+```
+
+Login, refresh, logout e autorização conservam os contratos abaixo. O limite de requisições e a validação
+JSON geral continuam anteriores às rotas. Fora desse perfil, o contrato de cadastro/recuperação permanece igual.
+`production + log` continua recusado na inicialização. Cookies de produção usam Secure, HttpOnly e SameSite=Strict.
+
 ## Endpoints operacionais
 
 Fora das 43 rotas de negócio e de sua matriz de papéis: `GET /api/saude/viva` responde 200

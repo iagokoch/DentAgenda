@@ -1,7 +1,7 @@
 import { criarApp } from './app.ts';
 import { criarPrisma } from './compartilhado/banco.ts';
 import { criarLogger } from './compartilhado/logger.ts';
-import { EnviadorLog } from './compartilhado/mensageria.ts';
+import { EnviadorIndisponivelDemo, EnviadorLog } from './compartilhado/mensageria.ts';
 import { relogioDoSistema } from './compartilhado/relogio.ts';
 import { carregarConfig } from './config/env.ts';
 import { criarSaude } from './compartilhado/saude.ts';
@@ -15,7 +15,7 @@ const saude = criarSaude(() => prisma.$queryRaw`SELECT 1`);
 const app = criarApp({
   prisma,
   relogio: relogioDoSistema,
-  enviador: new EnviadorLog(logger),
+  enviador: config.enviadorMensagem === 'indisponivel-demo' ? new EnviadorIndisponivelDemo() : new EnviadorLog(logger),
   config,
   logger,
 }, { saude });
