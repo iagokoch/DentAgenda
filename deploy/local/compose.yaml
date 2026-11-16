@@ -1,0 +1,33 @@
+name: dentagenda-demo-local
+
+services:
+  postgres:
+    image: postgres:17
+    pull_policy: never
+    container_name: dentagenda-demo-local-postgres
+    labels:
+      dentagenda.ambiente: demo-local
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?Use scripts/demo-local.ps1}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Use scripts/demo-local.ps1}
+      POSTGRES_DB: dentagenda_demo_local
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$$POSTGRES_USER" -d dentagenda_demo_local']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+volumes:
+  dados:
+    name: dentagenda-demo-local-dados
+    labels:
+      dentagenda.ambiente: demo-local

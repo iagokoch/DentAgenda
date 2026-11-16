@@ -48,7 +48,11 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
 | D41  | Roteiro de demonstração e paciente de exemplo     | Fechada                      |
 | D42  | Logout local e versões sequenciais de observação | Aprovada em 2026-11-09       |
-| D45  | Limites técnicos dos inteiros de procedimento    | Fechada                      |
+| D43  | Falhas de notificação após cancelamento e remarcação | Implementada (issue #1 parcial) |
+| D44  | Códigos e alterações de canal de acesso          | Implementada                 |
+| D45  | Reinício dos serviços contínuos da demonstração | Fechada (ensaio no destino pendente) |
+| D46  | Apresentação exclusivamente local no Windows | Fechada (sem exposição externa) |
+| D49  | Limites técnicos dos inteiros de procedimento    | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1018,6 +1022,10 @@ compatível com a versão do Zod instalada — conferir na documentação atual 
 **O quê:**
 1. **CPF válido** = 11 dígitos com dígitos verificadores corretos; recusa sequência repetida
    (`11111111111`).
+   A API exige o CPF sem pontuação. O backend mantém apenas `cpfValido`, consumido por
+   `esquemaCpf`; sanitização, formatação e o alias `validarCpf` foram removidos por não terem
+   consumidores (#32). A formatação para exibição continua no frontend. Aceitar pontuação
+   por sanitização automática foi descartado para preservar o contrato de entrada.
 2. **Bloqueio do funcionário:** as falhas contam a partir do último `SUCESSO`, `REDEFINICAO` ou
    do fim do último bloqueio. Tentativa durante o bloqueio → 423, gravada como `FALHA`, sem
    estender os 15 min. Senha **certa** durante o bloqueio (cliente ou funcionário) → 423.
@@ -1737,7 +1745,124 @@ consumido o código e ainda estivesse calculando a senha. Só comparar o destino
 **Alternativa descartada:** adicionar vínculo de conta por coluna/migration. A coordenação acima resolve os cenários
 sem nova coluna; vínculo imutável isolado ainda exigiria invalidação por canal e atomicidade de consumo/efeito.
 
-## D45 — Limites técnicos dos inteiros de procedimento (BUG-001)
+## D45 — Reinício dos serviços contínuos da demonstração (AUD-07)
+
+> **Status: fechada quanto à política.** A validação operacional completa no destino permanece pendente.
+
+**O quê:** o pacote `deploy/demonstracao/compose.yaml` usa `restart: unless-stopped` em `banco`, `api` e `front`.
+São serviços contínuos; uma saída do processo deve permitir recuperação automática pelo Docker, respeitando
+uma parada intencional para manutenção. `migrations` continua tarefa de execução única, sem reinício automático.
+Não há mudança de imagem, volume, porta, rede, usuário, healthcheck ou prazo de encerramento da API.
+
+**Por quê:** sem política, um serviço encerrado permanece parado até intervenção. A política escolhida recupera
+os serviços contínuos quando o Docker está disponível e mantém uma parada manual mesmo após reiniciar o daemon.
+Isso pressupõe Docker operacional; não configura sua inicialização no sistema nem comprova recuperação do host.
+
+**Alternativas descartadas:** `always` pode retomar uma parada manual após reiniciar o daemon; `on-failure`
+não cobre esse reinício do daemon. Reiniciar migrations automaticamente poderia repetir uma operação de instalação
+sem uma nova decisão do operador. Permanecer sem política conserva a lacuna identificada em AUD-07.
+
+**Consequências e limites:** healthcheck falho, sozinho, não reinicia o processo. `depends_on` orienta operações
+Compose, mas não comprova a ordem nem a recuperação de todas as dependências após um reboot. Configuração inválida
+pode repetir falhas; reinício não corrige credenciais, schema ou mensageria e não substitui alertas externos.
+A D16 continua valendo: o enviador por log é recusado em produção. O adiamento de AUD-01 não autoriza contornar
+essa guarda; esta decisão não libera exposição externa.
+
+**Validação:** conferir a configuração sem interpolar segredos e ensaiar a política em container exclusivo sem
+rede, portas ou volumes persistentes. Observar reinício após saída do processo e respeito à parada intencional.
+Esses controles não equivalem a ensaiar API/frontend reais, persistência do banco, TLS ou reboot no servidor final.
+O procedimento operacional fica em `docs/operacao-demonstracao.md`.
+
+Referências: [políticas de reinício do Docker](https://docs.docker.com/engine/containers/start-containers-automatically/)
+e [ordem de inicialização do Compose](https://docs.docker.com/compose/how-tos/startup-order/).
+
+## D46 — Apresentação exclusivamente local no Windows
+
+> **Status: aprovada em 15/11/2026.** Validação operacional registrada no roteiro local.
+
+**O quê:** apresentação com janela compartilhada, dados fictícios e acesso exclusivo ao próprio computador.
+PostgreSQL em Docker Desktop, com container/volume/bancos próprios e porta em `127.0.0.1`; API e frontend
+no host em desenvolvimento, explicitamente vinculados a `127.0.0.1`. O proxy do Vite usa IPv4 explícito.
+A API conserva a escuta de produção necessária aos containers. A D16 permanece intacta:
+`production + log` continua recusado. Não há túnel, provedor real ou enviador remoto novo.
+
+**Por quê:** o pacote de produção ainda depende de mensageria aprovada e validação da cadeia de proxy.
+O ambiente local permite demonstrar os fluxos acadêmicos existentes sem expor códigos ou serviços na rede.
+Credenciais fictícias ficam fora do Git, protegidas por DPAPI do usuário Windows; o operador compartilha
+somente a janela da aplicação. Inicialização não usa nem sobrescreve o `.env` existente.
+
+**Alternativas descartadas para esta apresentação:** liberar log em produção violaria D16; publicar
+development/test não atende ao isolamento; provedor real ou caixa privada remota acrescentariam escopo
+e dependências que o usuário adiou. O Compose de produção não é convertido em ambiente de desenvolvimento.
+
+**Operação e limites:** configuração e dados persistem entre reinicializações; restauração usa banco novo
+e preserva o anterior. Testes destrutivos usam banco próprio separado. Os resultados de carga anteriores
+continuam históricos e não comprovam deploy remoto. AUD-02, Cloudflare, mensageria remota e validação
+completa de produção permanecem no backlog. Procedimento: `docs/operacao-local.md`.
+
+## D47 — Demonstração remota restrita por Quick Tunnel
+
+> **Status: aprovada em 15/11/2026 pelo usuário.** Implementação e validação local autorizadas; abertura externa depende de lista exata de e-mails e autorização específica posterior.
+
+**O quê:** pacote separado para dados fictícios, frontend compilado no Nginx, API em produção e PostgreSQL exclusivo em Docker. Cloudflared com saída para a Cloudflare, rede privada exclusiva até o proxy, outra rede proxy/API e rede interna API/banco. Nenhum serviço remoto publica portas no host. O proxy valida IP/protocolo da cadeia isolada e reescreve headers de encaminhamento; a API só confia nesse último salto. Quick Tunnel exige `--allowed-mail` com e-mail exato; lista vazia, domínio inteiro ou opção não suportada interrompem a operação. Nunca abrir túnel irrestrito como recuperação.
+
+**Mensageria:** perfil explícito de demonstração restrita, habilitação adicional e banco exclusivo fictício. Enviador indisponível não entrega nem registra destino/texto/código; falha de forma explícita. Seis rotas de cadastro/recuperação ficam indisponíveis com 503 e código `MENSAGERIA_INDISPONIVEL_DEMO`. Quatro contas fictícias são pré-ativadas. Login, autorização, refresh, logout e cookies Secure/HttpOnly preservados. D16 continua recusando production + log; produção normal não ativa demo automaticamente. Notificações de consulta continuam posteriores ao commit, com falha sanitizada sem desfazer consultas.
+
+**Por quê:** permite demonstrar os fluxos principais sem provedor real, códigos públicos ou servidor Vite exposto. O ambiente local D46, seus bancos, configuração DPAPI e volumes permanecem como contingência. Credenciais remotas ficam fora do Git; runtime e migrations usam papéis distintos. Backup individual validado antes de alterar arquivos existentes.
+
+**Alternativas descartadas:** publicar development/test ou permitir log em produção enfraqueceria D16/D46; apenas loopback não autentica o conector perante processos locais; provedor real adicionaria credenciais e escopo desnecessários; túnel irrestrito não satisfaz acesso restrito. Express servindo frontend no host reduz containers, mas exige resolver autenticação de origem no host; reutilizar o empacotamento Docker mantém a cadeia isolada.
+
+**Validação:** TDD nas guardas de configuração/mensageria e bloqueio de rotas; headers inválidos/falsificados, IPv4/IPv6, rate limit por cliente, cookies/sessões e quatro perfis pela cadeia compilada. Após autorização de exposição, ensaiar PIN e permanência da sessão, assets GET/POST, navegação por minutos e fluxos completos HTTPS; investigar a issue cloudflared #1752 sem remover restrição. Dispositivo externo e dois IPs devem ser verificados ou ficar explicitamente pendentes. Sem carga pela Cloudflare. Se crítico persistir: NO-GO remoto e apresentação local. Tunnel nomeado + Access exige proposta/autorização própria.
+
+**Operação/Git:** branch demo/quick-tunnel-restrito, dependente de #50; sem commits, pushes, PR ou merge automáticos. Inicializar o stack não inicia o túnel. Encerrar preserva banco/volumes; nova execução do túnel gera outra URL e exige revalidação. Plano e evidências: docs/plano-demo-remota.md e runbook remoto.
+
+**Atualização de 15/11/2026 — modo público temporário.** No ensaio do modo restrito, depois de e-mail e PIN o navegador mostrou `Forbidden`. A origem foi o cloudflared/Access (`HTTP request authorization failed before origin selection`); o Nginx não registrou requisição 4xx, então nada chegou à origem. É compatível com a issue cloudflare/cloudflared#1752. O usuário autorizou, só para a demonstração com dados fictícios, um Quick Tunnel sem `--allowed-mail`. Decisão: `RemotoIniciarTunel -Publico -ConfirmarExposicao` (nunca fallback do modo restrito, que continua disponível e não aceita `-Publico` junto de e-mail). Qualquer visitante vê a tela de login; toda funcionalidade exige o login do DentAgenda, e permanecem matriz de papéis, CSRF, cookies seguros, limite por IP, cadastro/recuperação em 503 e D16. Ação `RemotoUrl` mostra a URL do último túnel. Alternativa descartada: manter o e-mail/PIN e investigar o #1752, sem prazo para a apresentação. Risco aceito: a URL, enquanto durar, é pública; os dados são fictícios e o túnel é encerrado ao fim da demonstração.
+
+## D48 — Tela "Consultas" da clínica e estado vazio do paciente
+
+> **Status: aprovada em 15/11/2026 pelo usuário (mockups no artefato de design); só front-end.**
+
+**O quê:**
+- Rota `/consultas` (funcionários; no menu "Consultas", e "Minhas consultas" para o dentista) com duas visões:
+  **Dia** (uma coluna por dentista, navegação por dia, "Hoje") e **Lista** (período padrão de hoje a 30 dias, filtros de
+  dentista, status e nome do paciente).
+- Recepção e administração veem todos os dentistas; o dentista recebe da API só a própria agenda (D10, `GET /api/consultas`).
+  O filtro de dentista não aparece para ele.
+- Ações por consulta, as mesmas dos Detalhes: **Marcar realizada** (só depois do início), **Remarcar**
+  (`/agenda?remarcar=<id>`), **Cancelar** (diálogo existente) e **Detalhes**. Consulta confirmada cujo fim passou aparece como
+  "Passou, sem registro", com aviso da quantidade (as "pendentes" da D13).
+- Paciente sem nenhuma consulta vê "Nenhuma consulta" e o botão "Agendar consulta" (`/minha-conta/agendar`) no lugar
+  das listas; com consultas só no histórico, as listas continuam.
+
+**Por quê:** só havia "Consultas de hoje" no Início e o histórico por paciente; faltava ver o dia por dentista e a lista
+geral. A API já aceitava `de`, `ate`, `dentistaId` e `status`, então nenhuma rota ou regra de permissão mudou.
+
+**Não existe passo de "confirmar":** a consulta nasce `CONFIRMADA` (D13). O equivalente é "marcar realizada".
+
+**Alternativas descartadas / fora desta entrega:** visão Semana (os mockups tinham o botão; não foi implementada),
+bloqueios desenhados na grade do dia, filtro de paciente na API (a busca por nome é feita na tela sobre a página carregada,
+até 100 consultas) e telas separadas por perfil (uma só rota atende os dois, pela regra da API).
+
+**Limitação conhecida:** a conta de administração só vê todos os dentistas se for de recepção (flag somada, D10); um
+administrador que também é dentista recebe só a própria agenda.
+
+**Validação:** testes de tela (12) e de funções puras (6), axe nas duas visões, suíte do front 317/317. Carga em
+`docs/performance-resultados-2026-11-15.md`.
+
+## Próximo
+
+Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos
+quatro papéis, e 175 testes. Detalhes no README, seção "O que falta". Em resumo:
+
+1. ~~Spec, plano, backend, Swagger, fatias F1 a F3 e Tarefa 23.~~ Feitos (`docs/plano-implementacao.md`).
+2. ~~Área do paciente (D35), administração (D37), qualidade (D38, D39), produção (D40) e demonstração (D41).~~ Feitos.
+3. **Enviador real de SMS e e-mail** (issue #1): depende do provedor escolhido com a Colzani.
+4. **Conferência humana** no navegador, no celular e com leitor de tela (`docs/roteiro-de-demonstracao.md`,
+   `docs/acessibilidade.md`); o percurso automatizado no Edge já passou.
+5. Pendências que dependem da clínica: `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3, `dataInicio` da D18, prazo
+   de retenção da D40, paciente marcando pelo sistema da D35 e as demais perguntas da seção 6).
+
+## D49 — Limites técnicos dos inteiros de procedimento (BUG-001)
 
 **O quê:** criação e edição de procedimento aceitam `duracaoMinutos` entre 1 e 2147483647, em minutos,
 e `precoCentavos` entre 0 e 2147483647, em centavos. Os valores devem ser números inteiros JSON;

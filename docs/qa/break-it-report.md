@@ -216,7 +216,7 @@ Resultados transitórios permanecem locais e ignorados, sem tokens, senhas ou da
 
 Branch de correção: `fix/procedures-integer-overflow`, baseada em `chore/break-it-qa`. As evidências anteriores
 permanecem históricas. A correção substitui `z.int()` por `z.int32()` nos dois campos compartilhados por POST/PATCH,
-preservando duração positiva e preço não negativo. A decisão D45 e o contrato registram as unidades e o máximo
+preservando duração positiva e preço não negativo. A decisão D49 e o contrato registram as unidades e o máximo
 técnico de 2147483647. Não há migration, mudança de exceções, frontend ou dependências.
 
 Os dois casos originais foram transportados da suíte QA para

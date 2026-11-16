@@ -5,6 +5,22 @@ Contrato entre o backend e o front. As decisões por trás de cada regra estão 
 Consultas). Fora de produção, `/api/docs` mostra o Swagger gerado dos schemas Zod e `/api/docs.json` o OpenAPI (D34); este
 documento continua sendo o contrato (status, códigos de erro e regras).
 
+## Perfil de demonstração remota restrita (D47)
+
+Exclusivamente com enviador `indisponivel-demo`, produção, confirmação explícita e banco fictício exclusivo:
+os seis POSTs de cadastro/recuperação (`cliente/cadastro/codigo`, `cliente/cadastro/confirmar`,
+`cliente/recuperacao/codigo`, `cliente/recuperacao/confirmar`, `funcionario/recuperacao/codigo` e
+`funcionario/recuperacao/confirmar`, sob `/api/auth/`) respondem **503 `MENSAGERIA_INDISPONIVEL_DEMO`**,
+sem gerar/enviar códigos ou executar seus controllers. Resposta:
+
+```json
+{"erro":{"codigo":"MENSAGERIA_INDISPONIVEL_DEMO","mensagem":"Cadastro e recuperação indisponíveis nesta demonstração. Utilize uma conta de demonstração preparada."}}
+```
+
+Login, refresh, logout e autorização conservam os contratos abaixo. O limite de requisições e a validação
+JSON geral continuam anteriores às rotas. Fora desse perfil, o contrato de cadastro/recuperação permanece igual.
+`production + log` continua recusado na inicialização. Cookies de produção usam Secure, HttpOnly e SameSite=Strict.
+
 ## Endpoints operacionais
 
 Fora das 43 rotas de negócio e de sua matriz de papéis: `GET /api/saude/viva` responde 200
@@ -358,7 +374,7 @@ Dentistas ativos, para o paciente escolher. **200** `[{ "id", "nome" }]`.
   Cliente recebe só os ativos; funcionário recebe todos.
 - `POST` → `{ "nome", "duracaoMinutos", "precoCentavos" }` → **201** com o procedimento
   (`ativo: true`). `duracaoMinutos` inteiro de **1 a 2147483647 minutos**, `precoCentavos` inteiro de
-  **0 a 2147483647 centavos** (limite técnico do PostgreSQL, D45). Valores fora da faixa ou de outro tipo
+  **0 a 2147483647 centavos** (limite técnico do PostgreSQL, D49). Valores fora da faixa ou de outro tipo
   retornam **400** `ENTRADA_INVALIDA`, sem criar registro. **409** `NOME_JA_CADASTRADO`.
 - `PATCH` → qualquer campo + `ativo`; só os enviados mudam. Responde **200** com o procedimento.
   As mesmas faixas e tipos do POST valem para os campos enviados; entrada inválida retorna **400**

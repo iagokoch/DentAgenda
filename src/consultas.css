@@ -1,0 +1,23 @@
+.consultas-visao{display:flex;gap:4px;background:var(--surface-soft);padding:4px;border-radius:12px}
+.consultas-visao button{border:0;background:transparent;color:var(--muted);padding:9px 18px;border-radius:9px;font-weight:600;cursor:pointer}
+.consultas-visao button.is-active{background:#fff;color:var(--primary-dark);font-weight:700;box-shadow:0 1px 4px rgba(30,50,95,.12)}
+.consultas-navegacao{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0 14px}
+.consultas-navegacao h2{margin:0;font-size:20px;text-transform:capitalize}
+.consultas-seta-direita{display:grid;transform:rotate(180deg)}
+.consultas-filtros{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 14px}
+.consultas-filtros .field input,.consultas-filtros .field select{height:42px;border:1px solid var(--border);border-radius:9px;padding:0 12px;background:#fff}
+.consultas-filtros__paciente{flex:1 1 220px}
+.consultas-aviso{background:#fff3dc;color:#8a5200;border-radius:10px;padding:10px 14px;font-weight:600;margin:0 0 14px}
+.consultas-lista{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.consultas-lista__item{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.consultas-lista__item time{min-width:150px;font-weight:700}
+.consultas-lista__item .appointment__info{flex:1 1 200px}
+.consultas-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.consultas-dia{display:grid;grid-template-columns:repeat(var(--colunas),minmax(0,1fr));gap:14px}
+.consultas-dia__coluna h3{margin:0 0 12px;font-size:16px;display:flex;flex-direction:column}
+.consultas-dia__coluna h3 small{font-weight:500;color:var(--muted)}
+.consultas-dia__coluna ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px}
+.consultas-dia__consulta{display:flex;flex-direction:column;gap:4px;align-items:flex-start;background:#eefaf4;border:1px solid #12b76a;border-radius:10px;padding:10px 12px}
+.consultas-dia__consulta.is-pendente{background:#fff3dc;border-color:var(--orange)}
+.consultas-dia__consulta small{color:var(--muted)}
+@media (max-width:900px){.consultas-dia{grid-template-columns:minmax(0,1fr)}}
