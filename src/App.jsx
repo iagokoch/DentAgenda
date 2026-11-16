@@ -8,6 +8,7 @@ import NovoPaciente from './pages/NovoPaciente';
 import PerfilPaciente from './pages/PerfilPaciente';
 import Agenda from './pages/Agenda';
 import DetalhesDaConsulta from './pages/DetalhesDaConsulta';
+import ConsultasPendentes from './pages/ConsultasPendentes';
 import Consultas from './pages/Consultas.jsx'
 import MinhasConsultas from './pages/MinhasConsultas';
 import MarcarConsulta from './pages/MarcarConsulta';
@@ -34,6 +35,7 @@ function App() {
           <Route path="/cadastro" element={publica(<Cadastro />)} />
           <Route path="/recuperar-senha" element={publica(<RecuperarSenha />)} />
           <Route path="/inicio" element={daClinica(<Inicio />)} />
+          <Route path="/consultas/pendentes" element={daClinica(<ConsultasPendentes />)} />
           <Route path="/pacientes" element={daClinica(<Pacientes />)} />
           <Route path="/pacientes/novo" element={<RotaProtegida tipo="FUNCIONARIO" permitir={ehRecepcao}><NovoPaciente /></RotaProtegida>} />
           <Route path="/pacientes/:pacienteId" element={daClinica(<PerfilPaciente />)} />

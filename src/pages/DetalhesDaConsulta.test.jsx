@@ -22,6 +22,22 @@ const abrir = (opcoes = {}) => renderizarTela(<DetalhesDaConsulta />, { caminho:
 const api = (extras = {}) => simularApi({ 'GET /api/consultas/c-1': ok(consulta), 'GET /api/consultas/c-1/observacao/historico': ok([]), ...extras })
 
 describe('Detalhes da consulta (D33)', () => {
+  it.each(['-1', '2.5', 'Infinity', '9007199254740992'])('normaliza página inválida %s no retorno às pendências', async (pagina) => {
+    api()
+    abrir({ caminho: `/consultas/c-1?origem=pendentes&pagina=${pagina}` })
+    expect(screen.getByRole('link', { name: 'Voltar para pendências' }).getAttribute('href')).toBe('/consultas/pendentes?pagina=1')
+    await screen.findByText('Ações')
+    expect(screen.getByRole('link', { name: 'Voltar para pendências' }).getAttribute('href')).toBe('/consultas/pendentes?pagina=1')
+  })
+
+  it.each(['', '?origem=https://outro.site&pagina=2'])('preserva a navegação original sem origem pendentes: %s', async (query) => {
+    api()
+    abrir({ caminho: `/consultas/c-1${query}` })
+    expect(screen.getByRole('link', { name: 'Voltar para o Início' }).getAttribute('href')).toBe('/inicio')
+    await screen.findByText('Ações')
+    expect(screen.queryByRole('link', { name: 'Voltar para pendências' })).toBeNull()
+  })
+
   it('histórico com mesmo timestamp usa identidades distintas sem colisão de chave', async () => {
     const avisos = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
