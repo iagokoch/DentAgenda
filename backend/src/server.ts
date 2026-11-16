@@ -20,7 +20,10 @@ const app = criarApp({
   logger,
 }, { saude });
 
-const servidor = app.listen(config.porta, () => logger.info(`API ouvindo em http://localhost:${config.porta}`));
+// D46: o ambiente local com mensagens por log só aceita conexões deste computador.
+// Produção mantém a escuta necessária à rede interna dos containers (D16 continua na configuração).
+const enderecoDeEscuta = config.nodeEnv === 'development' ? '127.0.0.1' : '0.0.0.0';
+const servidor = app.listen(config.porta, enderecoDeEscuta, () => logger.info(`API ouvindo em http://${enderecoDeEscuta}:${config.porta}`));
 const encerrar = criarEncerramento({
   iniciar: saude.iniciarEncerramento,
   fechar: (concluiu) => { servidor.close(concluiu); },
