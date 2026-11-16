@@ -59,7 +59,7 @@ describe('datas da clínica independem do fuso do navegador (#21)', () => {
     const pedidos = simularApi({ 'GET /api/consultas': ok({ itens: [], total: 0 }) })
     renderizarTela(<MinhasConsultas />, { usuario: USUARIOS.paciente, agora: VIRADA_UTC })
 
-    await screen.findByText('Você não tem consultas marcadas.')
+    await screen.findByRole('heading', { name: 'Nenhuma consulta' })
     const proximas = pedidos.find((pedido) => pedido.url.searchParams.get('status') === 'CONFIRMADA')
     expect(proximas.url.searchParams.get('de')).toBe('2026-11-30')
   })

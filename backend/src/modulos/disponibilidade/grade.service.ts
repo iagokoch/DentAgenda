@@ -1,3 +1,4 @@
+import type { Transacao } from '../../compartilhado/banco.ts';
 import type { Contexto } from '../../compartilhado/contexto.ts';
 import { dataEmSaoPaulo, diaDaSemana, formatarEmSaoPaulo, instanteEmSaoPaulo, type Intervalo } from '../../compartilhado/datas.ts';
 import { ErroDeNegocio, naoEncontrado } from '../../compartilhado/erros.ts';
@@ -9,8 +10,8 @@ export type Faixa = { diaSemana: number; inicio: string; fim: string };
 const horaDe = (tempo: Date) => tempo.toISOString().slice(11, 16);
 const tempoDe = (hora: string) => new Date(`1970-01-01T${hora}:00Z`);
 
-export async function lerGrade(contexto: Contexto, dentistaId: string): Promise<Faixa[]> {
-  const faixas = await contexto.prisma.gradeHorario.findMany({
+export async function lerGrade(contexto: Contexto, dentistaId: string, banco: Transacao = contexto.prisma): Promise<Faixa[]> {
+  const faixas = await banco.gradeHorario.findMany({
     where: { dentistaId },
     orderBy: [{ diaSemana: 'asc' }, { inicio: 'asc' }],
   });
