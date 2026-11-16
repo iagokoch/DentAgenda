@@ -9,7 +9,8 @@ const AVISO_DA_CLINICA = 'O paciente é avisado por SMS. Esta ação não pode s
 
 export default function DialogoDeCancelamento({ aoCancelar, aoFechar, aviso = AVISO_DA_CLINICA, justificativaObrigatoria = false }) {
   const [justificativa, setJustificativa] = useState('')
-  const [obrigatoria, setObrigatoria] = useState(justificativaObrigatoria)
+  const [exigidaPelaApi, setExigidaPelaApi] = useState(false)
+  const obrigatoria = justificativaObrigatoria || exigidaPelaApi
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const campo = useRef(null)
@@ -34,7 +35,7 @@ export default function DialogoDeCancelamento({ aoCancelar, aoFechar, aviso = AV
     try {
       await aoCancelar(justificativa.trim() || undefined)
     } catch (falha) {
-      if (falha.codigo === 'JUSTIFICATIVA_OBRIGATORIA') setObrigatoria(true)
+      if (falha.codigo === 'JUSTIFICATIVA_OBRIGATORIA') setExigidaPelaApi(true)
       setErro(mensagemDoErro(falha))
       setEnviando(false)
     }
