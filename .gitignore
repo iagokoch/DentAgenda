@@ -41,6 +41,12 @@ backups/
 *.dump
 *.dump.sha256
 
+# Resultados transitórios da auditoria Break-It
+test-results/
+playwright-report/
+reports/
+.stryker-tmp/
+
 # Configuração DPAPI, processos e evidências privadas da apresentação local (D46)
 .codex/demo-local/
 
