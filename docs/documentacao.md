@@ -52,6 +52,7 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D44  | Códigos e alterações de canal de acesso          | Implementada                 |
 | D45  | Reinício dos serviços contínuos da demonstração | Fechada (ensaio no destino pendente) |
 | D46  | Apresentação exclusivamente local no Windows | Fechada (sem exposição externa) |
+| D49  | Limites técnicos dos inteiros de procedimento    | Fechada                      |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1847,6 +1848,43 @@ administrador que também é dentista recebe só a própria agenda.
 
 **Validação:** testes de tela (12) e de funções puras (6), axe nas duas visões, suíte do front 317/317. Carga em
 `docs/performance-resultados-2026-11-15.md`.
+
+## Próximo
+
+Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos
+quatro papéis, e 175 testes. Detalhes no README, seção "O que falta". Em resumo:
+
+1. ~~Spec, plano, backend, Swagger, fatias F1 a F3 e Tarefa 23.~~ Feitos (`docs/plano-implementacao.md`).
+2. ~~Área do paciente (D35), administração (D37), qualidade (D38, D39), produção (D40) e demonstração (D41).~~ Feitos.
+3. **Enviador real de SMS e e-mail** (issue #1): depende do provedor escolhido com a Colzani.
+4. **Conferência humana** no navegador, no celular e com leitor de tela (`docs/roteiro-de-demonstracao.md`,
+   `docs/acessibilidade.md`); o percurso automatizado no Edge já passou.
+5. Pendências que dependem da clínica: `docs/pendencias-colzani.md` (D11.1, D11.3, D15.3, `dataInicio` da D18, prazo
+   de retenção da D40, paciente marcando pelo sistema da D35 e as demais perguntas da seção 6).
+
+## D49 — Limites técnicos dos inteiros de procedimento (BUG-001)
+
+**O quê:** criação e edição de procedimento aceitam `duracaoMinutos` entre 1 e 2147483647, em minutos,
+e `precoCentavos` entre 0 e 2147483647, em centavos. Os valores devem ser números inteiros JSON;
+strings numéricas, frações e outros tipos continuam inválidos. A faixa vem do `Int` Prisma persistido
+como `integer` PostgreSQL de 32 bits, combinada às restrições de positividade/não negatividade da D11/D18.
+Não é um limite clínico novo nem altera duração/preço de consultas existentes.
+
+**Por quê:** a auditoria Break-It reproduziu HTTP 500 ao enviar 2147483648 em cada campo. A investigação
+de regressão confirmou a mesma falha em POST e PATCH. `z.int()` permitia inteiros maiores que o tipo SQL;
+os schemas compartilhados passam a usar `z.int32()` e o middleware Zod existente mantém
+`400 ENTRADA_INVALIDA`, com o caminho do campo. Uma entrada inválida é recusada antes da persistência:
+não cria procedimento nem altera os demais campos de uma edição combinada.
+
+**Alternativas descartadas:** ampliar o banco para bigint sem necessidade de domínio; tratar todo erro
+Prisma como entrada inválida; confiar somente no formulário, que pode ser contornado. Não há migration,
+alteração de exceções, atualização de dependências ou mudança visual. O frontend continua convertendo reais
+para centavos e exibindo as mensagens de `ENTRADA_INVALIDA` já existentes.
+
+**Verificação executada:** 40 regressões de criação e edição para mínimos, máximos, imediatamente acima,
+negativos, zero, frações, tipos inválidos e ausência de efeitos parciais, em PostgreSQL descartável.
+Antes: 36 aprovadas e 4 falhas HTTP 500; depois: 40 aprovadas. Suíte completa: 727 testes PostgreSQL
+e 32 isolados aprovados, além de lint, typecheck, build e conferência dos 33 códigos de erro.
 
 ## Próximo
 

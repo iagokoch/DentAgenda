@@ -3,8 +3,8 @@ import * as z from 'zod';
 // D11/D18: duração positiva (o banco também tem CHECK); preço em centavos, só exibição.
 const campos = {
   nome: z.string().trim().min(1),
-  duracaoMinutos: z.int().positive(),
-  precoCentavos: z.int().nonnegative(),
+  duracaoMinutos: z.int32().positive(),
+  precoCentavos: z.int32().nonnegative(),
 };
 
 export const esquemaNovoProcedimento = z.object(campos);

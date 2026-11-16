@@ -205,7 +205,7 @@ O que configurar no servidor, além do que o `backend/.env.example` lista. A API
 
 ## Regras do grupo
 
-- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D49**)
+- **Design antes de código:** decisão de modelagem ou de contrato entra em `docs/documentacao.md` (próxima é a **D50**)
   antes de virar código.
 - **Backend em TDD**, com nomes em português (D23). Biblioteca nova: conferir versão e API no context7 antes de usar.
 - **Se o front precisar de algo que a API não dá**, vira decisão e mudança no `docs/api.md`, não gambiarra no front.
