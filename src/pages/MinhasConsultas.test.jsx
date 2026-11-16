@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import MinhasConsultas from './MinhasConsultas.jsx'
 
@@ -24,23 +24,155 @@ const cancelada = consulta('cancelada', '2026-09-10T09:00:00-03:00', 'CANCELADA'
 const PROXIMAS = 'GET /api/consultas?status=CONFIRMADA&de=2026-10-05&porPagina=100'
 const TODAS = 'GET /api/consultas?porPagina=100'
 const lista = (itens) => ok({ itens, total: itens.length })
-const abrir = () => renderizarTela(<MinhasConsultas />, { usuario: USUARIOS.paciente, caminho: '/minha-conta' })
+const abrir = (opcoes = {}) => renderizarTela(<MinhasConsultas />, { usuario: USUARIOS.paciente, caminho: '/minha-conta', ...opcoes })
 const itemDe = (texto) => screen.getByText(texto).closest('li')
 
 describe('Minhas consultas (D35)', () => {
+  it('ao início move a consulta para o histórico e fecha o cancelamento aberto', async () => {
+    const pedidos = simularApi({ [PROXIMAS]: lista([hojeAsTres]), [TODAS]: lista([hojeAsTres]) })
+    const agora = new Date('2026-10-05T17:59:59.900Z')
+    vi.useFakeTimers()
+    try {
+      await act(async () => abrir({ agora }))
+      const proximas = screen.getByRole('region', { name: 'Próximas consultas' })
+      fireEvent.click(within(proximas).getByRole('button', { name: /Cancelar/ }))
+      expect(screen.getByRole('dialog', { name: 'Cancelar consulta' })).toBeTruthy()
+
+      agora.setTime(Date.parse('2026-10-05T18:00:00Z'))
+      await act(() => vi.advanceTimersByTimeAsync(100))
+
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(within(proximas).queryByRole('button', { name: /Cancelar/ })).toBeNull()
+      expect(within(proximas).getByText('Você não tem consultas marcadas.')).toBeTruthy()
+      expect(within(screen.getByRole('region', { name: 'Histórico' })).getByText('05/10/2026 às 15:00')).toBeTruthy()
+      expect(pedidos.filter((pedido) => pedido.metodo === 'POST')).toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it.each(['focus', 'visibilitychange'])('reavalia consulta e diálogo ao receber %s após suspensão', async (evento) => {
+    simularApi({ [PROXIMAS]: lista([hojeAsTres]), [TODAS]: lista([hojeAsTres]) })
+    const agora = new Date('2026-10-05T17:59:00Z')
+    abrir({ agora })
+    fireEvent.click(await screen.findByRole('button', { name: /Cancelar/ }))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+
+    agora.setTime(Date.parse('2026-10-05T18:30:00Z'))
+    await act(async () => (evento === 'focus' ? window : document).dispatchEvent(new Event(evento)))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Cancelar/ })).toBeNull()
+    expect(within(screen.getByRole('region', { name: 'Histórico' })).getByText('05/10/2026 às 15:00')).toBeTruthy()
+  })
+
+  it('após exatamente 24 h passa a exigir justificativa sem apagar o texto do diálogo', async () => {
+    const pedidos = simularApi({ [PROXIMAS]: lista([amanha]), [TODAS]: lista([amanha]) })
+    const agora = new Date('2026-10-05T13:00:00Z')
+    vi.useFakeTimers()
+    try {
+      await act(async () => abrir({ agora }))
+      fireEvent.click(screen.getByRole('button', { name: /Cancelar/ }))
+      const campo = screen.getByLabelText(/Justificativa/)
+      expect(campo.required).toBe(false)
+      fireEvent.change(campo, { target: { value: 'Preciso reorganizar o trabalho.' } })
+
+      agora.setTime(Date.parse('2026-10-05T13:00:00.001Z'))
+      await act(() => vi.advanceTimersByTimeAsync(1))
+
+      expect(screen.getByLabelText(/Justificativa/)).toBe(campo)
+      expect(campo.required).toBe(true)
+      expect(campo.value).toBe('Preciso reorganizar o trabalho.')
+      expect(screen.getByText(/menos de 24 h/)).toBeTruthy()
+      expect(pedidos.filter((pedido) => pedido.metodo === 'POST')).toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('não envia cancelamento se o início passou antes do timer ou do foco atualizar', async () => {
+    const pedidos = simularApi({ [PROXIMAS]: lista([hojeAsTres]), [TODAS]: lista([hojeAsTres]) })
+    const agora = new Date('2026-10-05T17:59:59.900Z')
+    vi.useFakeTimers()
+    try {
+      await act(async () => abrir({ agora }))
+      fireEvent.click(screen.getByRole('button', { name: /Cancelar/ }))
+      fireEvent.change(screen.getByLabelText(/Justificativa/), { target: { value: 'Imprevisto.' } })
+
+      agora.setTime(Date.parse('2026-10-05T18:00:00Z'))
+      await act(async () => fireEvent.submit(screen.getByRole('dialog').querySelector('form')))
+
+      expect(pedidos.filter((pedido) => pedido.metodo === 'POST')).toHaveLength(0)
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(screen.getByText(/A consulta já começou/)).toBeTruthy()
+      expect(screen.queryByRole('button', { name: /Cancelar/ })).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('revalida as 24 h no envio sem depender do timer e preserva o diálogo', async () => {
+    const pedidos = simularApi({ [PROXIMAS]: lista([amanha]), [TODAS]: lista([amanha]) })
+    const agora = new Date('2026-10-05T13:00:00Z')
+    vi.useFakeTimers()
+    try {
+      await act(async () => abrir({ agora }))
+      fireEvent.click(screen.getByRole('button', { name: /Cancelar/ }))
+      const campo = screen.getByLabelText(/Justificativa/)
+      expect(campo.required).toBe(false)
+
+      agora.setTime(Date.parse('2026-10-05T13:00:00.001Z'))
+      await act(async () => fireEvent.submit(screen.getByRole('dialog').querySelector('form')))
+
+      expect(pedidos.filter((pedido) => pedido.metodo === 'POST')).toHaveLength(0)
+      expect(screen.getByRole('dialog')).toBeTruthy()
+      expect(screen.getByLabelText(/Justificativa/)).toBe(campo)
+      expect(campo.required).toBe(true)
+      expect(screen.getByRole('alert').textContent).toBe('Informe o motivo: faltam menos de 24 horas para a consulta.')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('remove o timer ao sair da tela antes da consulta começar', async () => {
+    const pedidos = simularApi({ [PROXIMAS]: lista([hojeAsTres]), [TODAS]: lista([hojeAsTres]) })
+    const agora = new Date('2026-10-05T17:59:59.900Z')
+    vi.useFakeTimers()
+    try {
+      let tela
+      await act(async () => { tela = abrir({ agora }) })
+      expect(screen.getByRole('button', { name: /Cancelar/ })).toBeTruthy()
+      expect(vi.getTimerCount()).toBeGreaterThan(0)
+
+      tela.unmount()
+
+      expect(vi.getTimerCount()).toBe(0)
+      agora.setTime(Date.parse('2026-10-05T18:00:00Z'))
+      await act(async () => {
+        window.dispatchEvent(new Event('focus'))
+        document.dispatchEvent(new Event('visibilitychange'))
+        await vi.advanceTimersByTimeAsync(100)
+      })
+      expect(vi.getTimerCount()).toBe(0)
+      expect(pedidos).toHaveLength(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('mostra as próximas com botão de cancelar e o histórico sem as próximas, do mais novo ao mais antigo', async () => {
     simularApi({ [PROXIMAS]: lista([hojeAsTres, amanha]), [TODAS]: lista([realizada, cancelada, hojeAsTres, amanha]) })
 
     abrir()
 
     const proximas = await screen.findByRole('region', { name: 'Próximas consultas' })
-    expect(within(proximas).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    expect((await within(proximas).findAllByRole('listitem')).map((item) => item.textContent)).toEqual([
       expect.stringContaining('05/10/2026 às 15:00'),
       expect.stringContaining('06/10/2026 às 10:00'),
     ])
     expect(within(proximas).getAllByRole('button', { name: /Cancelar/ })).toHaveLength(2)
     const historico = screen.getByRole('region', { name: 'Histórico' })
-    expect(within(historico).getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+    expect((await within(historico).findAllByRole('listitem')).map((item) => item.textContent)).toEqual([
       expect.stringMatching(/10\/09\/2026.*Cancelada pela clínica/),
       expect.stringMatching(/01\/09\/2026.*Realizada/),
     ])
@@ -70,7 +202,7 @@ describe('Minhas consultas (D35)', () => {
     })
     abrir()
 
-    await userEvent.click(within(await screen.findByRole('region', { name: 'Próximas consultas' })).getByRole('button', { name: /Cancelar/ }))
+    await userEvent.click(await within(screen.getByRole('region', { name: 'Próximas consultas' })).findByRole('button', { name: /Cancelar/ }))
     const dialogo = screen.getByRole('dialog', { name: 'Cancelar consulta' })
     expect(within(dialogo).getByLabelText(/Justificativa/).required).toBe(false)
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar consulta' }))
