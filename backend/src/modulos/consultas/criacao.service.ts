@@ -34,7 +34,7 @@ async function conferirAgendaDoDentista(
   usuario: UsuarioAutenticado,
   nova: { dentistaId: string; inicio: Date; fim: Date; duracaoMinutos: number },
 ): Promise<void> {
-  const grade = await lerGrade(contexto, nova.dentistaId);
+  const grade = await lerGrade(contexto, nova.dentistaId, tx);
   if (!cabeNaGrade(grade, nova)) {
     throw conflito('FORA_DA_GRADE', 'O horário não cabe na agenda do dentista.');
   }
