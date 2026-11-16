@@ -1,0 +1,57 @@
+# Fixture descartável sem banco/segredos/túnel/portas. Rodar antes da stack remota:
+# docker compose -f deploy/remoto/proxy-teste.compose.yaml up -d api front
+# docker compose -f deploy/remoto/proxy-teste.compose.yaml run --rm cliente
+# docker compose -f deploy/remoto/proxy-teste.compose.yaml run --rm nao-confiavel
+# docker compose -f deploy/remoto/proxy-teste.compose.yaml down
+name: dentagenda-demo-proxy-teste
+services:
+  api:
+    image: ${REMOTO_VERIFICADOR_IMAGEM:-node:24-bookworm-slim}
+    command: [node, /verificacao/verificar-proxy-demo.mjs, api]
+    volumes:
+      - ../../scripts/verificar-proxy-demo.mjs:/verificacao/verificar-proxy-demo.mjs:ro
+    networks: [aplicacao]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  front:
+    image: ${REMOTO_FRONT_IMAGEM:-dentagenda-demo-remota-front:local}
+    depends_on: [api]
+    networks:
+      conector:
+        ipv4_address: 172.30.247.3
+      aplicacao:
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  cliente:
+    image: ${REMOTO_VERIFICADOR_IMAGEM:-node:24-bookworm-slim}
+    command: [node, /verificacao/verificar-proxy-demo.mjs]
+    volumes:
+      - ../../scripts/verificar-proxy-demo.mjs:/verificacao/verificar-proxy-demo.mjs:ro
+    networks:
+      conector:
+        ipv4_address: 172.30.247.2
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+  nao-confiavel:
+    image: ${REMOTO_VERIFICADOR_IMAGEM:-node:24-bookworm-slim}
+    command: [node, /verificacao/verificar-proxy-demo.mjs, nao-confiavel]
+    volumes:
+      - ../../scripts/verificar-proxy-demo.mjs:/verificacao/verificar-proxy-demo.mjs:ro
+    networks:
+      conector:
+        ipv4_address: 172.30.247.4
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+networks:
+  conector:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.247.0/29
+  aplicacao:
+    internal: true

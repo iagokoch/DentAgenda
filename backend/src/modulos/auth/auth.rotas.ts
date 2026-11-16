@@ -17,6 +17,18 @@ import {
 export function criarRotasAuth(contexto: Contexto): Router {
   const controller = criarControllerAuth(contexto);
   const rotas = Router();
+  if (contexto.config.enviadorMensagem === 'indisponivel-demo') {
+    rotas.post([
+      '/cliente/cadastro/codigo', '/cliente/cadastro/confirmar',
+      '/cliente/recuperacao/codigo', '/cliente/recuperacao/confirmar',
+      '/funcionario/recuperacao/codigo', '/funcionario/recuperacao/confirmar',
+    ], (_req, res) => {
+      res.status(503).json({ erro: {
+        codigo: 'MENSAGERIA_INDISPONIVEL_DEMO',
+        mensagem: 'Cadastro e recuperação indisponíveis nesta demonstração. Utilize uma conta de demonstração preparada.',
+      } });
+    });
+  }
   rotas.post('/cliente/login', controller.loginCliente);
   rotas.post('/funcionario/login', controller.loginFuncionario);
   rotas.post('/cliente/recuperacao/codigo', controller.pedirRecuperacaoCliente);
