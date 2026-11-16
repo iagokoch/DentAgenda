@@ -46,3 +46,9 @@ test-results/
 playwright-report/
 reports/
 .stryker-tmp/
+
+# Configuração DPAPI, processos e evidências privadas da apresentação local (D46)
+.codex/demo-local/
+
+# Configuração DPAPI e evidências privadas da demonstração remota (D47)
+.codex/demo-remota/

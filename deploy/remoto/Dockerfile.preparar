@@ -1,0 +1,5 @@
+FROM dentagenda-demo-remota-migrations:local
+COPY backend/scripts/preparar-demo-remota.ts ./scripts/preparar-demo-remota.ts
+COPY backend/prisma/seed.ts backend/prisma/seed-dev.ts ./prisma/
+USER node
+CMD ["node", "--import", "tsx", "scripts/preparar-demo-remota.ts"]

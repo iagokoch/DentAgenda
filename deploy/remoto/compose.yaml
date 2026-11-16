@@ -1,0 +1,167 @@
+name: dentagenda-demo-remota
+
+x-logs: &logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-runtime: &runtime
+  restart: unless-stopped
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  logging: *logs
+
+services:
+  banco:
+    image: postgres:17.12@sha256:0d938e975177bef9f1f61f3f9dbcf2e0aa0a139568f66d3415ed8892eb97f6ac
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: dentagenda_demo_remota
+      POSTGRES_PASSWORD: ${BANCO_ADMIN_SENHA:?Forneça por ambiente}
+      BANCO_RUNTIME_SENHA: ${BANCO_RUNTIME_SENHA:?Forneça por ambiente}
+      BANCO_MIGRATIONS_SENHA: ${BANCO_MIGRATIONS_SENHA:?Forneça por ambiente}
+    volumes:
+      - banco:/var/lib/postgresql/data
+      - ./inicializar-banco.sh:/docker-entrypoint-initdb.d/10-papeis.sh:ro
+    networks: [dados]
+    healthcheck:
+      test: [CMD, pg_isready, -U, postgres, -d, dentagenda_demo_remota]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    logging: *logs
+
+  migrations:
+    profiles: [migrations]
+    image: ${REMOTO_MIGRATIONS_IMAGEM:-dentagenda-demo-remota-migrations:local}
+    build:
+      context: ../..
+      dockerfile: deploy/remoto/Dockerfile.api
+      target: migrations
+    environment:
+      DATABASE_URL: ${DATABASE_URL_MIGRATIONS:?Forneça por ambiente}
+    depends_on:
+      banco: { condition: service_healthy }
+    networks: [dados]
+    logging: *logs
+
+  preparar:
+    profiles: [preparacao]
+    image: ${REMOTO_PREPARAR_IMAGEM:-dentagenda-demo-remota-preparar:local}
+    build:
+      context: ../..
+      dockerfile: deploy/remoto/Dockerfile.preparar
+    environment:
+      DATABASE_URL: ${DATABASE_URL_MIGRATIONS:?Forneça por ambiente}
+      NODE_ENV: production
+      PORTA: "3000"
+      ENVIADOR_MENSAGEM: indisponivel-demo
+      DEMONSTRACAO_RESTRITA: APENAS_DADOS_FICTICIOS_SEM_MENSAGENS
+      DEMO_ADMIN_SENHA: ${DEMO_ADMIN_SENHA:-}
+      DEMO_RECEPCAO_SENHA: ${DEMO_RECEPCAO_SENHA:-}
+      DEMO_DENTISTA_SENHA: ${DEMO_DENTISTA_SENHA:-}
+      DEMO_PACIENTE_SENHA: ${DEMO_PACIENTE_SENHA:-}
+    depends_on:
+      banco: { condition: service_healthy }
+    networks: [dados]
+    logging: *logs
+
+  api:
+    <<: *runtime
+    image: ${REMOTO_API_IMAGEM:-dentagenda-demo-remota-api:local}
+    build:
+      context: ../..
+      dockerfile: deploy/remoto/Dockerfile.api
+      target: runtime
+    environment:
+      NODE_ENV: production
+      PORTA: "3000"
+      DATABASE_URL: ${DATABASE_URL:?Forneça por ambiente}
+      JWT_SEGREDO: ${JWT_SEGREDO:?Forneça por ambiente}
+      CODIGO_HMAC_SEGREDO: ${CODIGO_HMAC_SEGREDO:?Forneça por ambiente}
+      ENVIADOR_MENSAGEM: indisponivel-demo
+      DEMONSTRACAO_RESTRITA: APENAS_DADOS_FICTICIOS_SEM_MENSAGENS
+      PROXY_CONFIAVEL: "1"
+    depends_on:
+      banco: { condition: service_healthy }
+    networks: [aplicacao, dados]
+    stop_grace_period: 15s
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/saude/pronta').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  front:
+    <<: *runtime
+    image: ${REMOTO_FRONT_IMAGEM:-dentagenda-demo-remota-front:local}
+    build:
+      context: ../..
+      dockerfile: deploy/remoto/Dockerfile
+    depends_on:
+      api: { condition: service_healthy }
+    networks:
+      conector:
+        ipv4_address: 172.30.247.3
+      aplicacao:
+    healthcheck:
+      test: [CMD, wget, --quiet, --spider, http://127.0.0.1:8080/saude]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  conector:
+    <<: *runtime
+    restart: "no"
+    profiles: [tunel]
+    image: cloudflare/cloudflared:2026.11.0@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344
+    # Sem URL/command de exposição por padrão: a operação autorizada fornece os argumentos.
+    command: [--version]
+    networks:
+      conector:
+        ipv4_address: 172.30.247.2
+      saida:
+    depends_on:
+      front: { condition: service_healthy }
+
+  verificar:
+    profiles: [verificacao]
+    image: node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54
+    command: [node, /verificacao/verificar-demo-remota.mjs]
+    volumes:
+      - ../../scripts/verificar-demo-remota.mjs:/verificacao/verificar-demo-remota.mjs:ro
+    environment:
+      BASE_URL: http://front:8080
+      DEMO_ADMIN_SENHA: ${DEMO_ADMIN_SENHA:-}
+      DEMO_RECEPCAO_SENHA: ${DEMO_RECEPCAO_SENHA:-}
+      DEMO_DENTISTA_SENHA: ${DEMO_DENTISTA_SENHA:-}
+      DEMO_PACIENTE_SENHA: ${DEMO_PACIENTE_SENHA:-}
+    networks:
+      conector:
+        # Exclusivo com o túnel real: ambos representam a mesma fronteira confiável.
+        ipv4_address: 172.30.247.2
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+
+networks:
+  conector:
+    name: dentagenda-demo-remota-conector
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.30.247.0/29
+  aplicacao:
+    internal: true
+  dados:
+    internal: true
+  saida:
+
+volumes:
+  banco:
+    name: dentagenda-demo-remota-dados

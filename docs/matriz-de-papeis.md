@@ -76,6 +76,7 @@ paciente numa tela da clínica vai para `/minha-conta`; anônimo vai para `/logi
 | `/login`, `/cadastro`, `/recuperar-senha` | ✓ | → início | → início | → início | → minha conta |
 | `/inicio`, `/agenda`, `/pacientes`, `/pacientes/:id`, `/consultas/:id` | → login | ✓ | ✓ | ✓ | → minha conta |
 | `/pacientes/novo` | → login | ✓ | ✓ | → início | → minha conta |
+| `/consultas` (D48: Dia e Lista) | → login | ✓ (todos os dentistas) | ✓ (todos os dentistas) | ✓ (só a própria agenda, pela API) | → minha conta |
 | `/disponibilidade` | → login | ✓ (lê a grade, bloqueia todos) | ✓ (edita a grade) | ✓ (só a própria) | → minha conta |
 | `/admin/equipe`, `/admin/procedimentos` | → login | → início | ✓ | → início | → minha conta |
 | `/minha-conta`, `/minha-conta/agendar` | → login | → início | → início | → início | ✓ |

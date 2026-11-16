@@ -22,20 +22,21 @@ Tudo pelas telas, nos quatro papéis (recepção, dentista, admin e paciente), s
 
 1. **Início:** consultas de hoje, próxima consulta, total de pacientes e o lembrete "1 consulta já passou e ainda não foi
    marcada como realizada".
-2. **Pacientes:** busque `marcos` (a busca ignora acento e maiúscula) → abra **Marcos Oliveira (exemplo)**. Mostre dados,
+2. **Consultas (D48):** no menu, **Consultas**. Visão **Dia**: uma coluna por dentista, com "Passou, sem registro" em destaque; navegue com as setas e "Hoje". Visão **Lista**: período de 30 dias, filtros de dentista, status e nome do paciente. Cada consulta tem Marcar realizada, Remarcar, Cancelar e Detalhes.
+3. **Pacientes:** busque `marcos` (a busca ignora acento e maiúscula) → abra **Marcos Oliveira (exemplo)**. Mostre dados,
    alertas (adicione "Alergia a látex") e a aba **Histórico**. Teclado: setas trocam de aba.
-3. **Agendar Consulta:** Limpeza, Dra. Ana Costa, um dia da semana que vem, 09:00 → **Confirmar Agendamento** → **Ver
+4. **Agendar Consulta:** Limpeza, Dra. Ana Costa, um dia da semana que vem, 09:00 → **Confirmar Agendamento** → **Ver
    consulta**.
-4. **Conflito de horário (409):** abra **Novo Agendamento** em **duas abas**, escolha o mesmo paciente, dia e horário nas
+5. **Conflito de horário (409):** abra **Novo Agendamento** em **duas abas**, escolha o mesmo paciente, dia e horário nas
    duas e confirme as duas. A segunda mostra "Esse horário acabou de ser ocupado. Escolha outro horário." e recarrega as
    vagas.
-5. **Remarcar** a consulta do passo 3 para 10:00: a original aparece como Cancelada no Histórico (nos detalhes dela,
+6. **Remarcar** a consulta do passo 4 para 10:00: a original aparece como Cancelada no Histórico (nos detalhes dela,
    "por a clínica"), e o terminal da API mostra o SMS ao paciente com o horário novo.
-6. **Cancelar consulta** a criada no passo 4: a clínica não precisa de justificativa; o SMS sai no terminal.
+7. **Cancelar consulta** a criada no passo 5: a clínica não precisa de justificativa; o SMS sai no terminal.
 
 ### 2. Dentista — o atendimento (Ana)
 
-1. **Início:** mesmo lembrete de consulta pendente. Abra a consulta: **Pacientes** → `marcos` → **Marcos Oliveira
+1. **Minhas consultas** (menu): só a agenda dela, no Dia ou na Lista; consultas de outros dentistas não aparecem. **Início:** mesmo lembrete de consulta pendente. Abra a consulta: **Pacientes** → `marcos` → **Marcos Oliveira
    (exemplo)** → aba **Histórico** → a consulta do último dia útil, às 09:00.
 2. **Observações:** escreva "Dente 24 – oclusal. Sem intercorrências." → salve → edite de novo: o histórico mostra as
    duas versões, com o nome da Ana.
@@ -59,7 +60,7 @@ Tudo pelas telas, nos quatro papéis (recepção, dentista, admin e paciente), s
 
 1. Saia e vá em **Cadastre-se** com o CPF `123.456.789-09` (o paciente que a clínica cadastrou) e qualquer celular.
    O código vai para o celular **que a clínica tem** (veja no terminal: `47999990000`) — é a ativação da conta (D15).
-2. Em **Minhas consultas**: próximas e histórico. **Cancelar** a do próximo dia útil: se faltar menos de 24 h, a
+2. Em **Minhas consultas**: próximas e histórico. Um paciente sem nenhuma consulta vê "Nenhuma consulta" e o botão **Agendar consulta**. **Cancelar** a do próximo dia útil: se faltar menos de 24 h, a
    justificativa já vem obrigatória.
 3. **Marcar consulta:** o paciente só vê horários no passo do procedimento e só procedimentos ativos.
 
@@ -67,7 +68,7 @@ Tudo pelas telas, nos quatro papéis (recepção, dentista, admin e paciente), s
 
 - **Celular:** ferramentas do navegador → modo dispositivo, 400px: menu embaixo, Sair no topo.
 - **Qualidade:** `npm test` na raiz e em `backend/` (front com axe nas telas; backend com o ponta a ponta, a matriz de
-  43 rotas × 5 papéis e as corridas de login). Decisões em `docs/documentacao.md` (D1 a D41).
+  43 rotas × 5 papéis e as corridas de login). Decisões em `docs/documentacao.md` (D1 a D48).
 
 ## Se algo der errado
 
