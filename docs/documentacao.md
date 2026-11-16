@@ -48,6 +48,9 @@ Cada decisão tem status. **Fechada** pode virar schema/código. **Parcial** tem
 | D40  | Produção: proxy, limite por IP, índices e retenção | Fechada (prazo com a Colzani) |
 | D41  | Roteiro de demonstração e paciente de exemplo     | Fechada                      |
 | D42  | Logout local e versões sequenciais de observação | Aprovada em 2026-11-09       |
+| D43  | Falhas de notificação após cancelamento e remarcação | Implementada (issue #1 parcial) |
+| D44  | Códigos e alterações de canal de acesso          | Implementada                 |
+| D45  | Reinício dos serviços contínuos da demonstração | Fechada (ensaio no destino pendente) |
 
 ## D1 — Separação entre Cliente e Login
 
@@ -1735,6 +1738,37 @@ consumido o código e ainda estivesse calculando a senha. Só comparar o destino
 
 **Alternativa descartada:** adicionar vínculo de conta por coluna/migration. A coordenação acima resolve os cenários
 sem nova coluna; vínculo imutável isolado ainda exigiria invalidação por canal e atomicidade de consumo/efeito.
+
+## D45 — Reinício dos serviços contínuos da demonstração (AUD-07)
+
+> **Status: fechada quanto à política.** A validação operacional completa no destino permanece pendente.
+
+**O quê:** o pacote `deploy/demonstracao/compose.yaml` usa `restart: unless-stopped` em `banco`, `api` e `front`.
+São serviços contínuos; uma saída do processo deve permitir recuperação automática pelo Docker, respeitando
+uma parada intencional para manutenção. `migrations` continua tarefa de execução única, sem reinício automático.
+Não há mudança de imagem, volume, porta, rede, usuário, healthcheck ou prazo de encerramento da API.
+
+**Por quê:** sem política, um serviço encerrado permanece parado até intervenção. A política escolhida recupera
+os serviços contínuos quando o Docker está disponível e mantém uma parada manual mesmo após reiniciar o daemon.
+Isso pressupõe Docker operacional; não configura sua inicialização no sistema nem comprova recuperação do host.
+
+**Alternativas descartadas:** `always` pode retomar uma parada manual após reiniciar o daemon; `on-failure`
+não cobre esse reinício do daemon. Reiniciar migrations automaticamente poderia repetir uma operação de instalação
+sem uma nova decisão do operador. Permanecer sem política conserva a lacuna identificada em AUD-07.
+
+**Consequências e limites:** healthcheck falho, sozinho, não reinicia o processo. `depends_on` orienta operações
+Compose, mas não comprova a ordem nem a recuperação de todas as dependências após um reboot. Configuração inválida
+pode repetir falhas; reinício não corrige credenciais, schema ou mensageria e não substitui alertas externos.
+A D16 continua valendo: o enviador por log é recusado em produção. O adiamento de AUD-01 não autoriza contornar
+essa guarda; esta decisão não libera exposição externa.
+
+**Validação:** conferir a configuração sem interpolar segredos e ensaiar a política em container exclusivo sem
+rede, portas ou volumes persistentes. Observar reinício após saída do processo e respeito à parada intencional.
+Esses controles não equivalem a ensaiar API/frontend reais, persistência do banco, TLS ou reboot no servidor final.
+O procedimento operacional fica em `docs/operacao-demonstracao.md`.
+
+Referências: [políticas de reinício do Docker](https://docs.docker.com/engine/containers/start-containers-automatically/)
+e [ordem de inicialização do Compose](https://docs.docker.com/compose/how-tos/startup-order/).
 
 ## Próximo
 
