@@ -5,8 +5,8 @@ import Bloqueios from '../disponibilidade/Bloqueios.jsx'
 import GradeSemanal from '../disponibilidade/GradeSemanal.jsx'
 import { ehAdmin, useSessao } from '../sessao/sessao-contexto.js'
 
-// Quando cada dentista atende (D37): grade semanal e bloqueios. Recepção e admin escolhem o dentista; o dentista vê a
-// própria agenda (admin dentista escolhe a grade de qualquer um, mas bloqueia só a própria — a API devolve 404 nos dos
+// Quando cada dentista atende (D37, D49): grade semanal e bloqueios. Recepção e admin escolhem o dentista e editam a
+// grade dele; o dentista edita a própria agenda (admin dentista vê a lista de todos, mas a API devolve 404 nos dos
 // colegas).
 export default function Disponibilidade() {
   const { usuario } = useSessao()
@@ -16,6 +16,8 @@ export default function Disponibilidade() {
   const [escolhido, setEscolhido] = useState(ehDentista ? usuario.id : '')
   const dentistaId = escolhido || dentistas.dados?.[0]?.id
   const mostraBloqueios = !ehDentista || dentistaId === usuario.id
+  // D49: recepção e administração editam a grade de qualquer dentista; o dentista, só a própria.
+  const podeEditarGrade = !ehDentista || dentistaId === usuario.id
 
   return (
     <AppShell title="Disponibilidade" wide>
@@ -47,7 +49,7 @@ export default function Disponibilidade() {
 
       {dentistaId && (
         <div className="disponibilidade">
-          <GradeSemanal key={`grade-${dentistaId}`} dentistaId={dentistaId} podeEditar={ehAdmin(usuario)} />
+          <GradeSemanal key={`grade-${dentistaId}`} dentistaId={dentistaId} podeEditar={podeEditarGrade} />
           {mostraBloqueios && <Bloqueios key={`bloqueios-${dentistaId}`} dentistaId={dentistaId} dentistas={ehDentista ? [] : (dentistas.dados ?? [])} />}
         </div>
       )}

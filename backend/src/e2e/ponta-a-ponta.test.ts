@@ -24,6 +24,7 @@ async function entrar(email: string, senha: string): Promise<string> {
 async function definirSenha(email: string): Promise<void> {
   const pedido = await request(app).post('/api/auth/funcionario/recuperacao/codigo').send({ email });
   expect(pedido.status).toBe(202);
+
   const codigo = contexto.enviador.ultimoCodigoPara(email);
   const confirmacao = await request(app)
     .post('/api/auth/funcionario/recuperacao/confirmar')
@@ -31,9 +32,16 @@ async function definirSenha(email: string): Promise<void> {
   expect(confirmacao.status).toBe(204);
 }
 
-async function contratar(tokenDoAdmin: string, dados: Record<string, unknown>): Promise<{ id: string; email: string }> {
-  const resposta = await request(app).post('/api/funcionarios').set(com(tokenDoAdmin)).send({ cpf: gerarCpfValido(), dataInicio: '2026-10-01', isAdmin: false, ...dados });
+async function contratar(
+  tokenDoAdmin: string,
+  dados: Record<string, unknown>,
+): Promise<{ id: string; email: string }> {
+  const resposta = await request(app)
+    .post('/api/funcionarios')
+    .set(com(tokenDoAdmin))
+    .send({ cpf: gerarCpfValido(), dataInicio: '2026-10-01', isAdmin: false, ...dados });
   expect(resposta.status).toBe(201);
+
   await definirSenha(resposta.body.email);
   return resposta.body;
 }
@@ -48,19 +56,40 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
   let julia: string;
   let consultaDoMarcos: string;
 
+  async function cadastrarPaciente(nome: string, telefone: string): Promise<string> {
+    const paciente = await request(app)
+      .post('/api/pacientes')
+      .set(com(recepcao))
+      .send({ nome, cpf: gerarCpfValido(), telefone });
+    expect(paciente.status).toBe(201);
+    return paciente.body.id;
+  }
+
   beforeAll(async () => {
     // Relógio no instante inicial dos testes (segunda, 2026-10-05, 09:00 em São Paulo); as consultas são na segunda seguinte.
     const admin = await criarFuncionario(contexto, { isAdmin: true, email: 'admin@colzani.com.br' });
     expect(admin.isAdmin).toBe(true);
     const tokenDoAdmin = await entrar('admin@colzani.com.br', SENHA_DE_TESTE);
 
-    const ana = await contratar(tokenDoAdmin, { nome: 'Ana Costa', email: 'ana@colzani.com.br', categoria: 'DENTISTA', cro: 'SC-12345' });
-    await contratar(tokenDoAdmin, { nome: 'Carla Souza', email: 'carla@colzani.com.br', categoria: 'RECEPCIONISTA' });
+    const ana = await contratar(tokenDoAdmin, {
+      nome: 'Ana Costa',
+      email: 'ana@colzani.com.br',
+      categoria: 'DENTISTA',
+      cro: 'SC-12345',
+    });
+    await contratar(tokenDoAdmin, {
+      nome: 'Carla Souza',
+      email: 'carla@colzani.com.br',
+      categoria: 'RECEPCIONISTA',
+    });
     dentistaId = ana.id;
     dentista = await entrar('ana@colzani.com.br', SENHA_NOVA);
     recepcao = await entrar('carla@colzani.com.br', SENHA_NOVA);
 
-    const limpeza = await request(app).post('/api/procedimentos').set(com(tokenDoAdmin)).send({ nome: 'Limpeza', duracaoMinutos: 60, precoCentavos: 18000 });
+    const limpeza = await request(app)
+      .post('/api/procedimentos')
+      .set(com(tokenDoAdmin))
+      .send({ nome: 'Limpeza', duracaoMinutos: 60, precoCentavos: 18000 });
     expect(limpeza.status).toBe(201);
     procedimentoId = limpeza.body.id;
 
@@ -72,12 +101,8 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
     expect(grade.status).toBe(200);
     expect(grade.body.consultasForaDaGrade).toEqual([]);
 
-    for (const [nome, telefone] of [['Marcos Oliveira', '47987654321'], ['Júlia Ramos', '47912345678']] as const) {
-      const paciente = await request(app).post('/api/pacientes').set(com(recepcao)).send({ nome, cpf: gerarCpfValido(), telefone });
-      expect(paciente.status).toBe(201);
-      if (nome === 'Marcos Oliveira') marcos = paciente.body.id;
-      else julia = paciente.body.id;
-    }
+    marcos = await cadastrarPaciente('Marcos Oliveira', '47987654321');
+    julia = await cadastrarPaciente('Júlia Ramos', '47912345678');
   });
 
   const marcar = (pacienteId: string, hora: string) =>
@@ -87,8 +112,13 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
       .send({ pacienteId, dentistaId, procedimentoId, inicio: `2026-10-12T${hora}:00-03:00` });
 
   it('2. a recepção vê os horários livres da grade e marca uma consulta', async () => {
-    const livres = await request(app).get('/api/horarios-livres').query({ procedimentoId, data: '2026-10-12', dentistaId }).set(com(recepcao));
+    const livres = await request(app)
+      .get('/api/horarios-livres')
+      .query({ procedimentoId, data: '2026-10-12', dentistaId })
+      .set(com(recepcao));
     expect(livres.status).toBe(200);
+
+    // Procedimento de 60 min numa grade de 08:00–12:00, de 5 em 5 minutos: de 08:00 a 11:00 são 37 inícios.
     const oferecidos = livres.body.horarios.map((horario: { inicio: string }) => horario.inicio);
     expect(oferecidos).toHaveLength(37);
     expect(oferecidos[0]).toBe('2026-10-12T08:00:00-03:00');
@@ -98,7 +128,11 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
     const resposta = await marcar(marcos, '09:00');
 
     expect(resposta.status).toBe(201);
-    expect(resposta.body).toMatchObject({ status: 'CONFIRMADA', inicio: '2026-10-12T09:00:00-03:00', fim: '2026-10-12T10:00:00-03:00' });
+    expect(resposta.body).toMatchObject({
+      status: 'CONFIRMADA',
+      inicio: '2026-10-12T09:00:00-03:00',
+      fim: '2026-10-12T10:00:00-03:00',
+    });
     consultaDoMarcos = resposta.body.id;
   });
 
@@ -118,7 +152,11 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
       .send({ inicio: '2026-10-12T10:00:00-03:00' });
 
     expect(resposta.status).toBe(201);
-    expect(resposta.body.cancelada).toMatchObject({ id: consultaDoMarcos, status: 'CANCELADA', canceladoPor: 'CLINICA' });
+    expect(resposta.body.cancelada).toMatchObject({
+      id: consultaDoMarcos,
+      status: 'CANCELADA',
+      canceladoPor: 'CLINICA',
+    });
     expect(resposta.body.nova).toMatchObject({ status: 'CONFIRMADA', inicio: '2026-10-12T10:00:00-03:00' });
     expect(contexto.enviador.mensagens.length).toBe(mensagensAntes + 1);
     consultaDoMarcos = resposta.body.nova.id;
@@ -128,25 +166,40 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
   });
 
   it('5. a recepção cancela a consulta da Júlia sem justificativa (a clínica não precisa dela)', async () => {
-    const daJulia = await request(app).get('/api/consultas').query({ pacienteId: julia, status: 'CONFIRMADA' }).set(com(recepcao));
+    const daJulia = await request(app)
+      .get('/api/consultas')
+      .query({ pacienteId: julia, status: 'CONFIRMADA' })
+      .set(com(recepcao));
+    expect(daJulia.status).toBe(200);
     expect(daJulia.body.total).toBe(1);
 
-    const resposta = await request(app).post(`/api/consultas/${daJulia.body.itens[0].id}/cancelamento`).set(com(recepcao)).send({});
+    const resposta = await request(app)
+      .post(`/api/consultas/${daJulia.body.itens[0].id}/cancelamento`)
+      .set(com(recepcao))
+      .send({});
 
     expect(resposta.status).toBe(200);
     expect(resposta.body).toMatchObject({ status: 'CANCELADA', canceladoPor: 'CLINICA' });
   });
 
   it('6. a dentista registra uma observação, que entra no histórico', async () => {
+    const texto = 'Dente 24 – Oclusal. Sem intercorrências.';
+
     const resposta = await request(app)
       .put(`/api/consultas/${consultaDoMarcos}/observacao`)
       .set(com(dentista))
-      .send({ texto: 'Dente 24 – Oclusal. Sem intercorrências.' });
+      .send({ texto });
 
     expect(resposta.status).toBe(200);
-    expect(resposta.body.observacao).toBe('Dente 24 – Oclusal. Sem intercorrências.');
-    const historico = await request(app).get(`/api/consultas/${consultaDoMarcos}/observacao/historico`).set(com(recepcao));
-    expect(historico.body).toEqual([expect.objectContaining({ autor: 'CLINICA', funcionario: { id: dentistaId, nome: 'Ana Costa' } })]);
+    expect(resposta.body.observacao).toBe(texto);
+
+    const historico = await request(app)
+      .get(`/api/consultas/${consultaDoMarcos}/observacao/historico`)
+      .set(com(recepcao));
+    expect(historico.status).toBe(200);
+    expect(historico.body).toEqual([
+      expect.objectContaining({ autor: 'CLINICA', funcionario: { id: dentistaId, nome: 'Ana Costa' } }),
+    ]);
   });
 
   it('7. antes do horário não dá para realizar; depois do início, a dentista marca como realizada', async () => {
@@ -158,7 +211,9 @@ describe('ponta a ponta: da grade da dentista à consulta realizada', { shuffle:
     contexto.relogio.definir(instanteEmSaoPaulo('2026-10-12', '11:30'));
     expect((await request(app).get('/api/auth/eu').set(com(dentista))).status).toBe(401);
     dentista = await entrar('ana@colzani.com.br', SENHA_NOVA);
+
     const pendentes = await request(app).get('/api/consultas/pendentes').set(com(dentista));
+    expect(pendentes.status).toBe(200);
     expect(pendentes.body.itens.map((consulta: { id: string }) => consulta.id)).toEqual([consultaDoMarcos]);
 
     const resposta = await request(app).post(`/api/consultas/${consultaDoMarcos}/realizacao`).set(com(dentista));

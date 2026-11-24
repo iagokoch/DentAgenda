@@ -17,6 +17,7 @@ import Pacientes from './pages/Pacientes.jsx'
 import PerfilPaciente from './pages/PerfilPaciente.jsx'
 import Procedimentos from './pages/admin/Procedimentos.jsx'
 import RecuperarSenha from './pages/RecuperarSenha.jsx'
+import ConsultasPendentes from './pages/ConsultasPendentes.jsx'
 
 // #2 (D39): axe em cada tela, com dados. O jsdom não calcula cor nem layout, então contraste fica de fora daqui e é
 // medido no navegador real (roteiro em docs/acessibilidade.md).
@@ -55,6 +56,7 @@ const TELAS = [
   { nome: 'Cadastro', elemento: <Cadastro />, caminho: '/cadastro' },
   { nome: 'Recuperar senha', elemento: <RecuperarSenha />, caminho: '/recuperar-senha' },
   { nome: 'Início', elemento: <Inicio />, caminho: '/inicio', pronta: 'Limpeza' },
+  { nome: 'Consultas pendentes', elemento: <ConsultasPendentes />, caminho: '/consultas/pendentes', pronta: 'Mais antigas primeiro', respostas: { 'GET /api/consultas/pendentes': ok({ itens: [consulta], total: 1 }) } },
   { nome: 'Pacientes', elemento: <Pacientes />, caminho: '/pacientes', pronta: '529.982.247-25' },
   { nome: 'Novo paciente', elemento: <NovoPaciente />, caminho: '/pacientes/novo' },
   { nome: 'Perfil do paciente', elemento: <PerfilPaciente />, caminho: '/pacientes/p-1', rota: '/pacientes/:pacienteId', pronta: 'Informações Gerais' },
@@ -77,8 +79,8 @@ describe('acessibilidade das telas com axe (#2)', () => {
     expect(screen.getByRole('heading', { level: 1 }).textContent).toContain('DentAgenda')
   })
 
-  it.each(TELAS)('$nome', async ({ elemento, caminho, rota, usuario, pronta }) => {
-    simularApi(API)
+  it.each(TELAS)('$nome', async ({ elemento, caminho, rota, usuario, pronta, respostas }) => {
+    simularApi({ ...API, ...respostas })
     const { container } = renderizarTela(elemento, { caminho, rota, usuario })
     if (pronta) await screen.findAllByText(pronta, { exact: false })
 

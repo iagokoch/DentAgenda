@@ -26,17 +26,32 @@ const abrir = (usuario) => renderizarTela(<Disponibilidade />, { usuario, caminh
 const secao = (nome) => screen.getByRole('region', { name: nome })
 
 describe('Disponibilidade (D37)', () => {
-  it('recepção: escolhe a dentista, vê a grade só para leitura e os bloqueios a partir de hoje', async () => {
+  it('recepção: escolhe a dentista, edita a grade (D49) e vê os bloqueios a partir de hoje', async () => {
     const pedidos = api()
     abrir(USUARIOS.recepcao)
 
-    expect(await within(await screen.findByRole('region', { name: 'Grade semanal' })).findByText('08:00–12:00, 14:00–18:00')).toBeTruthy()
-    expect(within(secao('Grade semanal')).queryByRole('button', { name: 'Salvar grade' })).toBeNull()
+    expect(await within(await screen.findByRole('region', { name: 'Grade semanal' })).findByRole('button', { name: 'Remover faixa 14:00–18:00 de segunda' })).toBeTruthy()
+    expect(within(secao('Grade semanal')).getByRole('button', { name: 'Salvar grade' })).toBeTruthy()
     expect(await within(secao('Bloqueios')).findByText('24/12/2026 às 00:00 até 26/12/2026 às 00:00')).toBeTruthy()
     expect(pedidos.find((pedido) => pedido.url.pathname.endsWith('/bloqueios')).url.search).toBe('?de=2026-10-05')
 
     await userEvent.selectOptions(screen.getByLabelText('Dentista'), 'dentista-2')
-    expect(await within(secao('Grade semanal')).findByText('Sem grade: este dentista não tem horários livres.')).toBeTruthy()
+    expect(await within(secao('Grade semanal')).findByRole('button', { name: 'Adicionar faixa na segunda' })).toBeTruthy()
+  })
+
+  it('recepção salva a grade de outra dentista (D49)', async () => {
+    const pedidos = api({ 'PUT /api/dentistas/dentista-2/grade': ({ corpo }) => ok({ grade: corpo, consultasForaDaGrade: [] }) })
+    abrir(USUARIOS.recepcao)
+    await userEvent.selectOptions(await screen.findByLabelText('Dentista'), 'dentista-2')
+    const grade = secao('Grade semanal')
+
+    await userEvent.click(await within(grade).findByRole('button', { name: 'Adicionar faixa na terça' }))
+    await userEvent.click(within(grade).getByRole('button', { name: 'Salvar grade' }))
+
+    await within(grade).findByRole('button', { name: 'Salvar grade' })
+    const gravacao = pedidos.find((pedido) => pedido.metodo === 'PUT')
+    expect(gravacao.url.pathname).toBe('/api/dentistas/dentista-2/grade')
+    expect(gravacao.corpo).toEqual([{ diaSemana: 2, inicio: '08:00', fim: '12:00' }])
   })
 
   it('admin edita a grade e vê as consultas que ficaram fora dela', async () => {
@@ -128,6 +143,20 @@ describe('Disponibilidade (D37)', () => {
 
     expect(await screen.findByText('Nenhum bloqueio de hoje em diante.')).toBeTruthy()
     expect(pedidos.some((pedido) => pedido.metodo === 'DELETE')).toBe(true)
+  })
+
+  it('dentista ajusta e salva a própria grade (D49)', async () => {
+    const pedidos = api({ 'PUT /api/dentistas/dentista-1/grade': ({ corpo }) => ok({ grade: corpo, consultasForaDaGrade: [] }) })
+    abrir({ ...USUARIOS.dentista, id: 'dentista-1' })
+    const grade = await screen.findByRole('region', { name: 'Grade semanal' })
+
+    await userEvent.click(await within(grade).findByRole('button', { name: 'Remover faixa 14:00–18:00 de segunda' }))
+    await userEvent.click(within(grade).getByRole('button', { name: 'Salvar grade' }))
+
+    await within(grade).findByRole('button', { name: 'Salvar grade' })
+    const gravacao = pedidos.find((pedido) => pedido.metodo === 'PUT')
+    expect(gravacao.url.pathname).toBe('/api/dentistas/dentista-1/grade')
+    expect(gravacao.corpo).toEqual([{ diaSemana: 1, inicio: '08:00', fim: '12:00' }])
   })
 
   it('dentista: só a própria agenda, sem escolher dentista nem marcar outros no bloqueio', async () => {

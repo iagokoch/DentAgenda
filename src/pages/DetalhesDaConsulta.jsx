@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { api } from '../api/api.js'
 import { mensagemDoErro } from '../api/mensagens.js'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
@@ -18,6 +18,12 @@ export default function DetalhesDaConsulta() {
 }
 
 function ConsultaDetalhada({ consultaId }) {
+  const [parametros] = useSearchParams()
+  const numeroDaPagina = Number(parametros.get('pagina') ?? 1)
+  const pagina = Number.isSafeInteger(numeroDaPagina) && numeroDaPagina > 0 ? numeroDaPagina : 1
+  const veioDePendentes = parametros.get('origem') === 'pendentes'
+  const retorno = veioDePendentes ? `/consultas/pendentes?pagina=${pagina}` : '/inicio'
+  const textoDoRetorno = veioDePendentes ? 'Voltar para pendências' : 'Voltar para o Início'
   const leitura = useDadosDaApi(`/api/consultas/${consultaId}`)
   // A consulta devolvida por uma ação vale mais que a lida ao abrir a tela, sem recarregar tudo.
   const [aposAcao, setAposAcao] = useState(null)
@@ -57,7 +63,7 @@ function ConsultaDetalhada({ consultaId }) {
         <section className="tab-placeholder">
           {leitura.estado !== 'erro' && <p className="form-info">Carregando…</p>}
           {leitura.estado === 'erro' && <><p className="form-error" role="alert">{leitura.erro}</p><button className="soft-btn" onClick={leitura.recarregar}>Tentar de novo</button></>}
-          <Link className="text-button" to="/inicio">Voltar para o Início</Link>
+          <Link className="text-button" to={retorno}>{textoDoRetorno}</Link>
         </section>
       </AppShell>
     )
@@ -105,6 +111,7 @@ function ConsultaDetalhada({ consultaId }) {
   return (
     <AppShell title="Detalhes da Consulta" wide>
       <nav className="breadcrumb" aria-label="Caminho"><Link to="/inicio">Início</Link> / <Link to={`/pacientes/${consulta.paciente.id}`}>{consulta.paciente.nome}</Link> / Consulta</nav>
+      {veioDePendentes && <Link className="consulta-voltar-pendencias" to={retorno}>{textoDoRetorno}</Link>}
       <section className="patient-hero">
         <div className="patient-hero__name">
           <h1>{consulta.procedimento.nome}</h1>

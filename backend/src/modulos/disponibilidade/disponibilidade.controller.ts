@@ -41,6 +41,7 @@ export function criarControllerDisponibilidade(
     },
     gravarGrade: async (req, res) => {
       const id = idDaRota(req.params.id);
+      conferirAgendaDoDentista(req, id);
       const faixas = validar(esquemaGrade, req.body);
       await exigirDentista(contexto, id);
       res.json(await substituirGrade(contexto, id, faixas));

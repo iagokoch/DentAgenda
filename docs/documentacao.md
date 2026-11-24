@@ -1308,6 +1308,16 @@ regra é a mesma para não haver dois formatos no banco.
 5. A lista existente oferece horários a cada cinco minutos para R/D e no passo da duração para C (issue #19).
    `janelasLivres` continua retornado para R/D, sem interface dedicada para manipular esses intervalos.
    Com "qualquer dentista", cada horário aparece uma vez e vale o primeiro dentista livre.
+6. **Pendências de registro (#34, opção A):** o lembrete do Início oferece "Ver consultas pendentes" quando há
+   pendências. A página `/consultas/pendentes?pagina=N`, só para funcionários, reutiliza a API existente com 20
+   consultas por página, mais antigas primeiro. Pendência significa `CONFIRMADA` com **fim** no passado (D13).
+   Recepção vê as da clínica; dentista só as próprias, conforme a API. Mostra paciente, data/intervalo e dentista,
+   com acesso aos detalhes. `?origem=pendentes&pagina=N` nos detalhes preserva o retorno inclusive após refresh;
+   somente essa origem enumerada é aceita, sem URL de retorno arbitrária. Ao voltar, a lista é relida; uma página
+   que ficou sem itens recua à última válida. O Início também relê o lembrete ao retornar. A paginação não garante
+   snapshot entre chamadas concorrentes. A lista vira cartões em telas estreitas, mantendo foco visível,
+   carregamento, vazio e erro com nova tentativa. A gaveta foi descartada por exigir mais controle de foco e
+   reabertura ao voltar dos detalhes. Sem item novo no menu, tema escuro, cache global ou ações clínicas em lote.
 
 **Por quê:** fecha o fluxo marcar → ver → remarcar/cancelar/realizar sem mudar o contrato do `api.md`; a
 alternativa de editar horário na mesma consulta já estava descartada (D14).
@@ -1847,6 +1857,26 @@ administrador que também é dentista recebe só a própria agenda.
 
 **Validação:** testes de tela (12) e de funções puras (6), axe nas duas visões, suíte do front 317/317. Carga em
 `docs/performance-resultados-2026-11-15.md`.
+
+## D49 — Quem edita a grade semanal: recepção, administração e o próprio dentista
+
+> **Status: pedida pelo usuário em 16/11/2026, na véspera da apresentação, depois que os dentistas não conseguiram configurar a própria agenda.**
+
+**O quê:** `PUT /api/dentistas/{id}/grade` passa de "só admin" (`A`) para `R`, `A` e `D`.
+- Recepção e administração substituem a grade de qualquer dentista.
+- O dentista substitui só a própria. Na grade de um colega a API responde 404, como já faz na leitura e nos bloqueios (D10, D20).
+- A tela `/disponibilidade` mostra "Salvar grade" para recepção, administração e para o dentista na própria grade.
+- Nada mais muda: faixas sobrepostas, `consultasForaDaGrade` (só lista, nunca cancela, D33) e o 404 para quem não é dentista.
+
+**Por quê:** a D37 deixou a grade só para o administrador, mas quem sabe quando o dentista atende é a recepção e o próprio
+dentista; sem isso, cada mudança de horário dependia de uma pessoa a mais.
+
+**Alternativa descartada:** manter só o admin e avisar a equipe para pedir a ele. É o que travou os dentistas.
+
+**Limitação conhecida (igual à D48):** um administrador que também é dentista é tratado como dentista nas rotas de agenda
+(D10) e só edita a própria grade; para editar a dos colegas, a conta precisa ser de recepção.
+
+**Efeito na matriz de papéis:** `PUT /api/dentistas/{id}/grade` passa de 401/403/✓/403/403 para 401/✓/✓/✓/403 (anônimo, R, R-admin, D, C).
 
 ## Próximo
 
