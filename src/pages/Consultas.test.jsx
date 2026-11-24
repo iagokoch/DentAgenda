@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import axe from 'axe-core'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import Consultas from './Consultas.jsx'
 
@@ -131,7 +131,7 @@ describe('Consultas da clínica', () => {
     const dialogo = screen.getByRole('dialog', { name: 'Cancelar consulta' })
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar consulta' }))
 
-    expect(await screen.findByText('Consulta cancelada. O paciente foi avisado.')).toBeTruthy()
+    expect(await screen.findByText('Consulta cancelada.')).toBeTruthy()
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(pedidos.find((pedido) => pedido.metodo === 'POST').corpo).toEqual({})
     expect(screen.queryByRole('button', { name: /Cancelar: Rafael Tavares/ })).toBeNull()
@@ -166,5 +166,48 @@ describe('Consultas da clínica', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Lista' }))
     await screen.findByText('Marcos Oliveira')
     expect((await axe.run(document.body)).violations).toEqual([])
+  })
+})
+
+describe('relógio e seleção do dia', () => {
+  async function avancar(relogio, minutos) {
+    vi.useFakeTimers()
+    fireEvent.focus(window)
+    relogio.setTime(relogio.getTime() + minutos * 60_000)
+    try { await act(async () => { await vi.advanceTimersByTimeAsync(minutos * 60_000) }) }
+    finally { vi.useRealTimers() }
+  }
+  it('atualiza realização e pendência sem trocar a visão', async () => {
+    simularApi({ 'GET /api/dentistas': DENTISTAS, 'GET /api/consultas': lista([emAndamento]) })
+    const relogio = new Date('2026-10-05T08:29:00-03:00')
+    renderizarTela(<Consultas />, { caminho: '/consultas', agora: relogio })
+    await screen.findByText('Júlia Ferreira')
+    expect(screen.queryByRole('button', { name: /Marcar como realizada/ })).toBeNull()
+    await avancar(relogio, 1)
+    expect(screen.getByRole('button', { name: /Marcar como realizada/ })).toBeTruthy()
+    await avancar(relogio, 60)
+    expect(screen.getByText('1 consulta já passou e aguarda registro.')).toBeTruthy()
+  })
+  it.each([false, true])('virada do dia preserva escolha manual=%s e Hoje volta ao dia atual', async (manual) => {
+    const pedidos = simularApi({ 'GET /api/dentistas': DENTISTAS, 'GET /api/consultas': lista([]) })
+    const relogio = new Date('2026-10-05T23:59:00-03:00')
+    renderizarTela(<Consultas />, { caminho: '/consultas', agora: relogio })
+    await screen.findByText('segunda-feira, 5 de outubro')
+    if (manual) fireEvent.click(screen.getByRole('button', { name: 'Dia anterior' }))
+    await avancar(relogio, 1)
+    expect(await screen.findByText(manual ? 'domingo, 4 de outubro' : 'terça-feira, 6 de outubro')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Hoje' }))
+    expect(await screen.findByText('terça-feira, 6 de outubro')).toBeTruthy()
+    expect(doDia(pedidos).at(-1).url.searchParams.get('de')).toBe('2026-10-06')
+  })
+  it.each([false, true])('período da lista acompanha o dia apenas quando não foi editado: manual=%s', async (manual) => {
+    simularApi({ 'GET /api/dentistas': DENTISTAS, 'GET /api/consultas': lista([]) })
+    const relogio = new Date('2026-10-05T23:59:00-03:00')
+    renderizarTela(<Consultas />, { caminho: '/consultas', agora: relogio })
+    fireEvent.click(await screen.findByRole('button', { name: 'Lista' }))
+    if (manual) fireEvent.change(screen.getByLabelText('De'), { target: { value: '2026-10-01' } })
+    await avancar(relogio, 1)
+    expect(screen.getByLabelText('De').value).toBe(manual ? '2026-10-01' : '2026-10-06')
+    expect(screen.getByLabelText('Até').value).toBe(manual ? '2026-11-04' : '2026-11-05')
   })
 })

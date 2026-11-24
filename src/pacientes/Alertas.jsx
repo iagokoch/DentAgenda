@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../api/api.js'
 import { mensagemDoErro } from '../api/mensagens.js'
 import Icon from '../components/Icon'
@@ -21,19 +21,36 @@ function AlertasDoPaciente({ pacienteId }) {
   const [erro, setErro] = useState('')
   const [texto, setTexto] = useState('')
   const [enviando, setEnviando] = useState(false)
+  const [tentativa, setTentativa] = useState(0)
+  const leituraEmAndamento = useRef(true)
 
   useEffect(() => {
     let atual = true
+    leituraEmAndamento.current = true
     api.pedir(`/api/pacientes/${pacienteId}/alertas`).then(
-      (alertas) => atual && setResposta({ pacienteId, alertas }),
-      (falha) => atual && setResposta({ pacienteId, erro: mensagemDoErro(falha) }),
+      (alertas) => {
+        if (!atual) return
+        leituraEmAndamento.current = false
+        setResposta({ pacienteId, tentativa, alertas })
+      },
+      (falha) => {
+        if (!atual) return
+        leituraEmAndamento.current = false
+        setResposta(anterior => ({ ...anterior, pacienteId, tentativa, erro: mensagemDoErro(falha) }))
+      },
     )
     return () => {
       atual = false
     }
-  }, [pacienteId])
+  }, [pacienteId, tentativa])
 
-  const estado = resposta.pacienteId !== pacienteId ? 'carregando' : resposta.erro ? 'erro' : 'pronto'
+  const estado = resposta.pacienteId !== pacienteId || resposta.tentativa !== tentativa ? 'carregando' : resposta.erro ? 'erro' : 'pronto'
+
+  function tentarNovamente() {
+    if (leituraEmAndamento.current) return
+    leituraEmAndamento.current = true
+    setTentativa(anterior => anterior + 1)
+  }
   const porId = new Map((resposta.alertas ?? []).map((alerta) => [alerta.id, alerta]))
   for (const [id, alerta] of alteracoes) {
     if (alerta === null) porId.delete(id)
@@ -73,8 +90,11 @@ function AlertasDoPaciente({ pacienteId }) {
     <section className="info-card observations">
       <h2>Observações Importantes</h2>
       <p className="form-info">Alertas que o dentista vê antes de atender.</p>
-      {estado === 'carregando' && <p className="form-info">Carregando…</p>}
+      {estado === 'carregando' && <p className="form-info" role="status">{tentativa === 0 ? 'Carregando…' : 'Carregando alertas…'}</p>}
       {estado === 'erro' && <p className="form-error" role="alert">{resposta.erro}</p>}
+      {(estado === 'erro' || (estado === 'carregando' && tentativa > 0)) && (
+        <button type="button" className="soft-btn" disabled={estado === 'carregando'} onClick={tentarNovamente}>Tentar de novo</button>
+      )}
       {estado === 'pronto' && alertas.length === 0 && <p className="form-info">Nenhum alerta registrado.</p>}
       <ul className="alertas">
         {alertas.map((alerta) => (

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import GavetaDeFuncionario from '../admin/GavetaDeFuncionario.jsx'
 import Bloqueios from '../disponibilidade/Bloqueios.jsx'
 import { ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
@@ -77,4 +77,18 @@ describe('datas da clínica independem do fuso do navegador (#21)', () => {
 
     expect(screen.getByLabelText('Início na clínica').value).toBe('2026-11-30')
   })
+})
+
+it('cabeçalho e saudação do Início usam São Paulo mesmo com navegador UTC', async () => {
+  const original = Date.prototype.toLocaleDateString
+  const data = vi.spyOn(Date.prototype, 'toLocaleDateString').mockImplementation(function (locale, options) {
+    return original.call(this, locale, { timeZone: 'UTC', ...options })
+  })
+  const hora = vi.spyOn(Date.prototype, 'getHours').mockReturnValue(0)
+  try {
+    simularApi({ 'GET /api/consultas': ok({ itens: [], total: 0 }), 'GET /api/pacientes': ok({ itens: [], total: 0 }), 'GET /api/consultas/pendentes': ok({ itens: [], total: 0 }) })
+    renderizarTela(<Inicio />, { agora: VIRADA_UTC })
+    expect(await screen.findByText('SEGUNDA-FEIRA, 30 DE NOVEMBRO')).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /Boa noite/ })).toBeTruthy()
+  } finally { data.mockRestore(); hora.mockRestore() }
 })

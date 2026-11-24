@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../../testes/tela.jsx'
@@ -175,5 +175,28 @@ describe('Procedimentos (D37, só admin)', () => {
     await screen.findByText('Clareamento voltou a aparecer no agendamento.')
 
     expect(pedidos.filter((pedido) => pedido.metodo === 'PATCH').map((pedido) => pedido.corpo)).toEqual([{ precoCentavos: 20000 }, { ativo: true }])
+  })
+})
+
+describe('respostas de gavetas anteriores', () => {
+  it.each(['nova', 'mesma', 'erro'])('preserva nova abertura após resposta de A: %s', async (cenario) => {
+    const resposta = Promise.withResolvers()
+    const pedidos = simularApi({
+      'GET /api/procedimentos': ok([limpeza]),
+      'PATCH /api/procedimentos/p-limpeza': () => resposta.promise,
+    })
+    abrir()
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar ' + limpeza.nome }))
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'A editado' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    await waitFor(() => expect(pedidos.some(p => p.metodo === 'PATCH')).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }))
+    fireEvent.click(screen.getByRole('button', { name: cenario === 'mesma' ? 'Editar ' + limpeza.nome : 'Novo procedimento' }))
+    fireEvent.change(screen.getByLabelText('Nome'), { target: { value: 'Rascunho B' } })
+    await act(async () => resposta.resolve(cenario === 'erro' ? falha(500, 'ERRO_INTERNO', 'Falha A') : ok(limpeza)))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByLabelText('Nome').value).toBe('Rascunho B')
+    expect(within(screen.getByRole('dialog')).queryByText('Falha A')).toBeNull()
+    expect(pedidos.some(p => p.metodo === 'POST')).toBe(false)
   })
 })

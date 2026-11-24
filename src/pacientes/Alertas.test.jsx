@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { falha, ok, simularApi } from '../testes/tela.jsx'
@@ -163,5 +163,53 @@ describe('alertas clínicos e respostas fora de ordem (#18)', () => {
 
     expect(screen.getByText(outroPaciente.texto)).toBeTruthy()
     expect(screen.queryByText(anterior.texto)).toBeNull()
+  })
+})
+
+describe('recuperação local da leitura', () => {
+  it('retry preserva texto, admite nova tentativa e não duplica leitura pendente', async () => {
+    let chamadas = 0
+    const leitura = Promise.withResolvers()
+    abrir({ 'GET /api/pacientes/p-1/alertas': () => ++chamadas === 1 ? falha(500, 'ERRO_INTERNO', 'Falha transitória') : chamadas === 2 ? leitura.promise : ok([anterior]) })
+    await screen.findByText('Falha transitória')
+    fireEvent.change(screen.getByLabelText('Novo alerta'), { target: { value: 'Rascunho' } })
+    const retry = screen.getByRole('button', { name: 'Tentar de novo' })
+    act(() => { fireEvent.click(retry); fireEvent.click(retry) })
+    expect(chamadas).toBe(2)
+    expect(screen.getByText('Carregando alertas…')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Tentar de novo' }).disabled).toBe(true)
+    expect(screen.getByLabelText('Novo alerta').value).toBe('Rascunho')
+    await responder(leitura, falha(500, 'ERRO_INTERNO', 'Falha no retry'))
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+    expect(await screen.findByText(anterior.texto)).toBeTruthy()
+    expect(screen.getByLabelText('Novo alerta').value).toBe('Rascunho')
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+  it.each([false, true])('GET atrasado durante retry preserva criação e remoção=%s', async (removerCriado) => {
+    let chamadas = 0
+    const leitura = Promise.withResolvers()
+    abrir({ 'GET /api/pacientes/p-1/alertas': () => ++chamadas === 1 ? falha(500, 'ERRO_INTERNO', 'Falha transitória') : leitura.promise })
+    await screen.findByText('Falha transitória')
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+    await adicionar()
+    await screen.findByText(criado.texto)
+    if (removerCriado) await userEvent.click(screen.getByRole('button', { name: 'Remover alerta ' + criado.texto }))
+    await responder(leitura, ok(removerCriado ? [anterior, criado] : [anterior]))
+    expect(await screen.findByText(anterior.texto)).toBeTruthy()
+    if (removerCriado) expect(screen.queryByText(criado.texto)).toBeNull()
+    else expect(screen.getByText(criado.texto)).toBeTruthy()
+  })
+  it('trocar paciente durante retry ignora resposta e rascunho antigos', async () => {
+    let chamadas = 0
+    const leitura = Promise.withResolvers()
+    const tela = abrir({ 'GET /api/pacientes/p-1/alertas': () => ++chamadas === 1 ? falha(500, 'ERRO_INTERNO', 'Falha transitória') : leitura.promise })
+    await screen.findByText('Falha transitória')
+    fireEvent.change(screen.getByLabelText('Novo alerta'), { target: { value: 'Rascunho anterior' } })
+    await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
+    tela.rerender(<Alertas pacienteId="p-2" />)
+    await screen.findByText(outroPaciente.texto)
+    await responder(leitura, ok([anterior]))
+    expect(screen.queryByText(anterior.texto)).toBeNull()
+    expect(screen.getByLabelText('Novo alerta').value).toBe('')
   })
 })

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../../testes/tela.jsx'
@@ -115,5 +115,28 @@ describe('Equipe (D37, só admin)', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('Você não tem permissão.')
     await userEvent.click(screen.getByRole('button', { name: 'Tentar de novo' }))
     expect(await screen.findByText('Nenhum funcionário cadastrado.')).toBeTruthy()
+  })
+})
+
+describe('respostas de gavetas anteriores', () => {
+  it.each(['nova', 'mesma', 'erro'])('preserva nova abertura após resposta de A: %s', async (cenario) => {
+    const resposta = Promise.withResolvers()
+    const pedidos = simularApi({
+      'GET /api/funcionarios': ok([ana]),
+      'PATCH /api/funcionarios/f-ana': () => resposta.promise,
+    })
+    abrir()
+    fireEvent.click(await screen.findByRole('button', { name: 'Editar ' + ana.nome }))
+    fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'A editado' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar alterações' }))
+    await waitFor(() => expect(pedidos.some(p => p.metodo === 'PATCH')).toBe(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Fechar' }))
+    fireEvent.click(screen.getByRole('button', { name: cenario === 'mesma' ? 'Editar ' + ana.nome : 'Novo funcionário' }))
+    fireEvent.change(screen.getByLabelText('Nome completo'), { target: { value: 'Rascunho B' } })
+    await act(async () => resposta.resolve(cenario === 'erro' ? falha(500, 'ERRO_INTERNO', 'Falha A') : ok(ana)))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    expect(screen.getByLabelText('Nome completo').value).toBe('Rascunho B')
+    expect(within(screen.getByRole('dialog')).queryByText('Falha A')).toBeNull()
+    expect(pedidos.some(p => p.metodo === 'POST')).toBe(false)
   })
 })
