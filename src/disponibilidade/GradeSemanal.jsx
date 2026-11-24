@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api/api.js'
 import { mensagemDoErro } from '../api/mensagens.js'
@@ -52,8 +52,11 @@ function GradeSoLeitura({ grade }) {
 function EditorDeGrade({ dentistaId, gradeInicial }) {
   const [dias, setDias] = useState(() => faixasPorDia(gradeInicial))
   const [envio, setEnvio] = useState({ estado: 'parado' })
+  const envioEmAndamento = useRef(false)
+  const enviando = envio.estado === 'enviando'
 
   const mudarDia = (dia, faixas) => {
+    if (envioEmAndamento.current) return
     setDias(dias.map((atuais, indice) => (indice === dia ? faixas : atuais)))
     setEnvio({ estado: 'parado' })
   }
@@ -61,12 +64,16 @@ function EditorDeGrade({ dentistaId, gradeInicial }) {
 
   async function salvar(evento) {
     evento.preventDefault()
+    if (envioEmAndamento.current) return
+    envioEmAndamento.current = true
     setEnvio({ estado: 'enviando' })
     try {
       const { consultasForaDaGrade } = await api.pedir(`/api/dentistas/${dentistaId}/grade`, { metodo: 'PUT', corpo: gradeParaEnviar(dias) })
       setEnvio({ estado: 'salvo', consultasForaDaGrade })
     } catch (falha) {
       setEnvio({ estado: 'erro', mensagem: mensagemDoErro(falha) })
+    } finally {
+      envioEmAndamento.current = false
     }
   }
 
@@ -79,14 +86,14 @@ function EditorDeGrade({ dentistaId, gradeInicial }) {
             {dias[dia].length === 0 && <span className="grade-dia__vazio">Não atende</span>}
             {dias[dia].map((faixa, posicao) => (
               <div className="grade-faixa" key={posicao}>
-                <input type="time" step="300" required aria-label={`Início da faixa ${posicao + 1} de ${DIAS[dia]}`} value={faixa.inicio} onChange={(e) => alterarFaixa(dia, posicao, 'inicio', e.target.value)} />
+                <input type="time" step="300" required disabled={enviando} aria-label={`Início da faixa ${posicao + 1} de ${DIAS[dia]}`} value={faixa.inicio} onChange={(e) => alterarFaixa(dia, posicao, 'inicio', e.target.value)} />
                 <span aria-hidden="true">até</span>
-                <input type="time" step="300" required aria-label={`Fim da faixa ${posicao + 1} de ${DIAS[dia]}`} value={faixa.fim} onChange={(e) => alterarFaixa(dia, posicao, 'fim', e.target.value)} />
-                <button type="button" className="text-button text-button--perigo" aria-label={`Remover faixa ${faixa.inicio}–${faixa.fim} de ${DIAS[dia]}`} onClick={() => mudarDia(dia, dias[dia].filter((_, indice) => indice !== posicao))}>Remover</button>
+                <input type="time" step="300" required disabled={enviando} aria-label={`Fim da faixa ${posicao + 1} de ${DIAS[dia]}`} value={faixa.fim} onChange={(e) => alterarFaixa(dia, posicao, 'fim', e.target.value)} />
+                <button type="button" className="text-button text-button--perigo" aria-label={`Remover faixa ${faixa.inicio}–${faixa.fim} de ${DIAS[dia]}`} disabled={enviando} onClick={() => mudarDia(dia, dias[dia].filter((_, indice) => indice !== posicao))}>Remover</button>
               </div>
             ))}
           </div>
-          <button type="button" className="text-button" aria-label={`Adicionar faixa na ${DIAS[dia]}`} onClick={() => mudarDia(dia, [...dias[dia], { ...FAIXA_NOVA }])}>+ Faixa</button>
+          <button type="button" className="text-button" aria-label={`Adicionar faixa na ${DIAS[dia]}`} disabled={enviando} onClick={() => mudarDia(dia, [...dias[dia], { ...FAIXA_NOVA }])}>+ Faixa</button>
         </fieldset>
       ))}
       <div aria-live="polite">

@@ -5,7 +5,7 @@ import { useFocoPreso } from '../components/useFocoPreso.js'
 // A justificativa é opcional para a clínica; se a API devolver JUSTIFICATIVA_OBRIGATORIA (paciente com menos de
 // 24 h, docs/api.md), o campo passa a ser exigido e o popup continua aberto. A área do paciente já abre com ele exigido
 // quando faltam menos de 24 h (D35).
-const AVISO_DA_CLINICA = 'O paciente é avisado por SMS. Esta ação não pode ser desfeita; para trocar o horário, use “Remarcar”.'
+const AVISO_DA_CLINICA = 'O cancelamento será registrado. Esta ação não pode ser desfeita; para trocar o horário, use ‘Remarcar’.'
 
 export default function DialogoDeCancelamento({ aoCancelar, aoFechar, aviso = AVISO_DA_CLINICA, justificativaObrigatoria = false }) {
   const [justificativa, setJustificativa] = useState('')

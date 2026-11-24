@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, fireEvent, renderHook, screen, waitFor, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
 import Inicio from './Inicio.jsx'
 import { useConsultasDeHoje } from '../agenda/useConsultasDeHoje.js'
@@ -162,4 +162,68 @@ describe('Início (D33)', () => {
     expect(atalhos(USUARIOS.admin)).toEqual(['/agenda', '/pacientes', '/disponibilidade', '/admin/equipe'])
     expect(atalhos(USUARIOS.dentista)).toEqual(['/agenda', '/pacientes', '/disponibilidade'])
   })
+})
+
+describe('Início acompanha o tempo', () => {
+  it('remove a próxima ao iniciar e revalida pendentes só ao cruzar fim, dia ou retornar', async () => {
+    const relogio = new Date('2026-10-05T08:59:00-03:00')
+    const marcada = { ...consulta('tempo', '09:00'), fim: '2026-10-05T09:30:00-03:00' }
+    const pedidos = simularApi({
+      'GET /api/consultas': ok({ itens: [marcada], total: 1 }),
+      'GET /api/pacientes': ok({ itens: [], total: 1 }),
+      'GET /api/consultas/pendentes': () => ok({ itens: [], total: relogio > new Date(marcada.fim) ? 1 : 0 }),
+    })
+    vi.useFakeTimers()
+    await act(async () => { renderizarTela(<Inicio />, { caminho: '/inicio', agora: relogio }) })
+    expect(screen.getByText('1 ainda por vir')).toBeTruthy()
+    const pendentes = () => pedidos.filter(p => p.url.pathname.endsWith('/pendentes')).length
+    async function avancar(minutos) {
+      relogio.setTime(relogio.getTime() + minutos * 60_000)
+      await act(async () => { await vi.advanceTimersByTimeAsync(minutos * 60_000) })
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    }
+    try {
+      await avancar(1)
+      expect(screen.getByText('0 ainda por vir')).toBeTruthy()
+      expect(within(cartao('Próxima consulta')).getByText('—')).toBeTruthy()
+      expect(pendentes()).toBe(1)
+      await avancar(30)
+      expect(pendentes()).toBe(1)
+      await avancar(1)
+      expect(pendentes()).toBe(2)
+      await act(async () => { fireEvent.focus(window); fireEvent(document, new Event('visibilitychange')); await vi.advanceTimersByTimeAsync(0) })
+      expect(pendentes()).toBe(3)
+    } finally { vi.useRealTimers() }
+  })
+  it('troca a consulta diária à meia-noite', async () => {
+    const pedidos = api({ consultas: ok({ itens: [], total: 0 }) })
+    const relogio = new Date('2026-10-05T23:59:00-03:00')
+    vi.useFakeTimers()
+    await act(async () => { renderizarTela(<Inicio />, { caminho: '/inicio', agora: relogio }) })
+    relogio.setTime(relogio.getTime() + 60_000)
+    try { await act(async () => { await vi.advanceTimersByTimeAsync(60_000) }) }
+    finally { vi.useRealTimers() }
+    await waitFor(() => expect(pedidos.filter(p => p.url.pathname === '/api/consultas').at(-1).url.searchParams.get('de')).toBe('2026-10-06'))
+  })
+})
+
+it('revalida pendentes quando o GET diário termina depois do fim da consulta', async () => {
+  const relogio = new Date('2026-10-05T09:29:00-03:00')
+  const leitura = Promise.withResolvers()
+  const marcada = { ...consulta('atrasada', '09:00'), fim: '2026-10-05T09:30:00-03:00' }
+  const pedidos = simularApi({
+    'GET /api/consultas': () => leitura.promise,
+    'GET /api/pacientes': ok({ itens: [], total: 0 }),
+    'GET /api/consultas/pendentes': () => ok({ itens: [], total: relogio > new Date(marcada.fim) ? 1 : 0 }),
+  })
+  vi.useFakeTimers()
+  try {
+    await act(async () => { renderizarTela(<Inicio />, { agora: relogio }) })
+    relogio.setTime(relogio.getTime() + 2 * 60_000)
+    await act(async () => { await vi.advanceTimersByTimeAsync(2 * 60_000) })
+    await act(async () => leitura.resolve(ok({ itens: [marcada], total: 1 })))
+    await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+    expect(pedidos.filter(p => p.url.pathname.endsWith('/pendentes'))).toHaveLength(2)
+    expect(screen.getByText('1 consulta já passou e ainda não foi marcada como realizada.')).toBeTruthy()
+  } finally { vi.useRealTimers() }
 })

@@ -10,7 +10,7 @@ import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
 import { aguardaRegistro, colunasPorDentista, deslocarDia, diaPorExtenso, filtrarPorPaciente } from '../consultas/visao.js'
 import { jaComecou } from '../minha-conta/consultas-do-paciente.js'
-import { useRelogio } from '../relogio.js'
+import { useAgoraAtualizado } from '../agenda/useAgoraAtualizado.js'
 import { useSessao } from '../sessao/sessao-contexto.js'
 
 const DIAS_DA_LISTA = 30
@@ -19,15 +19,17 @@ const DIAS_DA_LISTA = 30
 // recebe da API só a própria agenda (D10). As ações são as mesmas dos Detalhes da consulta.
 export default function Consultas() {
   const { usuario } = useSessao()
-  const relogio = useRelogio()
-  const [agora, setAgora] = useState(() => relogio.agora())
+  const agora = useAgoraAtualizado()
   const hoje = dataDeHoje(agora)
   const ehDentista = usuario.categoria === 'DENTISTA'
 
   const [visao, setVisao] = useState('dia')
-  const [dia, setDia] = useState(hoje)
-  const [de, setDe] = useState(hoje)
-  const [ate, setAte] = useState(() => deslocarDia(hoje, DIAS_DA_LISTA))
+  const [diaSelecionado, setDiaSelecionado] = useState(null)
+  const dia = diaSelecionado ?? hoje
+  const [periodoSelecionado, setPeriodoSelecionado] = useState(null)
+  const { de, ate } = periodoSelecionado ?? { de: hoje, ate: deslocarDia(hoje, DIAS_DA_LISTA) }
+  const setDe = (valor) => setPeriodoSelecionado({ de: valor, ate })
+  const setAte = (valor) => setPeriodoSelecionado({ de, ate: valor })
   const [dentistaId, setDentistaId] = useState('')
   const [status, setStatus] = useState('')
   const [nome, setNome] = useState('')
@@ -49,7 +51,7 @@ export default function Consultas() {
   async function cancelar(justificativa) {
     await api.pedir(`/api/consultas/${cancelando.id}/cancelamento`, { metodo: 'POST', corpo: justificativa ? { justificativa } : {} })
     setCancelando(null)
-    setMensagem({ tipo: 'sucesso', texto: 'Consulta cancelada. O paciente foi avisado.' })
+    setMensagem({ tipo: 'sucesso', texto: 'Consulta cancelada.' })
     consultas.recarregar()
   }
 
@@ -67,7 +69,6 @@ export default function Consultas() {
   }
 
   function trocarVisao(nova) {
-    setAgora(relogio.agora())
     setVisao(nova)
   }
 
@@ -96,9 +97,9 @@ export default function Consultas() {
       {visao === 'dia' ? (
         <div className="consultas-navegacao">
           <h2>{diaPorExtenso(dia)}</h2>
-          <button type="button" className="icon-button" aria-label="Dia anterior" onClick={() => setDia(deslocarDia(dia, -1))}><Icon name="arrowLeft" /></button>
-          <button type="button" className="soft-btn" onClick={() => setDia(hoje)}>Hoje</button>
-          <button type="button" className="icon-button" aria-label="Próximo dia" onClick={() => setDia(deslocarDia(dia, 1))}><span className="consultas-seta-direita"><Icon name="arrowLeft" /></span></button>
+          <button type="button" className="icon-button" aria-label="Dia anterior" onClick={() => setDiaSelecionado(deslocarDia(dia, -1))}><Icon name="arrowLeft" /></button>
+          <button type="button" className="soft-btn" onClick={() => setDiaSelecionado(null)}>Hoje</button>
+          <button type="button" className="icon-button" aria-label="Próximo dia" onClick={() => setDiaSelecionado(deslocarDia(dia, 1))}><span className="consultas-seta-direita"><Icon name="arrowLeft" /></span></button>
         </div>
       ) : (
         <FiltrosDaLista {...{ de, setDe, ate, setAte, status, setStatus, nome, setNome, dentistaId, setDentistaId, dentistas: dentistas.dados ?? [], ehDentista }} />

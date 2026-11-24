@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { screen, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { falha, ok, renderizarTela, simularApi, USUARIOS } from '../testes/tela.jsx'
@@ -173,5 +173,30 @@ describe('Disponibilidade (D37)', () => {
     expect(await within(bloqueios).findByText('Bloqueio criado.')).toBeTruthy()
     expect(pedidos.find((pedido) => pedido.metodo === 'POST').corpo.dentistaIds).toEqual(['dentista-1'])
     expect(pedidos.some((pedido) => pedido.url.pathname.includes('dentista-2'))).toBe(false)
+  })
+})
+
+describe('grade com gravação pendente', () => {
+  it.each([false, true])('bloqueia edição e submits duplicados, preserva rascunho em erro=%s', async (erro) => {
+    const resposta = Promise.withResolvers()
+    const pedidos = api({ 'PUT /api/dentistas/dentista-1/grade': () => resposta.promise })
+    abrir(USUARIOS.admin)
+    const input = await screen.findByLabelText('Início da faixa 1 de segunda')
+    const form = input.closest('form')
+    act(() => { fireEvent.submit(form); fireEvent.submit(form) })
+    await waitFor(() => expect(pedidos.filter(p => p.metodo === 'PUT')).toHaveLength(1))
+    const grade = secao('Grade semanal')
+    for (const controle of grade.querySelectorAll('input, button')) expect(controle.disabled).toBe(true)
+    fireEvent.change(input, { target: { value: '09:00' } })
+    expect(input.value).toBe('08:00')
+    await act(async () => resposta.resolve(erro ? falha(500, 'ERRO_INTERNO', 'Falha fictícia') : ok({ consultasForaDaGrade: [] })))
+    expect(screen.getByRole('button', { name: 'Salvar grade' }).disabled).toBe(false)
+    expect(input.value).toBe('08:00')
+    if (erro) expect(screen.getByText('Falha fictícia')).toBeTruthy()
+    else {
+      expect(screen.getByText('Grade salva.')).toBeTruthy()
+      fireEvent.change(input, { target: { value: '09:00' } })
+      expect(screen.queryByText('Grade salva.')).toBeNull()
+    }
   })
 })

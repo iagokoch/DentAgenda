@@ -87,7 +87,7 @@ function ConsultaDetalhada({ consultaId }) {
     const cancelada = await api.pedir(`/api/consultas/${consulta.id}/cancelamento`, { metodo: 'POST', corpo: { justificativa } })
     atualizarSituacao(cancelada)
     setDialogoAberto(false)
-    setMensagem({ tipo: 'sucesso', texto: 'Consulta cancelada. O paciente foi avisado.' })
+    setMensagem({ tipo: 'sucesso', texto: 'Consulta cancelada.' })
   }
 
   async function realizar() {

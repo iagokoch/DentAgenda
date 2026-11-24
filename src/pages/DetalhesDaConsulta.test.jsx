@@ -118,10 +118,10 @@ describe('Detalhes da consulta (D33)', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: /Cancelar consulta/ }))
     const dialogo = screen.getByRole('dialog', { name: 'Cancelar consulta' })
-    expect(within(dialogo).getByText(/O paciente é avisado por SMS/)).toBeTruthy()
+    expect(within(dialogo).getByText(/O cancelamento será registrado/)).toBeTruthy()
     await userEvent.click(within(dialogo).getByRole('button', { name: 'Cancelar consulta' }))
 
-    expect(await screen.findByText('Consulta cancelada. O paciente foi avisado.')).toBeTruthy()
+    expect(await screen.findByText('Consulta cancelada.')).toBeTruthy()
     expect(pedidos.find((pedido) => pedido.metodo === 'POST').corpo).toEqual({})
   })
 

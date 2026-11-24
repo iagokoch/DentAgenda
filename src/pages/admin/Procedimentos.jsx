@@ -14,6 +14,7 @@ export default function Procedimentos() {
   const [aviso, setAviso] = useState({ tipo: null, texto: '' })
 
   async function salvar(corpo) {
+    const gavetaDoEnvio = gaveta
     if (gaveta.procedimento) {
       await api.pedir(`/api/procedimentos/${gaveta.procedimento.id}`, { metodo: 'PATCH', corpo })
       setAviso({ tipo: 'sucesso', texto: `Procedimento ${corpo.nome ?? gaveta.procedimento.nome} salvo.` })
@@ -21,7 +22,7 @@ export default function Procedimentos() {
       const criado = await api.pedir('/api/procedimentos', { metodo: 'POST', corpo })
       setAviso({ tipo: 'sucesso', texto: `Procedimento ${criado.nome} cadastrado.` })
     }
-    setGaveta(null)
+    setGaveta(atual => atual === gavetaDoEnvio ? null : atual)
     procedimentos.recarregar()
   }
 

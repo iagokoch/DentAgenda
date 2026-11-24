@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDadosDaApi } from '../api/useDadosDaApi.js'
 import { useConsultasDeHoje } from '../agenda/useConsultasDeHoje.js'
@@ -6,14 +6,14 @@ import { dataDeHoje, horaDoInstante } from '../agenda/calendario.js'
 import { STATUS_DA_CONSULTA } from '../agenda/status.js'
 import AppShell from '../components/AppShell'
 import Icon from '../components/Icon'
-import { useRelogio } from '../relogio.js'
+import { useAgoraAtualizado } from '../agenda/useAgoraAtualizado.js'
 import { ehAdmin, ehRecepcao, useSessao } from '../sessao/sessao-contexto.js'
 
 const saudacaoPelaHora = (agora) => {
-  const hora = agora.getHours()
+  const hora = Number(new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hourCycle: 'h23' }).format(agora))
   return hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite'
 }
-const dataPorExtenso = (agora) => agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()
+const dataPorExtenso = (agora) => agora.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Sao_Paulo' }).toUpperCase()
 
 // #3: só atalhos que levam a uma tela que o papel abre (D37).
 function atalhosDe(usuario) {
@@ -32,12 +32,46 @@ const plural = (quantidade, singular, pluralDaPalavra) => `${quantidade} ${quant
 export default function Inicio() {
   const navigate = useNavigate()
   const { usuario } = useSessao()
-  const relogio = useRelogio()
-  const [agora] = useState(() => relogio.agora())
+  const agora = useAgoraAtualizado()
   const hoje = dataDeHoje(agora)
   const consultasDeHoje = useConsultasDeHoje(hoje)
   const pacientes = useDadosDaApi('/api/pacientes?porPagina=1')
   const pendentes = useDadosDaApi('/api/consultas/pendentes?porPagina=1')
+  const revalidarPendentes = useRef(pendentes.recarregar)
+  const revalidacaoPendente = useRef(null)
+  const anterior = useRef({ instante: agora.getTime(), dia: hoje })
+
+  useEffect(() => { revalidarPendentes.current = pendentes.recarregar }, [pendentes.recarregar])
+
+  const solicitarRevalidacao = useCallback(() => {
+    if (revalidacaoPendente.current !== null) return
+    // Foco, visibilidade e virada podem ocorrer juntos; uma única leitura basta.
+    revalidacaoPendente.current = setTimeout(() => {
+      revalidacaoPendente.current = null
+      revalidarPendentes.current()
+    }, 0)
+  }, [])
+
+  useEffect(() => {
+    const instante = agora.getTime()
+    const cruzouFim = (consultasDeHoje.dados?.itens ?? []).some(consulta => {
+      const fim = Date.parse(consulta.fim)
+      return consulta.status === 'CONFIRMADA' && anterior.current.instante <= fim && fim < instante
+    })
+    if (anterior.current.dia !== hoje || cruzouFim) solicitarRevalidacao()
+    // A leitura pode atravessar o fim da consulta; só avançar a referência depois de conferir seus dados.
+    anterior.current = { instante: consultasDeHoje.dados ? instante : anterior.current.instante, dia: hoje }
+  }, [agora, hoje, consultasDeHoje.dados, solicitarRevalidacao])
+
+  useEffect(() => {
+    window.addEventListener('focus', solicitarRevalidacao)
+    document.addEventListener('visibilitychange', solicitarRevalidacao)
+    return () => {
+      clearTimeout(revalidacaoPendente.current)
+      window.removeEventListener('focus', solicitarRevalidacao)
+      document.removeEventListener('visibilitychange', solicitarRevalidacao)
+    }
+  }, [solicitarRevalidacao])
 
   const naoCanceladas = (consultasDeHoje.dados?.itens ?? []).filter((consulta) => consulta.status !== 'CANCELADA')
   const aVir = naoCanceladas.filter((consulta) => consulta.status === 'CONFIRMADA' && Date.parse(consulta.inicio) > agora.getTime())

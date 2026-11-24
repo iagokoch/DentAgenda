@@ -16,6 +16,7 @@ export default function Equipe() {
   const [aviso, setAviso] = useState({ tipo: null, texto: '' })
 
   async function salvar(corpo) {
+    const gavetaDoEnvio = gaveta
     if (gaveta.funcionario) {
       await api.pedir(`/api/funcionarios/${gaveta.funcionario.id}`, { metodo: 'PATCH', corpo })
       setAviso({ tipo: 'sucesso', texto: `Dados de ${corpo.nome ?? gaveta.funcionario.nome} salvos.` })
@@ -23,7 +24,7 @@ export default function Equipe() {
       const criado = await api.pedir('/api/funcionarios', { metodo: 'POST', corpo })
       setAviso({ tipo: 'sucesso', texto: `Funcionário cadastrado. ${criado.nome} define a senha em “Esqueci minha senha”, com o e-mail ${criado.email}.` })
     }
-    setGaveta(null)
+    setGaveta(atual => atual === gavetaDoEnvio ? null : atual)
     funcionarios.recarregar()
   }
 
