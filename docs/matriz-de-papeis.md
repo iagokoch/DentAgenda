@@ -49,7 +49,7 @@ Regras que a tabela não mostra, porque dependem do recurso e não do papel (D20
 | `POST /api/procedimentos` | 401 | 403 | ✓ | 403 | 403 |
 | `PATCH /api/procedimentos/{id}` | 401 | 403 | ✓ | 403 | 403 |
 | `GET /api/dentistas/{id}/grade` | 401 | ✓ | ✓ | ✓ | 403 |
-| `PUT /api/dentistas/{id}/grade` | 401 | 403 | ✓ | 403 | 403 |
+| `PUT /api/dentistas/{id}/grade` | 401 | ✓ | ✓ | ✓ | 403 |
 | `GET /api/dentistas/{id}/bloqueios` | 401 | ✓ | ✓ | ✓ | 403 |
 | `POST /api/bloqueios` | 401 | ✓ | ✓ | ✓ | 403 |
 | `DELETE /api/bloqueios/{id}` | 401 | ✓ | ✓ | ✓ | 403 |
@@ -77,6 +77,6 @@ paciente numa tela da clínica vai para `/minha-conta`; anônimo vai para `/logi
 | `/inicio`, `/agenda`, `/pacientes`, `/pacientes/:id`, `/consultas/:id` | → login | ✓ | ✓ | ✓ | → minha conta |
 | `/pacientes/novo` | → login | ✓ | ✓ | → início | → minha conta |
 | `/consultas` (D48: Dia e Lista) | → login | ✓ (todos os dentistas) | ✓ (todos os dentistas) | ✓ (só a própria agenda, pela API) | → minha conta |
-| `/disponibilidade` | → login | ✓ (lê a grade, bloqueia todos) | ✓ (edita a grade) | ✓ (só a própria) | → minha conta |
+| `/disponibilidade` | → login | ✓ (edita a grade, bloqueia todos) | ✓ (edita a grade) | ✓ (só a própria) | → minha conta |
 | `/admin/equipe`, `/admin/procedimentos` | → login | → início | ✓ | → início | → minha conta |
 | `/minha-conta`, `/minha-conta/agendar` | → login | → início | → início | → início | ✓ |

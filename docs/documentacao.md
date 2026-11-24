@@ -1858,6 +1858,26 @@ administrador que também é dentista recebe só a própria agenda.
 **Validação:** testes de tela (12) e de funções puras (6), axe nas duas visões, suíte do front 317/317. Carga em
 `docs/performance-resultados-2026-11-15.md`.
 
+## D49 — Quem edita a grade semanal: recepção, administração e o próprio dentista
+
+> **Status: pedida pelo usuário em 16/11/2026, na véspera da apresentação, depois que os dentistas não conseguiram configurar a própria agenda.**
+
+**O quê:** `PUT /api/dentistas/{id}/grade` passa de "só admin" (`A`) para `R`, `A` e `D`.
+- Recepção e administração substituem a grade de qualquer dentista.
+- O dentista substitui só a própria. Na grade de um colega a API responde 404, como já faz na leitura e nos bloqueios (D10, D20).
+- A tela `/disponibilidade` mostra "Salvar grade" para recepção, administração e para o dentista na própria grade.
+- Nada mais muda: faixas sobrepostas, `consultasForaDaGrade` (só lista, nunca cancela, D33) e o 404 para quem não é dentista.
+
+**Por quê:** a D37 deixou a grade só para o administrador, mas quem sabe quando o dentista atende é a recepção e o próprio
+dentista; sem isso, cada mudança de horário dependia de uma pessoa a mais.
+
+**Alternativa descartada:** manter só o admin e avisar a equipe para pedir a ele. É o que travou os dentistas.
+
+**Limitação conhecida (igual à D48):** um administrador que também é dentista é tratado como dentista nas rotas de agenda
+(D10) e só edita a própria grade; para editar a dos colegas, a conta precisa ser de recepção.
+
+**Efeito na matriz de papéis:** `PUT /api/dentistas/{id}/grade` passa de 401/403/✓/403/403 para 401/✓/✓/✓/403 (anônimo, R, R-admin, D, C).
+
 ## Próximo
 
 Estado em 2026-10-22: MVP completo. Backend com as 43 rotas e 628 testes; front com todas as telas ligadas à API, nos

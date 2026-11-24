@@ -385,11 +385,12 @@ Dentistas ativos, para o paciente escolher. **200** `[{ "id", "nome" }]`.
 | Rota                                 | Quem                   |
 |--------------------------------------|------------------------|
 | `GET /api/dentistas/{id}/grade`      | R, A, D (a própria)    |
-| `PUT /api/dentistas/{id}/grade`      | A                      |
+| `PUT /api/dentistas/{id}/grade`      | R, A, D (a própria; D49) |
 
 ### `PUT /api/dentistas/{id}/grade` (D12)
 
-Substitui a semana inteira do dentista.
+Substitui a semana inteira do dentista. Recepção e administração gravam a de qualquer dentista; o dentista grava só a
+própria (a de um colega responde **404** `NAO_ENCONTRADO`, D10, D49).
 
 ```json
 [

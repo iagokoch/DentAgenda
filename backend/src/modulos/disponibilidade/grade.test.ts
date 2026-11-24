@@ -179,17 +179,47 @@ describe('PUT /api/dentistas/{id}/grade', () => {
     expect(malformado.status).toBe(404);
   });
 
-  it('PUT por recepcionista sem isAdmin → 403', async () => {
-    const resposta = await gravar(await tokenDe(contexto, recepcionista), dentista.id, MANHA_E_TARDE);
+  it('PUT por recepcionista sem isAdmin grava a grade de qualquer dentista (D49)', async () => {
+    const alvo = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
 
-    expect(resposta.status).toBe(403);
-    expect(resposta.body.erro.codigo).toBe('SEM_PERMISSAO');
+    const resposta = await gravar(await tokenDe(contexto, recepcionista), alvo.id, MANHA_E_TARDE);
+
+    expect(resposta.status).toBe(200);
+    expect(resposta.body.grade).toEqual(MANHA_E_TARDE);
   });
 
-  it('PUT pelo próprio dentista sem isAdmin → 403', async () => {
-    const resposta = await gravar(await tokenDe(contexto, dentista), dentista.id, MANHA_E_TARDE);
+  it('PUT pelo próprio dentista grava a própria grade (D49)', async () => {
+    const proprio = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
 
-    expect(resposta.status).toBe(403);
+    const resposta = await gravar(await tokenDe(contexto, proprio), proprio.id, MANHA_E_TARDE);
+    const leitura = await ler(await tokenDe(contexto, proprio), proprio.id);
+
+    expect(resposta.status).toBe(200);
+    expect(leitura.body).toEqual(MANHA_E_TARDE);
+  });
+
+  it('PUT por dentista na grade de um colega → 404 e a grade do colega não muda (D49)', async () => {
+    const alvo = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
+    const intruso = await criarFuncionario(contexto, { categoria: 'DENTISTA' });
+    await gravar(await tokenDe(contexto, admin), alvo.id, [{ diaSemana: 2, inicio: '09:00', fim: '10:00' }]);
+
+    const resposta = await gravar(await tokenDe(contexto, intruso), alvo.id, MANHA_E_TARDE);
+    const leitura = await ler(await tokenDe(contexto, admin), alvo.id);
+
+    expect(resposta.status).toBe(404);
+    expect(resposta.body.erro.codigo).toBe('NAO_ENCONTRADO');
+    expect(leitura.body).toEqual([{ diaSemana: 2, inicio: '09:00', fim: '10:00' }]);
+  });
+
+  it('PUT por paciente → 403; sem login → 401', async () => {
+    const paciente = await criarPaciente(contexto);
+
+    const doPaciente = await gravar(await tokenDe(contexto, paciente), dentista.id, MANHA_E_TARDE);
+    const semLogin = await request(app).put(`/api/dentistas/${dentista.id}/grade`).send(MANHA_E_TARDE);
+
+    expect(doPaciente.status).toBe(403);
+    expect(doPaciente.body.erro.codigo).toBe('SEM_PERMISSAO');
+    expect(semLogin.status).toBe(401);
   });
 });
 
