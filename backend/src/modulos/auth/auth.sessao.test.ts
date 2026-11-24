@@ -33,6 +33,28 @@ const renovar = (refreshToken: string) =>
     .set('X-DentAgenda-Refresh', '1');
 
 describe('POST /api/auth/refresh', () => {
+  it('duas sessões continuam acessando e renovando após bloqueio de novo login por falhas', async () => {
+    const primeira = await logarPaciente();
+    const paciente = await contexto.prisma.cliente.findUniqueOrThrow({ where: { id: primeira.pacienteId } });
+    const segunda = await request(app).post('/api/auth/cliente/login').send({ cpf: paciente.cpf, senha: SENHA_DE_TESTE });
+    for (let tentativa = 0; tentativa < 3; tentativa++) {
+      contexto.relogio.avancarMinutos(1);
+      await request(app).post('/api/auth/cliente/login').send({ cpf: paciente.cpf, senha: 'senha-errada-123' });
+    }
+
+    const acessos = await Promise.all([primeira.accessToken, segunda.body.accessToken].map(accessToken =>
+      request(app).get('/api/auth/eu').set('Authorization', `Bearer ${accessToken}`)));
+    expect(acessos.map(resposta => resposta.status)).toEqual([200, 200]);
+    const renovadas = await Promise.all([primeira.refreshToken, refreshDoCookie(segunda.headers)].map(renovar));
+    expect(renovadas.map(resposta => resposta.status)).toEqual([200, 200]);
+    for (const resposta of renovadas) {
+      expect((await request(app).get('/api/auth/eu').set('Authorization', `Bearer ${resposta.body.accessToken}`)).status).toBe(200);
+    }
+    const novoLogin = await request(app).post('/api/auth/cliente/login').send({ cpf: paciente.cpf, senha: SENHA_DE_TESTE });
+    expect(novoLogin.status).toBe(423);
+    expect(novoLogin.body.erro.codigo).toBe('CONTA_BLOQUEADA');
+  });
+
   it('refresh com cookie e cabeçalho → 200 com accessToken e cookie novo', async () => {
     const sessao = await logarPaciente();
 

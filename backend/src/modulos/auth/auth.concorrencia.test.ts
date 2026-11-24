@@ -23,6 +23,26 @@ const renovar = (refreshToken: string) =>
   request(app).post('/api/auth/refresh').set('Cookie', `dentagenda_refresh=${refreshToken}`).set('X-DentAgenda-Refresh', '1');
 
 describe('login com tentativas simultâneas', () => {
+  it('três falhas simultâneas preservam refresh concorrente e a outra sessão existente', async () => {
+    const paciente = await criarPaciente(contexto, {}, { comLogin: true });
+    const logar = () => request(app).post('/api/auth/cliente/login').send({ cpf: paciente.cpf, senha: SENHA_DE_TESTE });
+    const primeira = await logar();
+    const segunda = await logar();
+    contexto.relogio.avancarMinutos(1);
+
+    const [falhas, renovada] = await Promise.all([
+      juntos(3, () => request(app).post('/api/auth/cliente/login').send({ cpf: paciente.cpf, senha: 'senha-errada-123' })),
+      renovar(refreshDoCookie(primeira.headers)),
+    ]);
+    expect(statusEmOrdem(falhas)).toEqual([401, 401, 423]);
+    expect(renovada.status).toBe(200);
+    for (const accessToken of [segunda.body.accessToken, renovada.body.accessToken]) {
+      expect((await request(app).get('/api/auth/eu').set('Authorization', `Bearer ${accessToken}`)).status).toBe(200);
+    }
+    expect((await renovar(refreshDoCookie(renovada.headers))).status).toBe(200);
+    expect((await logar()).status).toBe(423);
+  });
+
   it('cliente: 3 senhas erradas juntas → duas 401 e a 3ª já 423; a senha certa depois continua bloqueada', async () => {
     const paciente = await criarPaciente(contexto, {}, { comLogin: true });
 

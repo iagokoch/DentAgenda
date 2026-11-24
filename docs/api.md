@@ -144,6 +144,9 @@ Todas as rotas abaixo são públicas, exceto `logout` e `eu`.
 - **401** `CREDENCIAIS_INVALIDAS` — CPF inexistente e senha errada recebem a mesma resposta.
 - **423** `CONTA_BLOQUEADA` — 3 falhas desde o último acerto; só sai redefinindo a senha. A
   própria tentativa que completa as 3 falhas já recebe 423 (D27).
+  O bloqueio impede novos logins, inclusive com senha correta, mas não revoga sessões já
+  autenticadas: seus access e refresh tokens continuam sujeitos às regras normais de validade
+  e revogação. É uma mitigação parcial: um terceiro ainda pode bloquear novos logins pelo CPF.
 
 ### `POST /api/auth/funcionario/login` (D2, D3, D5)
 

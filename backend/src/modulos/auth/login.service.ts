@@ -6,7 +6,7 @@ import { conferirSenha, gerarHashDeSenha, gerarSenhaAleatoria } from '../../comp
 import { gerarAccessToken } from '../../compartilhado/tokens.ts';
 import type { ResultadoTentativa, TipoConta } from '../../generated/prisma/client.ts';
 import { clienteEstaBloqueado, funcionarioBloqueadoAte, type Tentativa } from './bloqueio-de-login.ts';
-import { criarSessao, revogarTodasAsSessoes } from './sessoes.ts';
+import { criarSessao } from './sessoes.ts';
 import {
   autenticadoDoFuncionario,
   usuarioDoCliente,
@@ -64,8 +64,6 @@ export async function loginCliente(
     if (!atual || !login || !senhaCerta || login.senhaHash !== cliente?.login?.senhaHash) {
       const falha = await registrar('FALHA');
       if (!clienteEstaBloqueado([...tentativas, falha])) return { erro: credenciaisInvalidasDoCliente() };
-      // D19: conta bloqueada derruba todas as sessões.
-      if (login) await revogarTodasAsSessoes(tx, { loginId: login.id }, contexto);
       return { erro: contaDoClienteBloqueada() };
     }
 

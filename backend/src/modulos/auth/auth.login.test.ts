@@ -103,15 +103,16 @@ describe('POST /api/auth/cliente/login', () => {
     expect(resposta.body.erro.codigo).toBe('CONTA_BLOQUEADA');
   });
 
-  it('3ª falha do cliente revoga as sessões abertas', async () => {
+  it('3ª falha e novas falhas do cliente preservam as sessões abertas', async () => {
     const paciente = await criarPaciente(contexto, {}, { comLogin: true });
     await loginCliente(paciente.cpf, SENHA_DE_TESTE);
 
     await errarTresVezesCliente(paciente.cpf);
+    expect((await loginCliente(paciente.cpf, 'senha-errada-123')).status).toBe(423);
 
     const sessoes = await contexto.prisma.refreshToken.findMany({ where: { login: { clienteId: paciente.id } } });
     expect(sessoes).toHaveLength(1);
-    expect(sessoes[0]?.revogadoEm).not.toBeNull();
+    expect(sessoes[0]?.revogadoEm).toBeNull();
   });
 
   it('3 falhas em CPF inexistente também respondem 423', async () => {
