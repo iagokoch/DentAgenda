@@ -161,6 +161,9 @@ Derivar da primeira consulta. Quem se cadastrou e faltou também é paciente, e 
 Tabela de eventos com uma linha por tentativa de login (cliente e funcionário): identificador digitado (texto, **sem FK**), IP, data/hora e resultado (sucesso/falha). Acertos também são gravados.
 - *Bloqueio da conta:* 3 falhas com o mesmo identificador depois do último acerto → conta bloqueada até redefinir a senha.
   Para **funcionário**, o bloqueio dura 15 min (D19).
+  Para **cliente**, o bloqueio impede novos logins, inclusive com senha correta; falhas anônimas
+  não revogam sessões já autenticadas nem impedem seu refresh válido. Essa proteção é parcial:
+  um terceiro que conhece o CPF ainda pode bloquear novos logins até a redefinição da senha.
 - ~~*Bloqueio por IP:* só no endpoint de cliente (ver D3).~~ Fora do MVP (D19).
 
 **Por quê:**
@@ -257,9 +260,10 @@ O login devolve um *access token* JWT de vida curta (proposta: 15 min) e um *ref
 em cookie `httpOnly`. O refresh fica guardado no banco (só o hash) e pode ser revogado.
 
 **Por quê:**
-- A D5 bloqueia conta e a D3 redefine senha — as duas precisam derrubar sessões já abertas.
-  Um JWT sozinho não pode ser revogado antes de expirar; o refresh guardado no banco pode,
-  e o access curto limita a janela em que um token antigo ainda vale.
+- A redefinição de senha (D3) precisa derrubar sessões já abertas. Falhas anônimas de login
+  (D5) não têm autoridade para encerrá-las: o bloqueio limita novos logins, sem revogar sessões.
+  Um JWT sozinho não pode ser revogado antes de expirar; a sessão guardada no banco é conferida
+  em cada pedido autenticado (D31), permitindo revogar também o acesso imediatamente.
 - Cookie `httpOnly`: o JavaScript da página não lê o refresh, então um XSS não rouba a sessão longa.
 
 **Alternativas descartadas:**
@@ -759,8 +763,11 @@ Contagem: falhas do par (identificador, tipo) depois da última linha `SUCESSO` 
 - Access token JWT: **15 min**. Refresh: **cliente 30 dias, funcionário 12 h**.
 - **Rotação:** cada uso do refresh revoga o atual e emite um novo. Reapresentar um token já
   revogado → **todas** as sessões daquela conta são revogadas (sinal de token roubado).
-- Todas as sessões da conta caem quando: a senha é redefinida, a conta de cliente é bloqueada
-  (D5), o funcionário é desativado (D18).
+- Todas as sessões da conta caem quando: a senha é redefinida ou alterada, ou o funcionário é
+  desativado (D18). O logout continua encerrando somente a sessão atual.
+- O bloqueio de novos logins do cliente (D5) não revoga suas sessões já autenticadas: access e
+  refresh continuam válidos até seus prazos ou outro motivo legítimo de revogação. Isso não
+  resolve o bloqueio dirigido de novos logins por CPF, nem restaura sessões anteriormente revogadas.
 - **Cookie:** `httpOnly`, `Secure` fora do desenvolvimento, `SameSite=Strict`, enviado só para a
   rota de refresh. A chamada de refresh exige também um cabeçalho próprio da aplicação.
   Consequência: front e API no mesmo site — no desenvolvimento, o Vite encaminha `/api` ao backend.
@@ -1106,7 +1113,8 @@ seguinte, livre em instalação padrão, e não exige mexer em nada da máquina.
 
 **O quê:**
 1. **A tentativa que completa 3 falhas já responde 423** `CONTA_BLOQUEADA`, e não 401. No cliente,
-   é nela que as sessões abertas são revogadas (D19).
+   o bloqueio impede novos logins até redefinir a senha, sem revogar sessões já autenticadas
+   nem impedir seu refresh válido (D5, D19).
 2. **CPF ou e-mail inexistente também passa pelo bcrypt**, comparado com um hash fictício, antes de
    responder 401.
 3. **As falhas contam pela ordem**, e não pelo horário: entram as falhas registradas depois do
@@ -1507,7 +1515,7 @@ transações, sem nova coluna ou mudança de política de bloqueio.
 - *Transação longa com o bcrypt dentro:* cada tentativa seguraria uma conexão do pool por ~250 ms enquanto as outras da
   mesma conta esperam; uma rajada contra uma conta esgotaria o pool de todos.
 - *Registrar a tentativa como FALHA antes do bcrypt e trocar para SUCESSO depois:* um login certo em andamento contaria
-  como falha para as tentativas paralelas, e a 3ª derrubaria a sessão que acabou de nascer.
+  como falha para as tentativas paralelas, podendo antecipar indevidamente o bloqueio de novos logins.
 - *Coluna "substituído por" no refresh para reconhecer a rotação:* resolve o mesmo caso com mais uma coluna; a janela
   de tempo não muda o schema.
 - *Janela maior (1 min):* deixaria um token roubado ser reapresentado sem alarme por mais tempo.
