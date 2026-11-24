@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": { "configFile": "vitest.break-it.config.ts" },
+  "mutate": ["src/modulos/disponibilidade/horarios.ts"],
+  "concurrency": 1,
+  "tsconfigFile": "",
+  "reporters": ["clear-text", "json", "html"],
+  "jsonReporter": { "fileName": "reports/break-it/mutation.json" },
+  "htmlReporter": { "fileName": "reports/break-it/mutation.html" },
+  "tempDirName": ".stryker-tmp",
+  "ignorePatterns": [".env", ".env.*", "reports", "dist"],
+  "timeoutMS": 10000,
+  "thresholds": { "high": 80, "low": 60, "break": 0 }
+}
